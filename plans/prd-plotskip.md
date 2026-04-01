@@ -126,6 +126,44 @@ Almacenar binarios en el filesystem del servidor es frágil (no persiste en depl
 | Imágenes | Cloudinary (free tier) | Para avatares de usuario |
 | Email | Resend (free tier, 100/día) | Para recuperación de contraseña |
 
+### Explicación de tecnologías del stack
+
+**SQLAlchemy 2.0 async**
+ORM de Python. Mapea tablas de PostgreSQL a clases Python. La versión async permite hacer queries sin bloquear el servidor (importante en FastAPI que es async por naturaleza). En vez de escribir SQL a mano, escribes `session.execute(select(User).where(User.email == email))`.
+
+**Alembic**
+Herramienta de migraciones para SQLAlchemy. Cuando cambias un modelo (añades una columna, creas una tabla), Alembic genera un script Python que aplica ese cambio a la BD. Funciona como git pero para el schema — cada migración tiene un ID y puedes hacer `upgrade` y `downgrade`.
+
+**python-jose**
+Librería para crear y verificar JWT (JSON Web Tokens). Los JWT son los tokens de sesión: el servidor los firma con una clave secreta, el cliente los guarda y los envía en cada request. `python-jose` hace la parte de firmar (`create_access_token`) y verificar (`decode_token`).
+
+**passlib[bcrypt]**
+bcrypt es el algoritmo estándar para hashear contraseñas. No es cifrado reversible — es un hash lento a propósito para que la fuerza bruta sea impráctica. `passlib` es el wrapper de Python que lo usa. Se guarda el hash en BD, nunca la contraseña en claro.
+
+**pydantic-settings**
+Extensión de Pydantic para leer variables de entorno desde `.env`. Se define una clase `Settings` con los campos tipados (`DATABASE_URL: str`, `SECRET_KEY: str`) y los lee automáticamente. Centraliza toda la configuración en un sitio.
+
+**asyncpg**
+Driver de PostgreSQL para Python async. SQLAlchemy lo usa por debajo cuando el engine es async. No se usa directamente en el código de aplicación.
+
+**aiosqlite**
+Driver async para SQLite. Solo entra en tests — permite usar SQLite en memoria como base de datos de pruebas sin necesidad de tener PostgreSQL corriendo en CI.
+
+**slowapi**
+Rate limiting para FastAPI. Con tres líneas limita `/auth/login` a N requests/min por IP. Previene fuerza bruta en los endpoints de autenticación.
+
+**Resend**
+Servicio de envío de emails. Tier gratuito: 100 emails/día. Se usa únicamente para el reset de contraseña. En tests se mockea para no mandar emails reales.
+
+**httpx + pytest-asyncio**
+`httpx` es el cliente HTTP recomendado por FastAPI para tests — permite hacer requests a la app sin levantar un servidor real. `pytest-asyncio` permite que los tests sean funciones `async def`, necesario porque toda la app es async.
+
+**cachetools (TTLCache)**
+Cache en memoria con expiración automática por tiempo (TTL). Se usa para cachear respuestas de TMDB en el proceso FastAPI durante 5 minutos. Evita llamadas repetidas a la API externa sin necesitar Redis.
+
+**Cloudinary**
+Servicio de almacenamiento y transformación de imágenes. Se usa para los avatares de usuario. El tier gratuito cubre las necesidades del proyecto. Evita guardar binarios en el filesystem del servidor (frágil en deploys).
+
 ### Arquitectura backend (Clean Architecture)
 
 ```
