@@ -1,20 +1,20 @@
+import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
+import bcrypt as _bcrypt
+
 from jose import jwt
-from passlib.context import CryptContext
 
 from app.infrastructure.config import get_settings
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(plain: str) -> str:
-    return _pwd_context.hash(plain)
+    return _bcrypt.hashpw(plain.encode(), _bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_context.verify(plain, hashed)
+    return _bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 def create_access_token(subject: str) -> str:
@@ -32,5 +32,10 @@ def decode_access_token(token: str) -> str:
 
 
 def create_refresh_token() -> str:
-    """Token opaco aleatorio. Se guarda en BD hasheado con bcrypt, no como JWT."""
+    """Token opaco aleatorio de 32 bytes."""
     return secrets.token_urlsafe(32)
+
+
+def hash_token(token: str) -> str:
+    """SHA-256 del token para almacenamiento y búsqueda en BD."""
+    return hashlib.sha256(token.encode()).hexdigest()

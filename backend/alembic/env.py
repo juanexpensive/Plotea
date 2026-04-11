@@ -14,8 +14,9 @@ if config.config_file_name is not None:
 
 # Importar Base y todos los modelos para que --autogenerate los detecte
 from app.infrastructure.database import Base  # noqa: E402
-# Los modelos se importan aquí a medida que se crean:
-# from app.data.models.user import User  # noqa: E402
+from app.data.models.user import User  # noqa: F401, E402
+from app.data.models.refresh_token import RefreshToken  # noqa: F401, E402
+from app.data.models.password_reset_token import PasswordResetToken  # noqa: F401, E402
 
 target_metadata = Base.metadata
 
