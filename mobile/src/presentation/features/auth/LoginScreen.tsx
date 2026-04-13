@@ -8,8 +8,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tokens, setTokens] = useState<{ access: string; refresh: string } | null>(null);
-
   async function handleLogin() {
     if (!email || !password) {
       setError('Rellena todos los campos');
@@ -17,10 +15,9 @@ export default function LoginScreen() {
     }
     setLoading(true);
     setError(null);
-    setTokens(null);
     try {
-      const result = await login(email, password);
-      setTokens({ access: result.access_token, refresh: result.refresh_token });
+      await login(email, password);
+      router.replace('/home');
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 401) {
@@ -74,20 +71,6 @@ export default function LoginScreen() {
           onPress={() => router.replace('/register')}
         />
       </View>
-
-      {tokens && (
-        <View style={{ marginTop: 32 }}>
-          <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>Login OK — Tokens recibidos:</Text>
-          <Text style={{ fontWeight: '600' }}>Access token:</Text>
-          <Text selectable style={{ fontFamily: 'monospace', fontSize: 11, marginBottom: 12 }}>
-            {tokens.access}
-          </Text>
-          <Text style={{ fontWeight: '600' }}>Refresh token:</Text>
-          <Text selectable style={{ fontFamily: 'monospace', fontSize: 11 }}>
-            {tokens.refresh}
-          </Text>
-        </View>
-      )}
     </ScrollView>
   );
 }
