@@ -1,36 +1,9 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
 import { Button, ScrollView, Text, TextInput, View } from 'react-native';
-import { login } from '../../../data/repositories/AuthRepository';
+import { useLoginViewModel } from './LoginViewModel';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  async function handleLogin() {
-    if (!email || !password) {
-      setError('Rellena todos los campos');
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      await login(email, password);
-      router.replace('/home');
-    } catch (err: any) {
-      const status = err?.response?.status;
-      if (status === 401) {
-        setError('Credenciales incorrectas');
-      } else if (status === 422) {
-        setError('Datos inválidos. Revisa el email.');
-      } else {
-        setError('Error de conexión. ¿Está el backend corriendo?');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { email, setEmail, password, setPassword, loading, error, handleLogin, goToRegister } =
+    useLoginViewModel();
 
   return (
     <ScrollView contentContainerStyle={{ padding: 24, justifyContent: 'center', flexGrow: 1 }}>
@@ -66,10 +39,7 @@ export default function LoginScreen() {
       />
 
       <View style={{ marginTop: 16 }}>
-        <Button
-          title="¿No tienes cuenta? Regístrate"
-          onPress={() => router.replace('/register')}
-        />
+        <Button title="¿No tienes cuenta? Regístrate" onPress={goToRegister} />
       </View>
     </ScrollView>
   );
