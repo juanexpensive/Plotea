@@ -11,9 +11,36 @@ Instala estas herramientas si no las tienes:
 | Herramienta | Dónde descargar | Versión mínima |
 |---|---|---|
 | Python | python.org/downloads | 3.12 |
-| Node.js | nodejs.org (LTS) | 18 |
-| Docker Desktop | docker.com/products/docker-desktop | cualquiera |
+| Node.js | **20 LTS** vía nvm-windows | 20 (no usar 24) |
+| nvm-windows | github.com/coreybutler/nvm-windows | cualquiera |
+| ngrok | ngrok.com/download | cualquiera |
 | Git | git-scm.com | cualquiera |
+
+> Docker ya no es necesario — la base de datos está en Neon (PostgreSQL cloud).
+> **Node 24 es incompatible con `@expo/ngrok`** — usa Node 20 LTS obligatoriamente para que funcione `--tunnel`.
+
+---
+
+## Paso 0 — Instalar Node 20 con nvm-windows (solo la primera vez)
+
+> Sáltate este paso si ya tienes nvm-windows y Node 20 activo.
+
+1. Descarga `nvm-setup.exe` desde [github.com/coreybutler/nvm-windows/releases](https://github.com/coreybutler/nvm-windows/releases)
+2. Cierra VSCode y todas las terminales antes de ejecutar el instalador
+3. El instalador desinstalará automáticamente cualquier Node.js existente
+4. Una vez instalado, abre una terminal nueva y ejecuta:
+
+```bash
+nvm install 20
+nvm use 20
+node -v   # debe mostrar v20.x.x
+```
+
+5. Si tenías `@expo/ngrok` instalado globalmente, reinstálalo:
+
+```bash
+npm install -g @expo/ngrok@4.1.3
+```
 
 ---
 
@@ -26,27 +53,7 @@ cd PlotSkip
 
 ---
 
-## Paso 2 — Arrancar Docker Desktop
-
-Abre **Docker Desktop** desde el menú inicio y espera a que el icono de la ballena
-en la barra de tareas deje de animarse (~30 segundos).
-
-Luego, desde la **raíz** del proyecto:
-
-```bash
-docker compose up -d
-```
-
-Verifica que el contenedor está corriendo:
-
-```bash
-docker ps
-# Debes ver: plotskip-db-1 con status "Up"
-```
-
----
-
-## Paso 3 — Crear el entorno virtual de Python (solo la primera vez en este PC)
+## Paso 2 — Crear el entorno virtual de Python (solo la primera vez en este PC)
 
 ```bash
 cd backend
@@ -57,7 +64,7 @@ py -3.12 -m venv .venv
 
 ---
 
-## Paso 4 — Activar el entorno virtual
+## Paso 3 — Activar el entorno virtual
 
 Cada vez que abras una terminal nueva debes activarlo:
 
@@ -73,7 +80,7 @@ El prompt cambiará a `(.venv) ...` cuando esté activo.
 
 ---
 
-## Paso 5 — Instalar dependencias Python (solo la primera vez o tras cambios en requirements.txt)
+## Paso 4 — Instalar dependencias Python (solo la primera vez o tras cambios en requirements.txt)
 
 ```bash
 pip install -r requirements.txt
@@ -81,7 +88,7 @@ pip install -r requirements.txt
 
 ---
 
-## Paso 6 — Crear el archivo .env (solo la primera vez en este PC)
+## Paso 5 — Crear el archivo .env (solo la primera vez en este PC)
 
 ```bash
 # Desde backend/
@@ -91,7 +98,8 @@ copy .env.example .env
 Abre `.env` y rellena los valores:
 
 ```env
-DATABASE_URL=postgresql+asyncpg://plotskip:plotskip@localhost:5432/plotskip
+# Neon (PostgreSQL cloud) — copia la connection string desde console.neon.tech
+DATABASE_URL=postgresql+asyncpg://user:pass@ep-xxx.neon.tech/plotskip?sslmode=require
 
 # Genera una clave segura con este comando y pégala aquí:
 # python -c "import secrets; print(secrets.token_hex(32))"
@@ -105,71 +113,61 @@ RESEND_API_KEY=tu-clave-resend
 ```
 
 > El `.env` nunca se sube a git. Cada PC tiene el suyo propio.
-> Las claves TMDB y Resend las tienes en tu cuenta — guárdalas en un gestor de contraseñas.
+> Las claves las tienes en tu cuenta de cada servicio — guárdalas en un gestor de contraseñas.
 
 ---
 
-## Paso 7 — Crear las tablas en la base de datos (solo la primera vez o tras nuevas migraciones)
+## Paso 6 — Aplicar migraciones (solo la primera vez o tras nuevas migraciones)
 
-Con el venv activo y Docker corriendo:
+Con el venv activo:
 
 ```bash
 alembic upgrade head
 ```
 
-Verifica que se crearon las tablas:
+---
 
+## Paso 7 — Configurar ngrok (solo la primera vez en este PC)
+
+Hay **dos authtokens** que configurar — son instalaciones separadas:
+
+**7a — ngrok MSIX** (para correr `ngrok http 8000` manualmente):
 ```bash
-docker exec -it plotskip-db-1 psql -U plotskip -d plotskip -c "\dt"
-# Debes ver: users, refresh_tokens, password_reset_tokens
+ngrok config add-authtoken TU_TOKEN
 ```
+
+**7b — @expo/ngrok** (para que Expo use `--tunnel`):
+```bash
+npx ngrok authtoken TU_TOKEN
+```
+
+> El token está en: dashboard.ngrok.com/get-started/your-authtoken
+> Puedes usar el mismo token en ambos.
 
 ---
 
-## Paso 8 — Arrancar el backend
+## Arranque diario
 
+**Terminal 1 — backend:**
 ```bash
-uvicorn app.main:app --reload
-```
-
-El servidor queda en: http://localhost:8000
-Documentación interactiva: http://localhost:8000/docs
-
----
-
-## Paso 9 — Arrancar el frontend (mobile)
-
-Abre una **segunda terminal** (sin cerrar la del backend):
-
-```bash
-cd mobile
-npx expo start
-```
-
-- Escanea el QR con **Expo Go** en el móvil (misma red WiFi)
-- Pulsa `a` para Android emulador
-- Pulsa `w` para abrir en el navegador
-
-> Si usas Expo Go en móvil físico, cambia `localhost` por la IP local de tu PC
-> en `mobile/src/infrastructure/http/api.ts` (ej. `192.168.1.X`).
-
----
-
-## Arranque diario (ya configurado)
-
-Una vez hecho el setup inicial, cada día solo necesitas:
-
-```bash
-# Terminal 1 — backend
-docker compose up -d          # desde la raíz
 cd backend
 .venv\Scripts\activate
 uvicorn app.main:app --reload
-
-# Terminal 2 — frontend
-cd mobile
-npx expo start
 ```
+
+**Terminal 2 — ngrok (expone el backend al móvil):**
+```bash
+ngrok http 8000
+```
+Copia la URL `https://xxx.ngrok-free.dev` y ponla en `mobile/src/infrastructure/http/api.ts`.
+
+**Terminal 3 — Expo:**
+```bash
+cd mobile
+npx expo start --tunnel --clear
+```
+
+Escanea el QR con Expo Go en el móvil.
 
 ---
 
@@ -186,8 +184,8 @@ set PYTHONPATH=. && pytest ../tests/ -v
 
 | Error | Causa | Solución |
 |---|---|---|
-| `El sistema no puede encontrar la ruta .venv` | El venv no existe en este PC | Paso 3 |
-| `unable to get image postgres:16` | Docker Desktop no está corriendo | Abre Docker Desktop, espera, repite |
-| `connection refused` al llamar al backend | El servidor no está arrancado | Paso 8 |
-| `Network Error` en la app móvil | La URL del backend no es accesible desde el móvil | Cambia `localhost` por la IP local del PC en `api.ts` |
-| `alembic: command not found` | El venv no está activo | Paso 4 |
+| `El sistema no puede encontrar la ruta .venv` | El venv no existe en este PC | Paso 2 |
+| `alembic: command not found` | El venv no está activo | Paso 3 |
+| `connection refused` al llamar al backend | El servidor no está arrancado | Arranque diario |
+| `Network Error` en la app móvil | URL de ngrok no actualizada en api.ts | Copia la URL nueva de ngrok en `api.ts` |
+| `failed to start tunnel` en Expo | ngrok no tiene authtoken | Paso 7 |
