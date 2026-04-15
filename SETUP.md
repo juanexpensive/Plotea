@@ -146,6 +146,18 @@ npx ngrok authtoken TU_TOKEN
 
 ---
 
+## Paso 8 — Instalar dependencias mobile (solo la primera vez o tras cambios en package.json)
+
+```bash
+cd mobile
+npm ci
+```
+
+> Usa siempre `npm ci` (no `npm install`) para instalaciones desde cero — respeta el `package-lock.json` exactamente y evita conflictos de versiones.
+> Solo usa `npm install` cuando quieras agregar o actualizar paquetes.
+
+---
+
 ## Arranque diario
 
 **Terminal 1 — backend:**
@@ -189,3 +201,4 @@ set PYTHONPATH=. && pytest ../tests/ -v
 | `connection refused` al llamar al backend | El servidor no está arrancado | Arranque diario |
 | `Network Error` en la app móvil | URL de ngrok no actualizada en api.ts | Copia la URL nueva de ngrok en `api.ts` |
 | `failed to start tunnel` en Expo | ngrok no tiene authtoken | Paso 7 |
+| `ERESOLVE could not resolve` en npm | Usar `npm install` en vez de `npm ci` | Paso 8 |
