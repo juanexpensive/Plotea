@@ -1,22 +1,37 @@
 import { useEffect, useState } from 'react';
-import { FlatList, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { getHomeFeed } from '../../../data/repositories/MediaRepository';
 import { HomeFeed, MediaItem } from '../../../domain/entities/media';
 
+const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
+
+function MediaCard({ item }: { item: MediaItem }) {
+  return (
+    <View style={styles.card}>
+      {item.poster_path ? (
+        <Image
+          source={{ uri: `${TMDB_IMAGE}${item.poster_path}` }}
+          style={styles.poster}
+        />
+      ) : (
+        <View style={[styles.poster, styles.posterFallback]} />
+      )}
+      <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+    </View>
+  );
+}
+
 function MediaRow({ title, data }: { title: string; data: MediaItem[] }) {
   return (
-    <View>
-      <Text>{title}</Text>
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
       <FlatList
         horizontal
         data={data}
         keyExtractor={(item) => `${item.media_type}-${item.tmdb_id}`}
-        renderItem={({ item }) => (
-          <View>
-            <Text>{item.title}</Text>
-          </View>
-        )}
+        renderItem={({ item }) => <MediaCard item={item} />}
         showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}
       />
     </View>
   );
@@ -36,26 +51,81 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View>
-        <Text>Cargando...</Text>
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#fff" />
       </View>
     );
   }
 
   if (error || !feed) {
     return (
-      <View>
-        <Text>{error ?? 'Error desconocido'}</Text>
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error ?? 'Error desconocido'}</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView>
-      <Text>PlotSkip</Text>
+    <ScrollView style={styles.screen}>
+      <Text style={styles.appTitle}>PlotSkip</Text>
       <MediaRow title="Trending esta semana" data={feed.trending} />
       <MediaRow title="Películas populares" data={feed.popular_movies} />
       <MediaRow title="Series populares" data={feed.popular_tv} />
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#111',
+  },
+  centered: {
+    flex: 1,
+    backgroundColor: '#111',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  appTitle: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: 'bold',
+    padding: 16,
+    paddingTop: 52,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  row: {
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  card: {
+    width: 110,
+  },
+  poster: {
+    width: 110,
+    height: 165,
+    borderRadius: 8,
+    backgroundColor: '#333',
+  },
+  posterFallback: {
+    backgroundColor: '#333',
+  },
+  cardTitle: {
+    color: '#ccc',
+    fontSize: 11,
+    marginTop: 6,
+  },
+  errorText: {
+    color: '#f66',
+    fontSize: 14,
+  },
+});

@@ -137,12 +137,18 @@ ngrok config add-authtoken TU_TOKEN
 ```
 
 **7b — @expo/ngrok** (para que Expo use `--tunnel`):
+
+`@expo/ngrok` usa ngrok v2, que lee el token desde `~/.ngrok2/ngrok.yml`. Créalo manualmente:
+
 ```bash
-npx ngrok authtoken TU_TOKEN
+# Windows — crea el archivo en la carpeta correcta
+mkdir %USERPROFILE%\.ngrok2
+echo authtoken: TU_TOKEN > %USERPROFILE%\.ngrok2\ngrok.yml
 ```
 
+> `npx ngrok authtoken TU_TOKEN` NO funciona aquí — guarda el token en la ruta de ngrok v3 (`AppData\Local\ngrok\`) que `@expo/ngrok` no lee.
 > El token está en: dashboard.ngrok.com/get-started/your-authtoken
-> Puedes usar el mismo token en ambos.
+> Puedes usar el mismo token en ambos pasos.
 
 ---
 
@@ -202,3 +208,40 @@ set PYTHONPATH=. && pytest ../tests/ -v
 | `Network Error` en la app móvil | URL de ngrok no actualizada en api.ts | Copia la URL nueva de ngrok en `api.ts` |
 | `failed to start tunnel` en Expo | ngrok no tiene authtoken | Paso 7 |
 | `ERESOLVE could not resolve` en npm | Usar `npm install` en vez de `npm ci` | Paso 8 |
+| `failed to start tunnel` / `remote gone away` | Token de `@expo/ngrok` en ruta incorrecta | Paso 7b |
+| `"ngrok" no se reconoce como comando` | ngrok.exe no está en el PATH | Ver abajo |
+| `ImportError: email-validator is not installed` | Falta dependencia de pydantic | Ver abajo |
+| `PluginError: Failed to resolve plugin for module "expo-router"` | node_modules de mobile no instalados | Paso 8 |
+
+---
+
+### Detalle de errores frecuentes
+
+#### `"ngrok" no se reconoce como comando`
+ngrok está descargado pero no está en el PATH del sistema.
+
+**Solución:** abre una terminal como Administrador y ejecuta:
+```bash
+copy C:\ruta\donde\descargaste\ngrok.exe C:\Windows\System32\ngrok.exe
+```
+Luego configura el authtoken (Paso 7).
+
+---
+
+#### `ImportError: email-validator is not installed`
+El backend arranca pero falla porque falta la dependencia `email-validator` que usa pydantic para validar emails. No está en `requirements.txt` porque viene como extra de pydantic.
+
+**Solución:** con el venv activo:
+```bash
+pip install "pydantic[email]"
+```
+Uvicorn se reinicia solo gracias a `--reload`.
+
+---
+
+#### `ERESOLVE could not resolve` al instalar dependencias mobile
+npm intenta re-resolver peer deps y encuentra un conflicto de versiones entre `react` y `react-dom`.
+
+**Causa raíz:** `npm install` re-resuelve las dependencias desde cero; `npm ci` usa el `package-lock.json` exacto.
+
+**Solución:** usa siempre `npm ci` para instalar en un PC nuevo (Paso 8). Nunca uses `--legacy-peer-deps` ni `--force`, enmascaran el problema sin resolverlo.

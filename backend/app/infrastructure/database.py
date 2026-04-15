@@ -14,7 +14,8 @@ _session_factory = None
 
 def init_db(database_url: str) -> None:
     global _engine, _session_factory
-    _engine = create_async_engine(database_url, echo=False)
+    connect_args = {"ssl": "require"} if database_url.startswith("postgresql+asyncpg") else {}
+    _engine = create_async_engine(database_url, echo=False, connect_args=connect_args)
     _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
 
 
