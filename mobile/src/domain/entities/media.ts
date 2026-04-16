@@ -7,6 +7,12 @@ export interface MediaItem {
   release_date: string | null;
 }
 
+export interface MediaDetail extends MediaItem {
+  overview: string;
+  genres: string[];
+  runtime: number | null;
+}
+
 export interface HomeFeed {
   trending: MediaItem[];
   popular_movies: MediaItem[];

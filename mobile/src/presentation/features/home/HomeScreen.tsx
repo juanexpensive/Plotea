@@ -1,5 +1,6 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getHomeFeed } from '../../../data/repositories/MediaRepository';
 import { HomeFeed, MediaItem } from '../../../domain/entities/media';
 
@@ -7,7 +8,11 @@ const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
 
 function MediaCard({ item }: { item: MediaItem }) {
   return (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => router.push({ pathname: '/detail', params: { tmdb_id: item.tmdb_id, media_type: item.media_type } })}
+      activeOpacity={0.7}
+    >
       {item.poster_path ? (
         <Image
           source={{ uri: `${TMDB_IMAGE}${item.poster_path}` }}
@@ -17,7 +22,7 @@ function MediaCard({ item }: { item: MediaItem }) {
         <View style={[styles.poster, styles.posterFallback]} />
       )}
       <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
