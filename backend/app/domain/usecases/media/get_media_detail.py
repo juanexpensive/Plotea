@@ -1,24 +1,13 @@
-from dataclasses import dataclass
-
-from app.infrastructure.tmdb import tmdb_get
-
-
-@dataclass
-class MediaDetail:
-    tmdb_id: int
-    media_type: str
-    title: str
-    poster_path: str | None
-    vote_average: float
-    release_date: str | None
-    overview: str
-    genres: list[str]
-    runtime: int | None
+from app.domain.entities.media import MediaDetail
+from app.domain.services.i_tmdb_client import ITmdbClient
 
 
 class GetMediaDetailUseCase:
+    def __init__(self, tmdb: ITmdbClient) -> None:
+        self._tmdb = tmdb
+
     async def execute(self, media_type: str, tmdb_id: int) -> MediaDetail:
-        data = await tmdb_get(f"/{media_type}/{tmdb_id}")
+        data = await self._tmdb.get(f"/{media_type}/{tmdb_id}")
 
         if media_type == "tv":
             title = data.get("name") or data.get("original_name", "")

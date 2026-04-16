@@ -1,23 +1,12 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { getMediaDetail } from '../../../data/repositories/MediaRepository';
-import { MediaDetail } from '../../../domain/entities/media';
+import { useDetailViewModel } from './DetailViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w500';
 
 export default function DetailScreen() {
   const { tmdb_id, media_type } = useLocalSearchParams<{ tmdb_id: string; media_type: string }>();
-  const [detail, setDetail] = useState<MediaDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getMediaDetail(media_type, Number(tmdb_id))
-      .then(setDetail)
-      .catch(() => setError('Error al cargar el contenido'))
-      .finally(() => setLoading(false));
-  }, [tmdb_id, media_type]);
+  const { detail, loading, error } = useDetailViewModel(media_type, Number(tmdb_id));
 
   if (loading) {
     return (

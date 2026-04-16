@@ -1,8 +1,7 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { getHomeFeed } from '../../../data/repositories/MediaRepository';
-import { HomeFeed, MediaItem } from '../../../domain/entities/media';
+import { MediaItem } from '../../../domain/entities/media';
+import { useHomeViewModel } from './HomeViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
 
@@ -43,16 +42,7 @@ function MediaRow({ title, data }: { title: string; data: MediaItem[] }) {
 }
 
 export default function HomeScreen() {
-  const [feed, setFeed] = useState<HomeFeed | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getHomeFeed()
-      .then(setFeed)
-      .catch(() => setError('Error al cargar el contenido'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { feed, loading, error } = useHomeViewModel();
 
   if (loading) {
     return (

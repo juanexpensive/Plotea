@@ -1,5 +1,7 @@
 import httpx
 
+from app.domain.services.i_tmdb_client import ITmdbClient
+
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 
 _client: httpx.AsyncClient | None = None
@@ -21,8 +23,9 @@ async def close_tmdb_client() -> None:
         _client = None
 
 
-async def tmdb_get(path: str, params: dict | None = None) -> dict:
-    assert _client is not None, "TMDB client not initialised"
-    response = await _client.get(path, params=params)
-    response.raise_for_status()
-    return response.json()
+class TmdbClient(ITmdbClient):
+    async def get(self, path: str, params: dict | None = None) -> dict:
+        assert _client is not None, "TMDB client not initialised"
+        response = await _client.get(path, params=params)
+        response.raise_for_status()
+        return response.json()

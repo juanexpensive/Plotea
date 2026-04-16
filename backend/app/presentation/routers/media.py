@@ -1,11 +1,17 @@
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.domain.services.i_tmdb_client import ITmdbClient
 from app.domain.usecases.media.get_home_feed import GetHomeFeedUseCase
 from app.domain.usecases.media.get_media_detail import GetMediaDetailUseCase
+from app.infrastructure.tmdb import TmdbClient
 from app.presentation.schemas.media import HomeFeedResponse, MediaDetailResponse, MediaItemResponse
 
 router = APIRouter(prefix="/media", tags=["media"])
+
+
+def get_tmdb_client() -> ITmdbClient:
+    return TmdbClient()
 
 
 def _to_response(item) -> MediaItemResponse:
@@ -20,9 +26,9 @@ def _to_response(item) -> MediaItemResponse:
 
 
 @router.get("/home", response_model=HomeFeedResponse)
-async def get_home_feed() -> HomeFeedResponse:
+async def get_home_feed(tmdb: ITmdbClient = Depends(get_tmdb_client)) -> HomeFeedResponse:
     try:
-        feed = await GetHomeFeedUseCase().execute()
+        feed = await GetHomeFeedUseCase(tmdb).execute()
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=502, detail=f"TMDB error: {exc.response.status_code}")
     except httpx.RequestError:
@@ -36,11 +42,15 @@ async def get_home_feed() -> HomeFeedResponse:
 
 
 @router.get("/{media_type}/{tmdb_id}", response_model=MediaDetailResponse)
-async def get_media_detail(media_type: str, tmdb_id: int) -> MediaDetailResponse:
+async def get_media_detail(
+    media_type: str,
+    tmdb_id: int,
+    tmdb: ITmdbClient = Depends(get_tmdb_client),
+) -> MediaDetailResponse:
     if media_type not in ("movie", "tv"):
         raise HTTPException(status_code=400, detail="media_type must be 'movie' or 'tv'")
     try:
-        detail = await GetMediaDetailUseCase().execute(media_type, tmdb_id)
+        detail = await GetMediaDetailUseCase(tmdb).execute(media_type, tmdb_id)
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=502, detail=f"TMDB error: {exc.response.status_code}")
     except httpx.RequestError:

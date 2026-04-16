@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 
 from app.domain.entities.media import MediaItem
-from app.infrastructure.tmdb import tmdb_get
+from app.domain.services.i_tmdb_client import ITmdbClient
 
 
 @dataclass
@@ -41,11 +41,14 @@ def _parse_mixed(item: dict) -> MediaItem:
 
 
 class GetHomeFeedUseCase:
+    def __init__(self, tmdb: ITmdbClient) -> None:
+        self._tmdb = tmdb
+
     async def execute(self) -> HomeFeed:
         trending_raw, movies_raw, tv_raw = await asyncio.gather(
-            tmdb_get("/trending/all/week"),
-            tmdb_get("/movie/popular"),
-            tmdb_get("/tv/popular"),
+            self._tmdb.get("/trending/all/week"),
+            self._tmdb.get("/movie/popular"),
+            self._tmdb.get("/tv/popular"),
         )
         return HomeFeed(
             trending=[_parse_mixed(i) for i in trending_raw["results"][:10]],
