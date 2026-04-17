@@ -1,15 +1,21 @@
 import axios from 'axios';
+import { tokenStorage } from '../storage/tokenStorage';
 
-// IP local del PC en la red WiFi.
-// Cámbiala si cambias de red o de PC.
-// Para encontrarla: ejecuta `ipconfig` y busca "Dirección IPv4" bajo el adaptador WiFi.
-const BACKEND_URL = 'https://trinity-ninetieth-satirical.ngrok-free.dev';
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: BACKEND_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+api.interceptors.request.use(async (config) => {
+  const token = await tokenStorage.get();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export default api;
