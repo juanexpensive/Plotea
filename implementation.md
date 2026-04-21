@@ -45,3 +45,10 @@
 - Expected files or systems: tests, docs
 - Validation: pytest pasa y el setup manual queda claro
 - Review gate: riesgos residuales explicitados
+
+### Phase 5: Native mobile recovery
+
+- Goal: mover forgot/reset a screens nativas de Expo Router
+- Expected files or systems: mobile auth screens, backend email link config
+- Validation: login navega a forgot nativo y el correo apunta al reset mobile
+- Review gate: TypeScript sin errores y flujo backend intacto

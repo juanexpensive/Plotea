@@ -36,6 +36,19 @@ export async function logout(): Promise<void> {
   }
 }
 
+export async function forgotPassword(email: string): Promise<string> {
+  const response = await api.post<{ message: string }>('/auth/forgot-password', { email });
+  return response.data.message;
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<string> {
+  const response = await api.post<{ message: string }>('/auth/reset-password', {
+    token,
+    new_password: newPassword,
+  });
+  return response.data.message;
+}
+
 export async function hasValidSession(): Promise<boolean> {
   const token = await tokenStorage.getAccessToken();
   if (!token) {

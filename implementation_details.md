@@ -82,6 +82,23 @@
 - Status:
 - completed
 
+### Phase 5
+
+- Detailed tasks:
+- Crear screens `forgot-password` y `reset-password` en Expo Router
+- Mover el acceso desde login a navegacion nativa
+- Hacer que el email use `plotskip://reset-password`
+- Findings:
+- El `scheme` `plotskip` ya existia en `app.json`, asi que no ha hecho falta tocar configuracion de Expo
+- Mantener el token editable en la screen de reset da fallback si el deep link falla
+- Tests:
+- `npm exec tsc -- --noEmit`
+- `python -m pytest ..\\tests\\test_password_reset.py -q`
+- Review notes:
+- Reiniciar backend para que relea `PASSWORD_RESET_BASE_URL`
+- Status:
+- completed
+
 ## Deferred Work
 
 - Integrar el flujo final en mobile
@@ -94,6 +111,7 @@
 - Likely code review callouts:
 - Las vistas HTML son deliberadamente temporales y convendria etiquetarlas como flujo de prueba
 - El enlace real del email depende de configurar bien `PASSWORD_RESET_BASE_URL`
+- En Expo Go, el comportamiento del deep link puede variar mas que en una build nativa
 - Residual risks:
 - No se ha hecho una llamada real a Resend en esta sesion
-- El flujo visual final en mobile sigue pendiente
+- El flujo visual final en mobile ya existe, pero falta pulir la UX

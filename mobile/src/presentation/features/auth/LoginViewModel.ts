@@ -1,8 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking } from 'react-native';
 import { login } from '../../../data/repositories/AuthRepository';
-import { BACKEND_URL } from '../../../infrastructure/http/backendUrl';
 import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
 import { tokenStorage } from '../../../infrastructure/storage/tokenStorage';
 
@@ -46,8 +44,8 @@ export function useLoginViewModel() {
     router.replace('/register');
   }
 
-  async function goToForgotPassword() {
-    await Linking.openURL(`${BACKEND_URL}/auth/forgot-password/view`);
+  function goToForgotPassword() {
+    router.push('/forgot-password');
   }
 
   return {

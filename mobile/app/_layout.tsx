@@ -4,8 +4,22 @@ export default function RootLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="login" options={{ headerShown: true, title: 'Iniciar sesión', headerBackVisible: false }} />
-      <Stack.Screen name="register" options={{ headerShown: true, title: 'Crear cuenta', headerBackVisible: false }} />
+      <Stack.Screen
+        name="login"
+        options={{ headerShown: true, title: 'Iniciar sesion', headerBackVisible: false }}
+      />
+      <Stack.Screen
+        name="register"
+        options={{ headerShown: true, title: 'Crear cuenta', headerBackVisible: false }}
+      />
+      <Stack.Screen
+        name="forgot-password"
+        options={{ headerShown: true, title: 'Recuperar contrasena' }}
+      />
+      <Stack.Screen
+        name="reset-password"
+        options={{ headerShown: true, title: 'Nueva contrasena' }}
+      />
       <Stack.Screen name="detail" />
     </Stack>
   );
