@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { isUnauthorizedError } from './apiErrors';
+import { BACKEND_URL } from './backendUrl';
 import { tokenStorage } from '../storage/tokenStorage';
-
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL ?? 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: BACKEND_URL,
@@ -17,5 +17,15 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (isUnauthorizedError(error)) {
+      await tokenStorage.clear();
+    }
+    return Promise.reject(error);
+  },
+);
 
 export default api;

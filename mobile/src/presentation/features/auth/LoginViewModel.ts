@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { login } from '../../../data/repositories/AuthRepository';
+import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
+import { tokenStorage } from '../../../infrastructure/storage/tokenStorage';
 
 export function useLoginViewModel() {
   const [email, setEmail] = useState('');
@@ -16,8 +18,9 @@ export function useLoginViewModel() {
     setLoading(true);
     setError(null);
     try {
-      await login(email, password);
-      router.replace('/home');
+      const tokens = await login(email, password);
+      await tokenStorage.save(tokens.access_token);
+      router.replace('/(tabs)/home');
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 401) {
@@ -25,7 +28,7 @@ export function useLoginViewModel() {
       } else if (status === 422) {
         setError('Datos inválidos. Revisa el email.');
       } else {
-        setError('Error de conexión. ¿Está el backend corriendo?');
+        setError(getApiErrorMessage(err, 'Error de conexión al iniciar sesión.'));
       }
     } finally {
       setLoading(false);
