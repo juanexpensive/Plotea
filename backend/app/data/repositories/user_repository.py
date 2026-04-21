@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models.user import User as UserModel
@@ -31,6 +31,14 @@ class UserRepository(IUserRepository):
         await self._session.commit()
         await self._session.refresh(user)
         return self._to_entity(user)
+
+    async def update_password_hash(self, user_id: int, password_hash: str) -> None:
+        await self._session.execute(
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(password_hash=password_hash)
+        )
+        await self._session.commit()
 
     def _to_entity(self, model: UserModel) -> User:
         return User(

@@ -15,3 +15,6 @@ class IUserRepository(ABC):
 
     @abstractmethod
     async def create(self, email: str, username: str, password_hash: str) -> User: ...
+
+    @abstractmethod
+    async def update_password_hash(self, user_id: int, password_hash: str) -> None: ...

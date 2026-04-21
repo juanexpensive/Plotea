@@ -1,25 +1,49 @@
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.data.repositories.password_reset_repository import PasswordResetRepository
 from app.data.repositories.refresh_token_repository import RefreshTokenRepository
 from app.data.repositories.user_repository import UserRepository
 from app.domain.entities.user import User
+from app.domain.services.i_email_sender import IEmailSender
+from app.domain.usecases.auth.forgot_password import ForgotPasswordUseCase
 from app.domain.usecases.auth.login import LoginUseCase
 from app.domain.usecases.auth.logout import LogoutUseCase
 from app.domain.usecases.auth.refresh import RefreshUseCase
 from app.domain.usecases.auth.register import RegisterUseCase
+from app.domain.usecases.auth.reset_password import ResetPasswordUseCase
 from app.infrastructure.database import get_db
 from app.infrastructure.limiter import limiter
-from app.presentation.dependencies import get_current_user
+from app.presentation.dependencies import (
+    get_current_user,
+    get_password_reset_email_sender,
+)
 from app.presentation.schemas.auth import (
+    ForgotPasswordRequest,
     LoginRequest,
+    MessageResponse,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserResponse,
 )
+from app.presentation.views.password_reset_pages import (
+    render_forgot_password_page,
+    render_reset_password_page,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.get("/forgot-password/view")
+async def forgot_password_view():
+    return render_forgot_password_page()
+
+
+@router.get("/reset-password/view")
+async def reset_password_view(token: str = ""):
+    return render_reset_password_page(token)
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -85,3 +109,36 @@ async def me(current_user: User = Depends(get_current_user)) -> UserResponse:
         display_name=current_user.display_name,
         created_at=current_user.created_at,
     )
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+@limiter.limit("5/minute")
+async def forgot_password(
+    request: Request,
+    data: ForgotPasswordRequest,
+    session: AsyncSession = Depends(get_db),
+    email_sender: IEmailSender = Depends(get_password_reset_email_sender),
+) -> MessageResponse:
+    use_case = ForgotPasswordUseCase(
+        UserRepository(session),
+        PasswordResetRepository(session),
+        email_sender,
+    )
+    await use_case.execute(str(data.email))
+    return MessageResponse(
+        message="Si el email existe, enviaremos instrucciones para restablecer la contraseña"
+    )
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(
+    data: ResetPasswordRequest,
+    session: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    use_case = ResetPasswordUseCase(
+        UserRepository(session),
+        PasswordResetRepository(session),
+        RefreshTokenRepository(session),
+    )
+    await use_case.execute(data.token, data.new_password)
+    return MessageResponse(message="Contraseña restablecida correctamente")
