@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { Linking } from 'react-native';
 import { login } from '../../../data/repositories/AuthRepository';
+import { BACKEND_URL } from '../../../infrastructure/http/backendUrl';
 import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
 import { tokenStorage } from '../../../infrastructure/storage/tokenStorage';
 
@@ -15,20 +17,25 @@ export function useLoginViewModel() {
       setError('Rellena todos los campos');
       return;
     }
+
     setLoading(true);
     setError(null);
+
     try {
       const tokens = await login(email, password);
-      await tokenStorage.save(tokens.access_token);
+      await tokenStorage.save({
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+      });
       router.replace('/(tabs)/home');
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 401) {
         setError('Credenciales incorrectas');
       } else if (status === 422) {
-        setError('Datos inválidos. Revisa el email.');
+        setError('Datos invalidos. Revisa el email.');
       } else {
-        setError(getApiErrorMessage(err, 'Error de conexión al iniciar sesión.'));
+        setError(getApiErrorMessage(err, 'Error de conexion al iniciar sesion.'));
       }
     } finally {
       setLoading(false);
@@ -39,5 +46,19 @@ export function useLoginViewModel() {
     router.replace('/register');
   }
 
-  return { email, setEmail, password, setPassword, loading, error, handleLogin, goToRegister };
+  async function goToForgotPassword() {
+    await Linking.openURL(`${BACKEND_URL}/auth/forgot-password/view`);
+  }
+
+  return {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    loading,
+    error,
+    handleLogin,
+    goToRegister,
+    goToForgotPassword,
+  };
 }

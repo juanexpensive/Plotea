@@ -29,17 +29,38 @@ def render_forgot_password_page() -> HTMLResponse:
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         message.textContent = "Enviando...";
+        message.className = "message";
 
         const email = document.getElementById("email").value;
-        const response = await fetch("/auth/forgot-password", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
+        try {
+          const response = await fetch("/auth/forgot-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
 
-        const data = await response.json();
-        message.textContent = data.message || "No se pudo completar la solicitud.";
-        message.className = response.ok ? "message success" : "message error";
+          const responseText = await response.text();
+          let data = {};
+
+          try {
+            data = JSON.parse(responseText);
+          } catch {
+            data = {};
+          }
+
+          if (!response.ok) {
+            const detail = data.detail || data.message || responseText || "No se pudo completar la solicitud.";
+            message.textContent = detail;
+            message.className = "message error";
+            return;
+          }
+
+          message.textContent = data.message || "Solicitud completada.";
+          message.className = "message success";
+        } catch (error) {
+          message.textContent = "Error de red o backend no disponible.";
+          message.className = "message error";
+        }
       });
     </script>
   </body>
@@ -77,17 +98,39 @@ def render_reset_password_page(token: str) -> HTMLResponse:
       form.addEventListener("submit", async (event) => {{
         event.preventDefault();
         message.textContent = "Actualizando...";
+        message.className = "message";
 
         const newPassword = document.getElementById("new-password").value;
-        const response = await fetch("/auth/reset-password", {{
-          method: "POST",
-          headers: {{ "Content-Type": "application/json" }},
-          body: JSON.stringify({{ token, new_password: newPassword }}),
-        }});
 
-        const data = await response.json();
-        message.textContent = data.message || data.detail || "No se pudo cambiar la contrasena.";
-        message.className = response.ok ? "message success" : "message error";
+        try {{
+          const response = await fetch("/auth/reset-password", {{
+            method: "POST",
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify({{ token, new_password: newPassword }}),
+          }});
+
+          const responseText = await response.text();
+          let data = {{}};
+
+          try {{
+            data = JSON.parse(responseText);
+          }} catch {{
+            data = {{}};
+          }}
+
+          if (!response.ok) {{
+            const detail = data.detail || data.message || responseText || "No se pudo cambiar la contrasena.";
+            message.textContent = detail;
+            message.className = "message error";
+            return;
+          }}
+
+          message.textContent = data.message || "Contrasena actualizada.";
+          message.className = "message success";
+        }} catch (error) {{
+          message.textContent = "Error de red o backend no disponible.";
+          message.className = "message error";
+        }}
       }});
     </script>
   </body>

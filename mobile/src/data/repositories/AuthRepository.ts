@@ -22,8 +22,22 @@ export async function getMe(): Promise<User> {
   return response.data;
 }
 
+export async function logout(): Promise<void> {
+  const refreshToken = await tokenStorage.getRefreshToken();
+  if (!refreshToken) {
+    await tokenStorage.clear();
+    return;
+  }
+
+  try {
+    await api.post('/auth/logout', { refresh_token: refreshToken });
+  } finally {
+    await tokenStorage.clear();
+  }
+}
+
 export async function hasValidSession(): Promise<boolean> {
-  const token = await tokenStorage.get();
+  const token = await tokenStorage.getAccessToken();
   if (!token) {
     return false;
   }

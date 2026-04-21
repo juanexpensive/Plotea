@@ -1,8 +1,8 @@
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useProfileViewModel } from './ProfileViewModel';
 
 export default function ProfileScreen() {
-  const { user, loading, error } = useProfileViewModel();
+  const { user, loading, loggingOut, error, handleLogout } = useProfileViewModel();
 
   if (loading) {
     return (
@@ -31,6 +31,20 @@ export default function ProfileScreen() {
       <Text style={styles.name}>{user.display_name ?? user.username}</Text>
       <Text style={styles.meta}>@{user.username}</Text>
       <Text style={styles.meta}>{user.email}</Text>
+      <Pressable
+        style={({ pressed }) => [
+          styles.logoutButton,
+          pressed ? styles.logoutButtonPressed : null,
+          loggingOut ? styles.logoutButtonDisabled : null,
+        ]}
+        onPress={handleLogout}
+        disabled={loggingOut}
+      >
+        <Text style={styles.logoutButtonText}>
+          {loggingOut ? 'Cerrando sesion...' : 'Cerrar sesion'}
+        </Text>
+      </Pressable>
+      {error ? <Text style={styles.inlineError}>{error}</Text> : null}
     </View>
   );
 }
@@ -80,6 +94,33 @@ const styles = StyleSheet.create({
     color: '#ccc',
     fontSize: 14,
     marginBottom: 4,
+  },
+  logoutButton: {
+    marginTop: 32,
+    width: '100%',
+    maxWidth: 280,
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#7f1d1d',
+    alignItems: 'center',
+  },
+  logoutButtonPressed: {
+    opacity: 0.85,
+  },
+  logoutButtonDisabled: {
+    opacity: 0.6,
+  },
+  logoutButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  inlineError: {
+    color: '#fca5a5',
+    fontSize: 14,
+    marginTop: 14,
+    textAlign: 'center',
   },
   errorText: {
     color: '#f66',
