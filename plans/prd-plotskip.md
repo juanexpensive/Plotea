@@ -46,7 +46,7 @@ El modelo original describe `listas: List<Lista>`, `reseñas: List<Reseña>` com
 
 **Solución:** Tablas intermedias explícitas con FKs, restricciones UNIQUE donde aplique, e índices compuestos. El PRD define el modelo completo más abajo.
 
-**Hosting:** PostgreSQL autogestionado (Docker local en desarrollo, VPS o Railway en producción).
+**Hosting:** Neon PostgreSQL para desarrollo y producción.
 
 ### E6 — Ausencia de timestamps en todos los modelos
 Sin `created_at` y `updated_at` en cada entidad, el feed, el diario y las estadísticas son imposibles de implementar correctamente.

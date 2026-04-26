@@ -1,5 +1,6 @@
 # Node
 node_modules/
+.tools/
 
 # Python
 backend/.venv/
@@ -8,3 +9,4 @@ backend/.venv/
 
 # Secrets
 backend/.env
+mobile/.env.local

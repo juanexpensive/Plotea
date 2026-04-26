@@ -1,12 +1,6 @@
-Ver la BD — dos opciones:
+Ver la BD:
 
-Opción A (sin instalar nada): psql desde el propio Docker:
-
-
-docker exec -it plotskip-db-1 psql -U plotskip -d plotskip
-# luego: \dt para ver tablas, SELECT * FROM users; etc.
-# salir: \q
-Opción B (recomendada): instala TablePlus o DBeaver (ambos gratuitos). Conexión: host=localhost, port=5432, user=plotskip, pass=plotskip, db=plotskip.
+Instala TablePlus o DBeaver (ambos gratuitos) y conecta usando la connection string de Neon.
 
 Resumen:
 
@@ -15,7 +9,7 @@ Resumen:
 
 ## Setup nuevo PC
 - Creado `.venv` con Python 3.12 e instaladas dependencias
-- Docker compose levanta PostgreSQL 16 en puerto 5432
+- `.env` apunta a Neon mediante `DATABASE_URL`
 - `alembic upgrade head` crea las 3 tablas
 
 ## Implementado: autenticación backend (Fases 1-3)

@@ -15,7 +15,7 @@
 
 ### Errores encontrados
 
-- **Docker no arrancaba** → Docker Desktop no estaba abierto
+- **Conexión a BD no configurada** → faltaba poner `DATABASE_URL` con la connection string de Neon
 - **`.venv` no existía** → había que crearlo con `py -3.12 -m venv .venv` y hacer `pip install -r requirements.txt`
 - **`alembic` no reconocido** → el venv estaba activo pero faltaba `pip install -r requirements.txt`
 - **`expo-linking` no resuelto** → faltaba instalarlo: `npx expo install expo-linking`
@@ -23,9 +23,9 @@
 - **package.json inválido (trailing comma)** → quedó una coma sobrante al borrar `react-native-web`, se corrigió a mano
 - **App se quedaba pillada al pulsar botones** → el móvil no podía alcanzar `localhost:8000`; solución: ngrok para exponer el backend públicamente
 - **`--tunnel` de Expo fallaba** → ngrok necesitaba authtoken configurado (`ngrok config add-authtoken`)
-- **Espacio en la URL de ngrok en api.ts** → URL con espacio al inicio causaba error silencioso, corregido
+- **Espacio en la URL de ngrok** → URL con espacio al inicio causaba error silencioso, corregido
 
 ### Cómo conectar móvil sin WiFi compartida
-1. `ngrok http 8000` → copia la URL `https://xxx.ngrok-free.dev`
-2. Pégala en `mobile/src/infrastructure/http/api.ts`
-3. `npx expo start --tunnel --clear`
+1. `ngrok 8000` → copia la URL `https://xxx.ngrok-free.dev`
+2. Pégala en `mobile/.env.local` como `EXPO_PUBLIC_BACKEND_URL=https://xxx.ngrok-free.dev`
+3. `npx expo start --tunnel`

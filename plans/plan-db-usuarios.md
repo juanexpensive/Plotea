@@ -8,7 +8,7 @@ Fecha: 2026-04-01
 ## Decisiones fijas (no cambiar)
 
 - **ORM:** SQLAlchemy 2.0 async (`AsyncSession`) + Alembic para migraciones versionadas
-- **BD dev:** PostgreSQL 16 vía Docker local. **BD tests:** SQLite en memoria (pytest)
+- **BD dev:** Neon PostgreSQL. **BD tests:** SQLite en memoria (pytest)
 - **Auth:** JWT con python-jose — `access_token` 15 min, `refresh_token` 30 días almacenado en BD como hash bcrypt
 - **Passwords:** bcrypt (passlib[bcrypt])
 - **Rate limiting:** slowapi en `/auth/login` y `/auth/register`

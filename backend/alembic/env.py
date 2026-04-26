@@ -13,7 +13,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Importar Base y todos los modelos para que --autogenerate los detecte
-from app.infrastructure.database import Base  # noqa: E402
+from app.infrastructure.database import Base, get_connect_args, normalize_database_url  # noqa: E402
 from app.data.models.user import User  # noqa: F401, E402
 from app.data.models.refresh_token import RefreshToken  # noqa: F401, E402
 from app.data.models.password_reset_token import PasswordResetToken  # noqa: F401, E402
@@ -24,7 +24,7 @@ target_metadata = Base.metadata
 from app.infrastructure.config import get_settings  # noqa: E402
 
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+config.set_main_option("sqlalchemy.url", normalize_database_url(settings.database_url))
 
 
 def run_migrations_offline() -> None:
@@ -50,6 +50,7 @@ async def run_async_migrations() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=get_connect_args(settings.database_url),
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

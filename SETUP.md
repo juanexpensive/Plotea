@@ -16,7 +16,7 @@ Instala estas herramientas si no las tienes:
 | ngrok | ngrok.com/download | cualquiera |
 | Git | git-scm.com | cualquiera |
 
-> Docker ya no es necesario — la base de datos está en Neon (PostgreSQL cloud).
+> La base de datos está en Neon (PostgreSQL cloud).
 > **Node 24 es incompatible con `@expo/ngrok`** — usa Node 20 LTS obligatoriamente para que funcione `--tunnel`.
 
 ---
@@ -170,19 +170,24 @@ npm ci
 ```bash
 cd backend
 .venv\Scripts\activate
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
 **Terminal 2 — ngrok (expone el backend al móvil):**
 ```bash
-ngrok http 8000
+ngrok 8000
 ```
-Copia la URL `https://xxx.ngrok-free.dev` y ponla en `mobile/src/infrastructure/http/api.ts`.
+Copia la URL `https://xxx.ngrok-free.dev` y ponla en `mobile/.env.local`:
+
+```env
+EXPO_PUBLIC_BACKEND_URL=https://xxx.ngrok-free.dev
+```
 
 **Terminal 3 — Expo:**
 ```bash
 cd mobile
-npx expo start --tunnel --clear
+npx expo start --tunnel
 ```
 
 Escanea el QR con Expo Go en el móvil.
@@ -205,7 +210,7 @@ set PYTHONPATH=. && pytest ../tests/ -v
 | `El sistema no puede encontrar la ruta .venv` | El venv no existe en este PC | Paso 2 |
 | `alembic: command not found` | El venv no está activo | Paso 3 |
 | `connection refused` al llamar al backend | El servidor no está arrancado | Arranque diario |
-| `Network Error` en la app móvil | URL de ngrok no actualizada en api.ts | Copia la URL nueva de ngrok en `api.ts` |
+| `Network Error` en la app móvil | URL de ngrok no actualizada en `mobile/.env.local` | Copia la URL nueva de ngrok en `EXPO_PUBLIC_BACKEND_URL` y reinicia Expo |
 | `failed to start tunnel` en Expo | ngrok no tiene authtoken | Paso 7 |
 | `ERESOLVE could not resolve` en npm | Usar `npm install` en vez de `npm ci` | Paso 8 |
 | `failed to start tunnel` / `remote gone away` | Token de `@expo/ngrok` en ruta incorrecta | Paso 7b |
