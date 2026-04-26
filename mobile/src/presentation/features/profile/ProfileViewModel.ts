@@ -1,18 +1,24 @@
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { getMe, logout } from '../../../data/repositories/AuthRepository';
+import { getMyMediaStatuses } from '../../../data/repositories/MediaRepository';
 import { User } from '../../../domain/entities/auth';
+import { MediaStatusLists } from '../../../domain/entities/media';
 import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
 
 export function useProfileViewModel() {
   const [user, setUser] = useState<User | null>(null);
+  const [mediaStatuses, setMediaStatuses] = useState<MediaStatusLists>({ watched: [], watchlist: [] });
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getMe()
-      .then(setUser)
+    Promise.all([getMe(), getMyMediaStatuses()])
+      .then(([user, mediaStatuses]) => {
+        setUser(user);
+        setMediaStatuses(mediaStatuses);
+      })
       .catch((error) => {
         if (isUnauthorizedError(error)) {
           router.replace('/login');
@@ -38,5 +44,5 @@ export function useProfileViewModel() {
     }
   }
 
-  return { user, loading, loggingOut, error, handleLogout };
+  return { user, mediaStatuses, loading, loggingOut, error, handleLogout };
 }

@@ -1,12 +1,13 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PersonalMediaStatus } from '../../../domain/entities/media';
 import { useDetailViewModel } from './DetailViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w500';
 
 export default function DetailScreen() {
   const { tmdb_id, media_type } = useLocalSearchParams<{ tmdb_id: string; media_type: string }>();
-  const { detail, loading, error } = useDetailViewModel(media_type, Number(tmdb_id));
+  const { detail, status, loading, savingStatus, error, handleStatusPress } = useDetailViewModel(media_type, Number(tmdb_id));
 
   if (loading) {
     return (
@@ -44,11 +45,54 @@ export default function DetailScreen() {
         {detail.genres.length > 0 && (
           <Text style={styles.genres}>{detail.genres.join(', ')}</Text>
         )}
+        <View style={styles.statusActions}>
+          <StatusButton
+            label="Vista"
+            active={status === 'watched'}
+            disabled={savingStatus}
+            onPress={() => handleStatusPress('watched')}
+          />
+          <StatusButton
+            label="Quiero verla"
+            active={status === 'watchlist'}
+            disabled={savingStatus}
+            onPress={() => handleStatusPress('watchlist')}
+          />
+        </View>
         {detail.overview ? (
           <Text style={styles.overview}>{detail.overview}</Text>
         ) : null}
       </View>
     </ScrollView>
+  );
+}
+
+function StatusButton({
+  label,
+  active,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.statusButton,
+        active ? styles.statusButtonActive : null,
+        pressed ? styles.statusButtonPressed : null,
+        disabled ? styles.statusButtonDisabled : null,
+      ]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <Text style={[styles.statusButtonText, active ? styles.statusButtonTextActive : null]}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -89,6 +133,41 @@ const styles = StyleSheet.create({
   genres: {
     color: '#aaa',
     fontSize: 13,
+  },
+  statusActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  statusButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#555',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  statusButtonActive: {
+    backgroundColor: '#fff',
+    borderColor: '#fff',
+  },
+  statusButtonPressed: {
+    opacity: 0.8,
+  },
+  statusButtonDisabled: {
+    opacity: 0.55,
+  },
+  statusButtonText: {
+    color: '#ddd',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  statusButtonTextActive: {
+    color: '#111',
   },
   overview: {
     color: '#ccc',

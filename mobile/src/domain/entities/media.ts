@@ -13,6 +13,25 @@ export interface MediaDetail extends MediaItem {
   runtime: number | null;
 }
 
+export type PersonalMediaStatus = 'watched' | 'watchlist' | null;
+
+export interface MediaStatus {
+  tmdb_id: number;
+  media_type: 'movie' | 'tv';
+  status: PersonalMediaStatus;
+}
+
+export interface SavedMediaStatus {
+  tmdb_id: number;
+  media_type: 'movie' | 'tv';
+  status: Exclude<PersonalMediaStatus, null>;
+}
+
+export interface MediaStatusLists {
+  watched: SavedMediaStatus[];
+  watchlist: SavedMediaStatus[];
+}
+
 export interface HomeFeed {
   trending: MediaItem[];
   popular_movies: MediaItem[];

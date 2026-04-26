@@ -17,6 +17,7 @@ from app.infrastructure.database import Base, get_connect_args, normalize_databa
 from app.data.models.user import User  # noqa: F401, E402
 from app.data.models.refresh_token import RefreshToken  # noqa: F401, E402
 from app.data.models.password_reset_token import PasswordResetToken  # noqa: F401, E402
+from app.data.models.user_media_status import UserMediaStatus  # noqa: F401, E402
 
 target_metadata = Base.metadata
 

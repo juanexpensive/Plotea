@@ -1,8 +1,9 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SavedMediaStatus } from '../../../domain/entities/media';
 import { useProfileViewModel } from './ProfileViewModel';
 
 export default function ProfileScreen() {
-  const { user, loading, loggingOut, error, handleLogout } = useProfileViewModel();
+  const { user, mediaStatuses, loading, loggingOut, error, handleLogout } = useProfileViewModel();
 
   if (loading) {
     return (
@@ -31,6 +32,10 @@ export default function ProfileScreen() {
       <Text style={styles.name}>{user.display_name ?? user.username}</Text>
       <Text style={styles.meta}>@{user.username}</Text>
       <Text style={styles.meta}>{user.email}</Text>
+      <View style={styles.library}>
+        <MediaStatusSection title="Vistas" items={mediaStatuses.watched} />
+        <MediaStatusSection title="Quiero verlas" items={mediaStatuses.watchlist} />
+      </View>
       <Pressable
         style={({ pressed }) => [
           styles.logoutButton,
@@ -49,12 +54,34 @@ export default function ProfileScreen() {
   );
 }
 
+function MediaStatusSection({ title, items }: { title: string; items: SavedMediaStatus[] }) {
+  return (
+    <View style={styles.statusSection}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionCount}>{items.length}</Text>
+      </View>
+      {items.length === 0 ? (
+        <Text style={styles.emptyText}>Nada guardado todavia.</Text>
+      ) : (
+        items.map((item) => (
+          <View key={`${item.media_type}-${item.tmdb_id}`} style={styles.statusItem}>
+            <Text style={styles.statusItemText}>
+              {item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #{item.tmdb_id}
+            </Text>
+          </View>
+        ))
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#111',
     alignItems: 'center',
-    paddingTop: 80,
+    paddingTop: 64,
     padding: 24,
   },
   centered: {
@@ -95,8 +122,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 4,
   },
+  library: {
+    width: '100%',
+    marginTop: 28,
+    gap: 14,
+  },
+  statusSection: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 8,
+    padding: 14,
+    backgroundColor: '#181818',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  sectionCount: {
+    color: '#aaa',
+    fontSize: 13,
+  },
+  emptyText: {
+    color: '#777',
+    fontSize: 13,
+  },
+  statusItem: {
+    borderTopWidth: 1,
+    borderTopColor: '#2b2b2b',
+    paddingVertical: 10,
+  },
+  statusItemText: {
+    color: '#ddd',
+    fontSize: 14,
+  },
   logoutButton: {
-    marginTop: 32,
+    marginTop: 28,
     width: '100%',
     maxWidth: 280,
     borderRadius: 10,

@@ -15,6 +15,7 @@ from app.infrastructure.tmdb import close_tmdb_client, init_tmdb_client
 import app.data.models.user  # noqa: F401, E402
 import app.data.models.refresh_token  # noqa: F401, E402
 import app.data.models.password_reset_token  # noqa: F401, E402
+import app.data.models.user_media_status  # noqa: F401, E402
 
 from app.presentation.routers import auth as auth_router  # noqa: E402
 from app.presentation.routers import media as media_router  # noqa: E402
