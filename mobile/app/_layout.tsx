@@ -21,6 +21,10 @@ export default function RootLayout() {
         options={{ headerShown: true, title: 'Nueva contrasena' }}
       />
       <Stack.Screen name="detail" />
+      <Stack.Screen
+        name="media-status-list"
+        options={{ headerShown: true, title: 'Mi lista' }}
+      />
     </Stack>
   );
 }

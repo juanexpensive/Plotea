@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SavedMediaStatus } from '../../../domain/entities/media';
 import { useProfileViewModel } from './ProfileViewModel';
 
@@ -24,7 +25,7 @@ export default function ProfileScreen() {
   const initial = (user.display_name || user.username).charAt(0).toUpperCase();
 
   return (
-    <View style={styles.screen}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent}>
       <Text style={styles.title}>Perfil</Text>
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{initial}</Text>
@@ -33,8 +34,16 @@ export default function ProfileScreen() {
       <Text style={styles.meta}>@{user.username}</Text>
       <Text style={styles.meta}>{user.email}</Text>
       <View style={styles.library}>
-        <MediaStatusSection title="Vistas" items={mediaStatuses.watched} />
-        <MediaStatusSection title="Quiero verlas" items={mediaStatuses.watchlist} />
+        <MediaStatusSection
+          title="Vistas"
+          items={mediaStatuses.watched}
+          onPress={() => router.push({ pathname: '/media-status-list', params: { status: 'watched' } })}
+        />
+        <MediaStatusSection
+          title="Quiero verlas"
+          items={mediaStatuses.watchlist}
+          onPress={() => router.push({ pathname: '/media-status-list', params: { status: 'watchlist' } })}
+        />
       </View>
       <Pressable
         style={({ pressed }) => [
@@ -50,13 +59,24 @@ export default function ProfileScreen() {
         </Text>
       </Pressable>
       {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-    </View>
+    </ScrollView>
   );
 }
 
-function MediaStatusSection({ title, items }: { title: string; items: SavedMediaStatus[] }) {
+function MediaStatusSection({
+  title,
+  items,
+  onPress,
+}: {
+  title: string;
+  items: SavedMediaStatus[];
+  onPress: () => void;
+}) {
   return (
-    <View style={styles.statusSection}>
+    <Pressable
+      style={({ pressed }) => [styles.statusSection, pressed ? styles.statusSectionPressed : null]}
+      onPress={onPress}
+    >
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{title}</Text>
         <Text style={styles.sectionCount}>{items.length}</Text>
@@ -72,7 +92,7 @@ function MediaStatusSection({ title, items }: { title: string; items: SavedMedia
           </View>
         ))
       )}
-    </View>
+    </Pressable>
   );
 }
 
@@ -80,6 +100,8 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#111',
+  },
+  screenContent: {
     alignItems: 'center',
     paddingTop: 64,
     padding: 24,
@@ -134,6 +156,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 14,
     backgroundColor: '#181818',
+  },
+  statusSectionPressed: {
+    opacity: 0.82,
   },
   sectionHeader: {
     flexDirection: 'row',
