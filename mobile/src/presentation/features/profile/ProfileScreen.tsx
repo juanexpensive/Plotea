@@ -4,7 +4,7 @@ import { SavedMediaStatus } from '../../../domain/entities/media';
 import { useProfileViewModel } from './ProfileViewModel';
 
 export default function ProfileScreen() {
-  const { user, mediaStatuses, loading, loggingOut, error, handleLogout } = useProfileViewModel();
+  const { user, mediaStatuses, watchLogCount, loading, loggingOut, error, handleLogout } = useProfileViewModel();
 
   if (loading) {
     return (
@@ -34,6 +34,18 @@ export default function ProfileScreen() {
       <Text style={styles.meta}>@{user.username}</Text>
       <Text style={styles.meta}>{user.email}</Text>
       <View style={styles.library}>
+        <Pressable
+          style={({ pressed }) => [styles.statusSection, pressed ? styles.statusSectionPressed : null]}
+          onPress={() => router.push('/watchlog-list')}
+        >
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Diario</Text>
+            <Text style={styles.sectionCount}>{watchLogCount}</Text>
+          </View>
+          <Text style={styles.emptyText}>
+            {watchLogCount === 0 ? 'Todavia no has registrado visionados.' : 'Ver historial de visionados.'}
+          </Text>
+        </Pressable>
         <MediaStatusSection
           title="Vistas"
           items={mediaStatuses.watched}

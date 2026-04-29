@@ -1,5 +1,5 @@
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.repositories.media_status_repository import MediaStatusRepository
@@ -9,6 +9,7 @@ from app.domain.usecases.media.get_home_feed import GetHomeFeedUseCase
 from app.domain.usecases.media.get_media_detail import GetMediaDetailUseCase
 from app.domain.usecases.media.get_media_status import GetMediaStatusUseCase
 from app.domain.usecases.media.list_media_statuses import ListMediaStatusesUseCase
+from app.domain.usecases.media.search_media import SearchMediaUseCase
 from app.domain.usecases.media.set_media_status import SetMediaStatusUseCase
 from app.infrastructure.database import get_db
 from app.infrastructure.tmdb import TmdbClient
@@ -68,6 +69,22 @@ async def get_home_feed(tmdb: ITmdbClient = Depends(get_tmdb_client)) -> HomeFee
         popular_movies=[_to_response(i) for i in feed.popular_movies],
         popular_tv=[_to_response(i) for i in feed.popular_tv],
     )
+
+
+@router.get("/search", response_model=list[MediaItemResponse])
+async def search_media(
+    q: str = Query(..., min_length=2),
+    limit: int = Query(20, ge=1, le=50),
+    tmdb: ITmdbClient = Depends(get_tmdb_client),
+) -> list[MediaItemResponse]:
+    try:
+        results = await SearchMediaUseCase(tmdb).execute(q, limit)
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=502, detail=f"TMDB error: {exc.response.status_code}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=503, detail="Cannot reach TMDB")
+
+    return [_to_response(i) for i in results]
 
 
 @router.get("/statuses/me", response_model=MediaStatusListsResponse)

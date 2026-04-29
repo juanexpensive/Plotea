@@ -1,6 +1,7 @@
 import api from '../../infrastructure/http/api';
 import {
   HomeFeed,
+  MediaItem,
   MediaDetail,
   MediaStatus,
   MediaStatusLists,
@@ -9,6 +10,13 @@ import {
 
 export async function getHomeFeed(): Promise<HomeFeed> {
   const response = await api.get<HomeFeed>('/media/home');
+  return response.data;
+}
+
+export async function searchMedia(query: string): Promise<MediaItem[]> {
+  const response = await api.get<MediaItem[]>('/media/search', {
+    params: { q: query, limit: 20 },
+  });
   return response.data;
 }
 

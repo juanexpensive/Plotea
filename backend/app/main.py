@@ -16,9 +16,11 @@ import app.data.models.user  # noqa: F401, E402
 import app.data.models.refresh_token  # noqa: F401, E402
 import app.data.models.password_reset_token  # noqa: F401, E402
 import app.data.models.user_media_status  # noqa: F401, E402
+import app.data.models.watch_log  # noqa: F401, E402
 
 from app.presentation.routers import auth as auth_router  # noqa: E402
 from app.presentation.routers import media as media_router  # noqa: E402
+from app.presentation.routers import watch_log as watch_log_router  # noqa: E402
 
 
 @asynccontextmanager
@@ -47,6 +49,7 @@ app.mount("/static", StaticFiles(directory="app/presentation/static"), name="sta
 
 app.include_router(auth_router.router)
 app.include_router(media_router.router)
+app.include_router(watch_log_router.router)
 
 
 @app.get("/health")

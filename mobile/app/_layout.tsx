@@ -25,6 +25,10 @@ export default function RootLayout() {
         name="media-status-list"
         options={{ headerShown: true, title: 'Mi lista' }}
       />
+      <Stack.Screen
+        name="watchlog-list"
+        options={{ headerShown: true, title: 'Diario' }}
+      />
     </Stack>
   );
 }

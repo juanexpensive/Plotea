@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { PersonalMediaStatus } from '../../../domain/entities/media';
 import { useDetailViewModel } from './DetailViewModel';
 
@@ -7,7 +7,23 @@ const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w500';
 
 export default function DetailScreen() {
   const { tmdb_id, media_type } = useLocalSearchParams<{ tmdb_id: string; media_type: string }>();
-  const { detail, status, loading, savingStatus, error, handleStatusPress } = useDetailViewModel(media_type, Number(tmdb_id));
+  const {
+    detail,
+    status,
+    loading,
+    savingStatus,
+    savingWatchLog,
+    showWatchLogForm,
+    watchedAt,
+    rating,
+    successMessage,
+    error,
+    handleStatusPress,
+    handleSaveWatchLog,
+    setWatchedAt,
+    setRating,
+    toggleWatchLogForm,
+  } = useDetailViewModel(media_type, Number(tmdb_id));
 
   if (loading) {
     return (
@@ -59,11 +75,97 @@ export default function DetailScreen() {
             onPress={() => handleStatusPress('watchlist')}
           />
         </View>
+        <Pressable
+          style={({ pressed }) => [
+            styles.watchLogButton,
+            pressed ? styles.statusButtonPressed : null,
+            savingWatchLog ? styles.statusButtonDisabled : null,
+          ]}
+          onPress={toggleWatchLogForm}
+          disabled={savingWatchLog}
+        >
+          <Text style={styles.watchLogButtonText}>
+            {showWatchLogForm ? 'Cancelar registro' : 'Registrar visionado'}
+          </Text>
+        </Pressable>
+        {showWatchLogForm ? (
+          <WatchLogForm
+            watchedAt={watchedAt}
+            rating={rating}
+            saving={savingWatchLog}
+            onWatchedAtChange={setWatchedAt}
+            onRatingChange={setRating}
+            onSave={handleSaveWatchLog}
+          />
+        ) : null}
+        {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
         {detail.overview ? (
           <Text style={styles.overview}>{detail.overview}</Text>
         ) : null}
       </View>
     </ScrollView>
+  );
+}
+
+function WatchLogForm({
+  watchedAt,
+  rating,
+  saving,
+  onWatchedAtChange,
+  onRatingChange,
+  onSave,
+}: {
+  watchedAt: string;
+  rating: number | null;
+  saving: boolean;
+  onWatchedAtChange: (value: string) => void;
+  onRatingChange: (value: number | null) => void;
+  onSave: () => void;
+}) {
+  const ratings = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+  return (
+    <View style={styles.watchLogForm}>
+      <Text style={styles.formLabel}>Fecha</Text>
+      <TextInput
+        style={styles.dateInput}
+        value={watchedAt}
+        onChangeText={onWatchedAtChange}
+        placeholder="YYYY-MM-DD"
+        placeholderTextColor="#777"
+        autoCapitalize="none"
+      />
+      <Text style={styles.formLabel}>Puntuacion</Text>
+      <View style={styles.ratingGrid}>
+        {ratings.map((value) => (
+          <Pressable
+            key={value}
+            style={[
+              styles.ratingButton,
+              rating === value ? styles.ratingButtonActive : null,
+            ]}
+            onPress={() => onRatingChange(rating === value ? null : value)}
+          >
+            <Text style={[styles.ratingText, rating === value ? styles.ratingTextActive : null]}>
+              {(value / 2).toFixed(1)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <Pressable
+        style={({ pressed }) => [
+          styles.saveWatchLogButton,
+          pressed ? styles.statusButtonPressed : null,
+          saving ? styles.statusButtonDisabled : null,
+        ]}
+        onPress={onSave}
+        disabled={saving}
+      >
+        <Text style={styles.saveWatchLogButtonText}>
+          {saving ? 'Guardando...' : 'Guardar visionado'}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -139,6 +241,84 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 8,
     marginBottom: 6,
+  },
+  watchLogButton: {
+    minHeight: 44,
+    borderRadius: 8,
+    backgroundColor: '#2563eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    marginBottom: 4,
+  },
+  watchLogButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  watchLogForm: {
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 8,
+    backgroundColor: '#181818',
+    padding: 12,
+    gap: 10,
+  },
+  formLabel: {
+    color: '#ddd',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  dateInput: {
+    minHeight: 42,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+    color: '#fff',
+    paddingHorizontal: 12,
+  },
+  ratingGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  ratingButton: {
+    width: 48,
+    minHeight: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ratingButtonActive: {
+    backgroundColor: '#fff',
+    borderColor: '#fff',
+  },
+  ratingText: {
+    color: '#ddd',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  ratingTextActive: {
+    color: '#111',
+  },
+  saveWatchLogButton: {
+    minHeight: 44,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveWatchLogButtonText: {
+    color: '#111',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  successText: {
+    color: '#86efac',
+    fontSize: 13,
   },
   statusButton: {
     flex: 1,

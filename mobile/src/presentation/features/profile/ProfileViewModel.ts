@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { getMe, logout } from '../../../data/repositories/AuthRepository';
 import { getMyMediaStatuses } from '../../../data/repositories/MediaRepository';
+import { getMyWatchLog } from '../../../data/repositories/WatchLogRepository';
 import { User } from '../../../domain/entities/auth';
 import { MediaStatusLists } from '../../../domain/entities/media';
 import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
@@ -9,15 +10,17 @@ import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure
 export function useProfileViewModel() {
   const [user, setUser] = useState<User | null>(null);
   const [mediaStatuses, setMediaStatuses] = useState<MediaStatusLists>({ watched: [], watchlist: [] });
+  const [watchLogCount, setWatchLogCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getMe(), getMyMediaStatuses()])
-      .then(([user, mediaStatuses]) => {
+    Promise.all([getMe(), getMyMediaStatuses(), getMyWatchLog()])
+      .then(([user, mediaStatuses, watchLog]) => {
         setUser(user);
         setMediaStatuses(mediaStatuses);
+        setWatchLogCount(watchLog.length);
       })
       .catch((error) => {
         if (isUnauthorizedError(error)) {
@@ -44,5 +47,5 @@ export function useProfileViewModel() {
     }
   }
 
-  return { user, mediaStatuses, loading, loggingOut, error, handleLogout };
+  return { user, mediaStatuses, watchLogCount, loading, loggingOut, error, handleLogout };
 }

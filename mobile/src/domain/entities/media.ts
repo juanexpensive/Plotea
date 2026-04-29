@@ -37,3 +37,19 @@ export interface HomeFeed {
   popular_movies: MediaItem[];
   popular_tv: MediaItem[];
 }
+
+export interface WatchLogEntry {
+  id: number;
+  tmdb_id: number;
+  media_type: 'movie' | 'tv';
+  watched_at: string;
+  rating: number | null;
+  created_at: string;
+}
+
+export interface CreateWatchLogRequest {
+  tmdb_id: number;
+  media_type: 'movie' | 'tv';
+  watched_at: string;
+  rating: number | null;
+}
