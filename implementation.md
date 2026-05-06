@@ -1,54 +1,59 @@
-# Password Reset Test Views
+# Fase 5 - Comentarios y votos utiles
 
-## Objective
+## Objetivo
 
-- Probar end-to-end el flujo de recuperacion de contrasena con Resend y una UI minima.
+- Implementar interaccion social basica sobre resenas existentes con un vertical slice completo: contratos y tests backend, persistencia y endpoints, integracion mobile en detalle, y cierre con review/QA.
 
-## Scope
+## Alcance
 
-- In scope:
-- Vistas HTML minimas para solicitar reset y establecer nueva contrasena
-- CSS simple para hacerlas legibles
-- Integracion con los endpoints backend ya creados
-- Tests de las vistas y del flujo principal
-- Out of scope:
-- Diseno final mobile
-- Navegacion Expo
-- Maquetacion avanzada o componentes reutilizables complejos
+- En alcance:
+- Modelo `comments` con replies de un solo nivel y soft delete
+- Modelo `review_votes` para marcar resenas como utiles
+- Endpoints para listar/comentar/borrar comentario y votar/quitar voto
+- Agregados sociales en `ReviewResponse`: `comment_count`, `helpful_votes`, `has_voted`
+- Integracion mobile en pantalla de detalle con carga de comentarios bajo demanda
+- Fuera de alcance:
+- Edicion de comentarios
+- Ordenar resenas por utilidad
+- Notificaciones por comentarios o votos
+- Pantalla separada de comentarios o tests frontend con Jest
 
-## Phases
+## Fases
 
-### Phase 1: Discovery and design
+### Fase 1: Contratos y tests backend
 
-- Goal: fijar el flujo minimo de prueba y sus rutas
-- Expected files or systems: backend auth router, config, docs
-- Validation: rutas y enlace de email definidos
-- Review gate: el flujo completo es claro antes de editar
+- Goal: fijar el comportamiento esperado de comentarios y votos desde tests y docs
+- Expected files or systems: `tests/test_reviews.py`, `implementation.md`, `implementation_details.md`
+- Validation: los tests describen replies, soft delete, autovoto prohibido, voto unico y agregados sociales
+- Review gate: el contrato backend queda cerrado antes de implementar persistencia
+- Estado: completada
 
-### Phase 2: Core implementation
+### Fase 2: Dominio, persistencia y endpoints
 
-- Goal: crear vistas HTML y CSS minimos
-- Expected files or systems: backend presentation views/static, auth router, main app
-- Validation: paginas renderizan y pueden enviar formularios
-- Review gate: las vistas cubren forgot y reset sin dependencia externa
+- Goal: implementar comentarios y votos en backend con Clean Architecture
+- Expected files or systems: modelos, migracion, repositorios, casos de uso, schemas y router de resenas
+- Validation: `pytest tests/test_reviews.py`
+- Review gate: las reglas viven en casos de uso y los agregados sociales no se calculan en el router
+- Estado: completada
 
-### Phase 3: Integration and cleanup
+### Fase 3: Integracion mobile en detalle
 
-- Goal: enlazar el email con la vista de reset y dejar mensajes claros
-- Expected files or systems: email sender, config, tests
-- Validation: el flujo manual de prueba queda documentado
-- Review gate: el correo y la UI usan la misma URL base
+- Goal: permitir votar y gestionar comentarios desde detalle sin cargar todos los hilos de golpe
+- Expected files or systems: entidades y repositorio mobile, `DetailViewModel`, `DetailScreen`
+- Validation: `npx tsc --noEmit`
+- Review gate: una sola caja de reply activa, own vote oculto y loading/error por resena
+- Estado: completada
 
-### Phase 4: Verification and handoff
+### Fase 4: QA, self-review y riesgos
 
-- Goal: ejecutar tests y resumir setup real para probar con Resend
-- Expected files or systems: tests, docs
-- Validation: pytest pasa y el setup manual queda claro
-- Review gate: riesgos residuales explicitados
+- Goal: revisar diffs, ejecutar checks y registrar riesgos reales
+- Expected files or systems: docs de implementacion, backend y mobile
+- Validation: backend y mobile pasan checks previstos y los riesgos quedan anotados
+- Review gate: confidence check y trabajo diferido documentado
+- Estado: completada
 
-### Phase 5: Native mobile recovery
+## Cierre
 
-- Goal: mover forgot/reset a screens nativas de Expo Router
-- Expected files or systems: mobile auth screens, backend email link config
-- Validation: login navega a forgot nativo y el correo apunta al reset mobile
-- Review gate: TypeScript sin errores y flujo backend intacto
+- Backend validado con `pytest tests/`
+- Mobile validado con `npx tsc --noEmit`
+- Comentarios y votos integrados en detalle con carga bajo demanda por resena

@@ -13,22 +13,37 @@ from app.infrastructure.email import ResendEmailSender
 _security = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(
+async def _resolve_user_from_credentials(
     credentials: HTTPAuthorizationCredentials | None = Depends(_security),
     session: AsyncSession = Depends(get_db),
-) -> User:
+) -> User | None:
     if credentials is None:
-        raise HTTPException(status_code=401, detail="No autenticado")
+        return None
 
     try:
         user_id_str = decode_access_token(credentials.credentials)
     except JWTError:
-        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+        raise HTTPException(status_code=401, detail="Token invÃ¡lido o expirado")
 
     user = await UserRepository(session).get_by_id(int(user_id_str))
     if user is None:
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
 
+    return user
+
+
+async def get_current_user(
+    user: User | None = Depends(_resolve_user_from_credentials),
+) -> User:
+    if user is None:
+        raise HTTPException(status_code=401, detail="No autenticado")
+
+    return user
+
+
+async def get_optional_current_user(
+    user: User | None = Depends(_resolve_user_from_credentials),
+) -> User | None:
     return user
 
 
