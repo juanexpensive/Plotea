@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.data.repositories.activity_repository import ActivityRepository
 from app.data.repositories.media_status_repository import MediaStatusRepository
 from app.data.repositories.watch_log_repository import WatchLogRepository
 from app.domain.entities.user import User
 from app.domain.entities.watch_log import WatchLog
+from app.domain.services.activity_publisher import ActivityPublisher
 from app.domain.usecases.watchlog.create_watch_log import CreateWatchLogUseCase
 from app.domain.usecases.watchlog.delete_watch_log import DeleteWatchLogUseCase
 from app.domain.usecases.watchlog.list_watch_log import ListWatchLogUseCase
@@ -35,6 +37,7 @@ async def create_watch_log(
     watch_log = await CreateWatchLogUseCase(
         WatchLogRepository(session),
         MediaStatusRepository(session),
+        ActivityPublisher(ActivityRepository(session)),
     ).execute(
         current_user.id,
         data.tmdb_id,

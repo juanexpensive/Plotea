@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from app.domain.entities.watch_log import WatchLog
 from app.domain.repositories.i_media_status_repository import IMediaStatusRepository
 from app.domain.repositories.i_watch_log_repository import IWatchLogRepository
+from app.domain.services.activity_publisher import ActivityPublisher
 
 
 class CreateWatchLogUseCase:
@@ -12,9 +13,11 @@ class CreateWatchLogUseCase:
         self,
         watch_log_repo: IWatchLogRepository,
         media_status_repo: IMediaStatusRepository,
+        activity_publisher: ActivityPublisher | None = None,
     ) -> None:
         self._watch_log_repo = watch_log_repo
         self._media_status_repo = media_status_repo
+        self._activity_publisher = activity_publisher
 
     async def execute(
         self,
@@ -35,4 +38,6 @@ class CreateWatchLogUseCase:
             rating=rating,
         )
         await self._media_status_repo.set(user_id, tmdb_id, media_type, "watched")
+        if self._activity_publisher is not None:
+            await self._activity_publisher.publish_watch_log(user_id, watch_log.id)
         return watch_log

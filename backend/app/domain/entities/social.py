@@ -1,0 +1,85 @@
+from dataclasses import dataclass
+from datetime import date, datetime
+
+
+@dataclass
+class PublicUserSummary:
+    id: int
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+    is_following: bool
+
+
+@dataclass
+class PublicUserProfile:
+    id: int
+    username: str
+    display_name: str | None
+    bio: str | None
+    avatar_url: str | None
+    created_at: datetime
+    followers_count: int
+    following_count: int
+    reviews_count: int
+    watch_logs_count: int
+    is_following: bool
+
+
+@dataclass
+class ActivityActor:
+    id: int
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+
+
+@dataclass
+class FeedCursor:
+    created_at: datetime
+    activity_id: int
+
+
+@dataclass
+class FollowedUser:
+    id: int
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+
+
+@dataclass
+class BaseActivity:
+    id: int
+    activity_type: str
+    created_at: datetime
+    actor: ActivityActor
+
+
+@dataclass
+class ReviewActivity(BaseActivity):
+    review_id: int
+    tmdb_id: int
+    media_type: str
+    rating: int
+    body_preview: str
+    contains_spoilers: bool
+
+
+@dataclass
+class WatchLogActivity(BaseActivity):
+    watch_log_id: int
+    tmdb_id: int
+    media_type: str
+    watched_at: date
+    rating: int | None
+
+
+@dataclass
+class FollowActivity(BaseActivity):
+    followed_user: FollowedUser
+
+
+@dataclass
+class ListCreatedActivity(BaseActivity):
+    list_id: int | None

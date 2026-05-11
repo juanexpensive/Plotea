@@ -16,6 +16,8 @@ import app.data.models.user  # noqa: F401, E402
 import app.data.models.refresh_token  # noqa: F401, E402
 import app.data.models.password_reset_token  # noqa: F401, E402
 import app.data.models.comment  # noqa: F401, E402
+import app.data.models.follow  # noqa: F401, E402
+import app.data.models.activity  # noqa: F401, E402
 import app.data.models.user_media_status  # noqa: F401, E402
 import app.data.models.review_vote  # noqa: F401, E402
 import app.data.models.watch_log  # noqa: F401, E402
@@ -24,6 +26,7 @@ import app.data.models.review  # noqa: F401, E402
 from app.presentation.routers import auth as auth_router  # noqa: E402
 from app.presentation.routers import media as media_router  # noqa: E402
 from app.presentation.routers import reviews as reviews_router  # noqa: E402
+from app.presentation.routers import social as social_router  # noqa: E402
 from app.presentation.routers import watch_log as watch_log_router  # noqa: E402
 
 
@@ -54,6 +57,7 @@ app.mount("/static", StaticFiles(directory="app/presentation/static"), name="sta
 app.include_router(auth_router.router)
 app.include_router(media_router.router)
 app.include_router(reviews_router.router)
+app.include_router(social_router.router)
 app.include_router(watch_log_router.router)
 
 

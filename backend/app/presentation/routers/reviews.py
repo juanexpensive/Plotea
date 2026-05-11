@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.data.repositories.activity_repository import ActivityRepository
 from app.data.repositories.comment_repository import CommentRepository
 from app.data.repositories.media_status_repository import MediaStatusRepository
 from app.data.repositories.review_repository import ReviewRepository
@@ -8,6 +9,7 @@ from app.data.repositories.review_vote_repository import ReviewVoteRepository
 from app.domain.entities.comment import Comment
 from app.domain.entities.review import Review
 from app.domain.entities.user import User
+from app.domain.services.activity_publisher import ActivityPublisher
 from app.domain.usecases.reviews.add_review_vote import AddReviewVoteUseCase
 from app.domain.usecases.reviews.create_review_comment import CreateReviewCommentUseCase
 from app.domain.usecases.reviews.create_review import CreateReviewUseCase
@@ -76,6 +78,7 @@ async def create_review(
     review = await CreateReviewUseCase(
         ReviewRepository(session),
         MediaStatusRepository(session),
+        ActivityPublisher(ActivityRepository(session)),
     ).execute(
         user_id=current_user.id,
         tmdb_id=data.tmdb_id,

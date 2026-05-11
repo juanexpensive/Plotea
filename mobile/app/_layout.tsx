@@ -29,6 +29,14 @@ export default function RootLayout() {
         name="watchlog-list"
         options={{ headerShown: true, title: 'Diario' }}
       />
+      <Stack.Screen
+        name="user-search"
+        options={{ headerShown: true, title: 'Buscar usuarios' }}
+      />
+      <Stack.Screen
+        name="user-profile"
+        options={{ headerShown: true, title: 'Perfil publico' }}
+      />
     </Stack>
   );
 }

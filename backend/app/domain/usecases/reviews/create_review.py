@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from app.domain.entities.review import Review
 from app.domain.repositories.i_media_status_repository import IMediaStatusRepository
 from app.domain.repositories.i_review_repository import IReviewRepository
+from app.domain.services.activity_publisher import ActivityPublisher
 
 
 class CreateReviewUseCase:
@@ -10,9 +11,11 @@ class CreateReviewUseCase:
         self,
         review_repo: IReviewRepository,
         media_status_repo: IMediaStatusRepository,
+        activity_publisher: ActivityPublisher | None = None,
     ) -> None:
         self._review_repo = review_repo
         self._media_status_repo = media_status_repo
+        self._activity_publisher = activity_publisher
 
     async def execute(
         self,
@@ -42,4 +45,6 @@ class CreateReviewUseCase:
             current_user_id=user_id,
         )
         await self._media_status_repo.set(user_id, tmdb_id, media_type, "watched")
+        if self._activity_publisher is not None:
+            await self._activity_publisher.publish_review(user_id, review.id)
         return review
