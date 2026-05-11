@@ -1,123 +1,90 @@
-# PlotSkip — Setup desde cero (nuevo PC)
+# PlotSkip - setup desde cero (nuevo PC)
 
-Sigue estos pasos en orden cada vez que montes el proyecto en un PC nuevo.
-
----
+Sigue estos pasos en orden al montar el proyecto en un PC nuevo.
 
 ## Requisitos previos
 
-Instala estas herramientas si no las tienes:
+Instala estas herramientas:
 
-| Herramienta | Dónde descargar | Versión mínima |
+| Herramienta | Donde descargar | Version recomendada |
 |---|---|---|
-| Python | python.org/downloads | 3.12 |
-| Node.js | **20 LTS** vía nvm-windows | 20 (no usar 24) |
-| nvm-windows | github.com/coreybutler/nvm-windows | cualquiera |
-| ngrok | ngrok.com/download | cualquiera |
-| Git | git-scm.com | cualquiera |
+| Python | `python.org/downloads` | 3.12 |
+| Node.js | `nvm-windows` | 20 LTS |
+| nvm-windows | `github.com/coreybutler/nvm-windows` | ultima estable |
+| ngrok | `ngrok.com/download` | ultima estable |
+| Git | `git-scm.com` | ultima estable |
 
-> La base de datos está en Neon (PostgreSQL cloud).
-> **Node 24 es incompatible con `@expo/ngrok`** — usa Node 20 LTS obligatoriamente para que funcione `--tunnel`.
+Notas:
 
----
+- La base de datos esta en Neon; Docker ya no es necesario.
+- Mantener Node 20 LTS evita deriva con npm y coincide con el setup documentado del repo.
+- `npx expo start --tunnel` no debe considerarse un flujo garantizado. Expo lo sigue documentando, pero su servicio compartido de tunnel ha tenido fallos aguas arriba en 2026.
 
-## Paso 0 — Instalar Node 20 con nvm-windows (solo la primera vez)
+## Paso 0 - Activar Node 20 con nvm-windows
 
-> Sáltate este paso si ya tienes nvm-windows y Node 20 activo.
-
-1. Descarga `nvm-setup.exe` desde [github.com/coreybutler/nvm-windows/releases](https://github.com/coreybutler/nvm-windows/releases)
-2. Cierra VSCode y todas las terminales antes de ejecutar el instalador
-3. El instalador desinstalará automáticamente cualquier Node.js existente
-4. Una vez instalado, abre una terminal nueva y ejecuta:
+Si ya lo tienes activo, salta este paso.
 
 ```bash
 nvm install 20
 nvm use 20
-node -v   # debe mostrar v20.x.x
+node -v
+npm -v
+npx --version
 ```
 
-5. Si tenías `@expo/ngrok` instalado globalmente, reinstálalo:
-
-```bash
-npm install -g @expo/ngrok@4.1.3
-```
-
----
-
-## Paso 1 — Clonar el repositorio
+## Paso 1 - Clonar el repositorio
 
 ```bash
 git clone <URL-del-repo> PlotSkip
 cd PlotSkip
 ```
 
----
-
-## Paso 2 — Crear el entorno virtual de Python (solo la primera vez en este PC)
+## Paso 2 - Crear el entorno virtual de Python
 
 ```bash
 cd backend
 py -3.12 -m venv .venv
 ```
 
-> Si `py -3.12` no funciona, prueba `python -m venv .venv` con la versión que tengas instalada.
-
----
-
-## Paso 3 — Activar el entorno virtual
-
-Cada vez que abras una terminal nueva debes activarlo:
+Si `py -3.12` no funciona:
 
 ```bash
-# Windows (PowerShell o CMD)
-.venv\Scripts\activate
-
-# Mac / Linux
-source .venv/bin/activate
+python -m venv .venv
 ```
 
-El prompt cambiará a `(.venv) ...` cuando esté activo.
+## Paso 3 - Activar el entorno virtual
 
----
+```bash
+.venv\Scripts\activate
+```
 
-## Paso 4 — Instalar dependencias Python (solo la primera vez o tras cambios en requirements.txt)
+## Paso 4 - Instalar dependencias Python
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
-
-## Paso 5 — Crear el archivo .env (solo la primera vez en este PC)
+## Paso 5 - Crear `backend/.env`
 
 ```bash
-# Desde backend/
 copy .env.example .env
 ```
 
-Abre `.env` y rellena los valores:
+Rellena como minimo:
 
 ```env
-# Neon (PostgreSQL cloud) — copia la connection string desde console.neon.tech
 DATABASE_URL=postgresql+asyncpg://user:pass@ep-xxx.neon.tech/plotskip?sslmode=require
-
-# Genera una clave segura con este comando y pégala aquí:
-# python -c "import secrets; print(secrets.token_hex(32))"
-SECRET_KEY=pega-aqui-el-valor-generado
-
-# TMDB: https://www.themoviedb.org/settings/api
+SECRET_KEY=pega-aqui-tu-clave
 TMDB_API_KEY=tu-clave-tmdb
-
-# Resend (email): https://resend.com/api-keys
 RESEND_API_KEY=tu-clave-resend
 ```
 
-> El `.env` nunca se sube a git. Cada PC tiene el suyo propio.
-> Las claves las tienes en tu cuenta de cada servicio — guárdalas en un gestor de contraseñas.
+Notas:
 
----
+- La URL de Neon suele venir como `postgresql://...`; cambiale solo el prefijo a `postgresql+asyncpg://...`.
+- `backend/.env` no se sube a git.
 
-## Paso 6 — Aplicar migraciones (solo la primera vez o tras nuevas migraciones)
+## Paso 6 - Aplicar migraciones
 
 Con el venv activo:
 
@@ -125,48 +92,30 @@ Con el venv activo:
 alembic upgrade head
 ```
 
----
+## Paso 7 - Instalar dependencias mobile
 
-## Paso 7 — Configurar ngrok (solo la primera vez en este PC)
-
-Hay **dos authtokens** que configurar — son instalaciones separadas:
-
-**7a — ngrok MSIX** (para correr `ngrok http 8000` manualmente):
-```bash
-ngrok config add-authtoken TU_TOKEN
-```
-
-**7b — @expo/ngrok** (para que Expo use `--tunnel`):
-
-`@expo/ngrok` usa ngrok v2, que lee el token desde `~/.ngrok2/ngrok.yml`. Créalo manualmente:
+Desde `mobile/`:
 
 ```bash
-# Windows — crea el archivo en la carpeta correcta
-mkdir %USERPROFILE%\.ngrok2
-echo authtoken: TU_TOKEN > %USERPROFILE%\.ngrok2\ngrok.yml
-```
-
-> `npx ngrok authtoken TU_TOKEN` NO funciona aquí — guarda el token en la ruta de ngrok v3 (`AppData\Local\ngrok\`) que `@expo/ngrok` no lee.
-> El token está en: dashboard.ngrok.com/get-started/your-authtoken
-> Puedes usar el mismo token en ambos pasos.
-
----
-
-## Paso 8 — Instalar dependencias mobile (solo la primera vez o tras cambios en package.json)
-
-```bash
-cd mobile
+cd ..\mobile
 npm ci
 ```
 
-> Usa siempre `npm ci` (no `npm install`) para instalaciones desde cero — respeta el `package-lock.json` exactamente y evita conflictos de versiones.
-> Solo usa `npm install` cuando quieras agregar o actualizar paquetes.
+Usa `npm ci`, no `npm install`, para respetar `package-lock.json`.
 
----
+## Paso 8 - Configurar ngrok para el backend
 
-## Arranque diario
+El backend usa su propio tunnel. No sustituye al tunnel de Expo.
 
-**Terminal 1 — backend:**
+```bash
+ngrok config add-authtoken TU_TOKEN
+ngrok version
+```
+
+## Arranque diario recomendado
+
+Terminal 1 - backend:
+
 ```bash
 cd backend
 .venv\Scripts\activate
@@ -174,79 +123,72 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-**Terminal 2 — ngrok (expone el backend al móvil):**
+Terminal 2 - tunnel del backend:
+
 ```bash
-ngrok 8000
+ngrok http 8000
 ```
-Copia la URL `https://xxx.ngrok-free.dev` y ponla en `mobile/.env.local`:
+
+Copia la URL HTTPS a `mobile/.env.local`:
 
 ```env
-EXPO_PUBLIC_BACKEND_URL=https://xxx.ngrok-free.dev
+EXPO_PUBLIC_BACKEND_URL=https://xxxx.ngrok-free.dev
 ```
 
-**Terminal 3 — Expo:**
+Terminal 3 - Expo:
+
+```bash
+cd mobile
+npx expo start --lan
+```
+
+Este es el flujo preferido si el movil y el PC estan en la misma red.
+
+## Cuando `--lan` no funciona
+
+`npx expo start --tunnel` puede ayudar en redes restrictivas, pero en este repo hay que tratarlo como un fallback, no como el camino principal:
+
 ```bash
 cd mobile
 npx expo start --tunnel
 ```
 
-Escanea el QR con Expo Go en el móvil.
+Importante:
 
----
+- Si `--tunnel` falla, no significa automaticamente que el proyecto este mal configurado.
+- El backend puede seguir funcionando por ngrok aunque Expo tunnel falle.
+- El tunnel de Expo sirve para Metro y Expo Go; el de ngrok solo expone la API backend.
+
+Alternativas practicas:
+
+- Usar `--lan` en una red donde PC y movil se vean entre si.
+- Usar un emulador Android en el mismo PC.
+- Cambiar temporalmente de red si la red del centro bloquea o aisla dispositivos.
 
 ## Tests
 
+Desde `backend/` con el venv activo:
+
 ```bash
-# Desde backend/ con .venv activo
-set PYTHONPATH=. && pytest ../tests/ -v
+set PYTHONPATH=. && pytest ..\tests\ -v
 ```
 
----
+## Problemas frecuentes
 
-## Solución de problemas frecuentes
-
-| Error | Causa | Solución |
+| Error | Causa probable | Solucion |
 |---|---|---|
-| `El sistema no puede encontrar la ruta .venv` | El venv no existe en este PC | Paso 2 |
-| `alembic: command not found` | El venv no está activo | Paso 3 |
-| `connection refused` al llamar al backend | El servidor no está arrancado | Arranque diario |
-| `Network Error` en la app móvil | URL de ngrok no actualizada en `mobile/.env.local` | Copia la URL nueva de ngrok en `EXPO_PUBLIC_BACKEND_URL` y reinicia Expo |
-| `failed to start tunnel` en Expo | ngrok no tiene authtoken | Paso 7 |
-| `ERESOLVE could not resolve` en npm | Usar `npm install` en vez de `npm ci` | Paso 8 |
-| `failed to start tunnel` / `remote gone away` | Token de `@expo/ngrok` en ruta incorrecta | Paso 7b |
-| `"ngrok" no se reconoce como comando` | ngrok.exe no está en el PATH | Ver abajo |
-| `ImportError: email-validator is not installed` | Falta dependencia de pydantic | Ver abajo |
-| `PluginError: Failed to resolve plugin for module "expo-router"` | node_modules de mobile no instalados | Paso 8 |
+| `El sistema no puede encontrar la ruta .venv` | El venv no existe en ese PC | Repite el paso 2 |
+| `alembic: command not found` | El venv no esta activo | Repite el paso 3 |
+| `Could not parse SQLAlchemy URL from string ''` | `DATABASE_URL` vacia o mal copiada | Revisa `backend/.env` |
+| `InvalidPasswordError` en `asyncpg` | Credenciales de Neon incorrectas | Copia de nuevo la URL desde Neon |
+| `Network Error` en la app | `EXPO_PUBLIC_BACKEND_URL` sigue apuntando a una URL vieja | Actualiza `mobile/.env.local` y reinicia Expo |
+| `failed to start tunnel` en Expo | Fallo del servicio tunnel de Expo o red restrictiva | Prueba `--lan`, emulador o otra red |
+| `"ngrok" no se reconoce como comando` | ngrok no esta en `PATH` | Reinstala ngrok o ajusta `PATH` |
+| `PluginError: Failed to resolve plugin for module "expo-router"` | `mobile/node_modules` no esta instalado | Ejecuta `npm ci` en `mobile/` |
 
----
+## Resumen de `--tunnel`
 
-### Detalle de errores frecuentes
-
-#### `"ngrok" no se reconoce como comando`
-ngrok está descargado pero no está en el PATH del sistema.
-
-**Solución:** abre una terminal como Administrador y ejecuta:
-```bash
-copy C:\ruta\donde\descargaste\ngrok.exe C:\Windows\System32\ngrok.exe
-```
-Luego configura el authtoken (Paso 7).
-
----
-
-#### `ImportError: email-validator is not installed`
-El backend arranca pero falla porque falta la dependencia `email-validator` que usa pydantic para validar emails. No está en `requirements.txt` porque viene como extra de pydantic.
-
-**Solución:** con el venv activo:
-```bash
-pip install "pydantic[email]"
-```
-Uvicorn se reinicia solo gracias a `--reload`.
-
----
-
-#### `ERESOLVE could not resolve` al instalar dependencias mobile
-npm intenta re-resolver peer deps y encuentra un conflicto de versiones entre `react` y `react-dom`.
-
-**Causa raíz:** `npm install` re-resuelve las dependencias desde cero; `npm ci` usa el `package-lock.json` exacto.
-
-**Solución:** usa siempre `npm ci` para instalar en un PC nuevo (Paso 8). Nunca uses `--legacy-peer-deps` ni `--force`, enmascaran el problema sin resolverlo.
+- Este repo usa Expo SDK `54.0.33`.
+- En el lockfile actual aparece `@expo/ws-tunnel`, no `@expo/ngrok`.
+- Por eso, documentar `@expo/ngrok` como causa principal del fallo ya no es correcto para el estado actual del proyecto.
+- Si el PC de practicas no puede usar `--tunnel`, la explicacion mas probable es una combinacion de red restrictiva y limitaciones del servicio de tunnel de Expo, no un bug propio del codigo de PlotSkip.

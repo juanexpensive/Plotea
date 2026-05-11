@@ -124,6 +124,9 @@ def _to_activity_response(activity: BaseActivity):
             created_at=activity.created_at,
             actor=actor,
             list_id=activity.list_id,
+            list_name=activity.list_name,
+            items_count=activity.items_count,
+            is_public=activity.is_public,
         )
 
     raise HTTPException(status_code=500, detail="Unsupported activity type")

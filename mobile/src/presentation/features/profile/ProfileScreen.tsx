@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ListSummary } from '../../../domain/entities/lists';
 import { SavedMediaStatus } from '../../../domain/entities/media';
 import { useProfileViewModel } from './ProfileViewModel';
 
 export default function ProfileScreen() {
-  const { user, mediaStatuses, watchLogCount, loading, loggingOut, error, handleLogout } = useProfileViewModel();
+  const { user, lists, mediaStatuses, watchLogCount, loading, loggingOut, error, handleLogout } = useProfileViewModel();
 
   if (loading) {
     return (
@@ -46,6 +47,11 @@ export default function ProfileScreen() {
             {watchLogCount === 0 ? 'Todavia no has registrado visionados.' : 'Ver historial de visionados.'}
           </Text>
         </Pressable>
+        <ListSection
+          lists={lists}
+          onPress={() => router.push('/my-lists')}
+          onOpenList={(listId) => router.push({ pathname: '/list-detail', params: { list_id: listId, editable: '1' } })}
+        />
         <MediaStatusSection
           title="Vistas"
           items={mediaStatuses.watched}
@@ -72,6 +78,44 @@ export default function ProfileScreen() {
       </Pressable>
       {error ? <Text style={styles.inlineError}>{error}</Text> : null}
     </ScrollView>
+  );
+}
+
+function ListSection({
+  lists,
+  onPress,
+  onOpenList,
+}: {
+  lists: ListSummary[];
+  onPress: () => void;
+  onOpenList: (listId: number) => void;
+}) {
+  return (
+    <View style={styles.statusSection}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Mis listas</Text>
+        <Text style={styles.sectionCount}>{lists.length}</Text>
+      </View>
+      {lists.length === 0 ? (
+        <Text style={styles.emptyText}>Todavia no has creado listas.</Text>
+      ) : (
+        lists.slice(0, 3).map((list) => (
+          <Pressable
+            key={list.id}
+            style={({ pressed }) => [styles.statusItem, pressed ? styles.statusSectionPressed : null]}
+            onPress={() => onOpenList(list.id)}
+          >
+            <Text style={styles.statusItemText}>{list.name}</Text>
+            <Text style={styles.itemMeta}>
+              {list.items_count} {list.items_count === 1 ? 'obra' : 'obras'} · {list.is_public ? 'Publica' : 'Privada'}
+            </Text>
+          </Pressable>
+        ))
+      )}
+      <Pressable style={({ pressed }) => [styles.linkButton, pressed ? styles.statusSectionPressed : null]} onPress={onPress}>
+        <Text style={styles.linkText}>Ver todas</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -199,6 +243,20 @@ const styles = StyleSheet.create({
   statusItemText: {
     color: '#ddd',
     fontSize: 14,
+  },
+  itemMeta: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  linkText: {
+    color: '#93c5fd',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  linkButton: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
   },
   logoutButton: {
     marginTop: 28,

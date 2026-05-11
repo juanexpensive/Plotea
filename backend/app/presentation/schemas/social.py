@@ -79,6 +79,9 @@ class ListCreatedActivityResponse(BaseModel):
     created_at: datetime
     actor: ActivityActorResponse
     list_id: int | None
+    list_name: str | None
+    items_count: int
+    is_public: bool
 
 
 ActivityItemResponse = Annotated[

@@ -55,7 +55,18 @@ export interface FollowActivity {
   followed_user: PublicUserSummary;
 }
 
-export type ActivityItem = ReviewActivity | WatchLogActivity | FollowActivity;
+export interface ListCreatedActivity {
+  id: number;
+  activity_type: 'list_created';
+  created_at: string;
+  actor: ActivityActor;
+  list_id: number | null;
+  list_name: string | null;
+  items_count: number;
+  is_public: boolean;
+}
+
+export type ActivityItem = ReviewActivity | WatchLogActivity | FollowActivity | ListCreatedActivity;
 
 export interface FeedPage {
   items: ActivityItem[];

@@ -1,11 +1,14 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, router } from 'expo-router';
+import { getUserPublicLists } from '../../../data/repositories/ListsRepository';
 import { followUser, getPublicProfile, unfollowUser } from '../../../data/repositories/SocialRepository';
+import { ListSummary } from '../../../domain/entities/lists';
 import { PublicUserProfile } from '../../../domain/entities/social';
 import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
 
 export function usePublicProfileViewModel(username: string | undefined) {
   const [profile, setProfile] = useState<PublicUserProfile | null>(null);
+  const [lists, setLists] = useState<ListSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingFollow, setSavingFollow] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,10 +25,11 @@ export function usePublicProfileViewModel(username: string | undefined) {
       setLoading(true);
       setError(null);
 
-      getPublicProfile(username)
-        .then((data) => {
+      Promise.all([getPublicProfile(username), getUserPublicLists(username)])
+        .then(([data, publicLists]) => {
           if (active) {
             setProfile(data);
+            setLists(publicLists);
           }
         })
         .catch((error) => {
@@ -90,6 +94,7 @@ export function usePublicProfileViewModel(username: string | undefined) {
 
   return {
     profile,
+    lists,
     loading,
     savingFollow,
     error,

@@ -108,6 +108,7 @@ function SocialFeed({
   onRetry,
   onOpenSearch,
   onOpenUser,
+  onOpenList,
   onLoadMore,
 }: {
   items: ActivityItem[];
@@ -118,6 +119,7 @@ function SocialFeed({
   onRetry: () => void;
   onOpenSearch: () => void;
   onOpenUser: (username: string) => void;
+  onOpenList: (listId: number) => void;
   onLoadMore: () => void;
 }) {
   return (
@@ -125,7 +127,7 @@ function SocialFeed({
       <View style={styles.socialHeader}>
         <View style={styles.socialHeaderBody}>
           <Text style={styles.sectionTitle}>Actividad de tu gente</Text>
-          <Text style={styles.socialSubtitle}>Resenas, visionados y follows recientes.</Text>
+          <Text style={styles.socialSubtitle}>Resenas, visionados, listas y follows recientes.</Text>
         </View>
         <Pressable onPress={onOpenSearch}>
           <Text style={styles.socialAction}>Buscar usuarios</Text>
@@ -162,7 +164,7 @@ function SocialFeed({
       {!loading && !error && items.length > 0 ? (
         <View style={styles.socialList}>
           {items.map((item) => (
-            <SocialActivityCard key={item.id} item={item} onOpenUser={onOpenUser} />
+            <SocialActivityCard key={item.id} item={item} onOpenUser={onOpenUser} onOpenList={onOpenList} />
           ))}
           <View style={styles.socialFooter}>
             {refreshing || loadingMore ? <ActivityIndicator size="small" color="#fff" /> : null}
@@ -181,9 +183,11 @@ function SocialFeed({
 function SocialActivityCard({
   item,
   onOpenUser,
+  onOpenList,
 }: {
   item: ActivityItem;
   onOpenUser: (username: string) => void;
+  onOpenList: (listId: number) => void;
 }) {
   const actorName = item.actor.display_name ?? item.actor.username;
 
@@ -225,6 +229,21 @@ function SocialActivityCard({
           .
         </Text>
       ) : null}
+      {item.activity_type === 'list_created' ? (
+        <>
+          <Text style={styles.socialCardBody}>
+            ha creado la lista {item.list_name ? `"${item.list_name}"` : 'sin titulo'}.
+          </Text>
+          <Text style={styles.socialCardAccent}>
+            {item.items_count} {item.items_count === 1 ? 'obra' : 'obras'}
+          </Text>
+          {item.is_public && item.list_id !== null ? (
+            <Pressable style={styles.inlinePill} onPress={() => onOpenList(item.list_id as number)}>
+              <Text style={styles.inlinePillText}>Abrir lista</Text>
+            </Pressable>
+          ) : null}
+        </>
+      ) : null}
     </View>
   );
 }
@@ -248,6 +267,7 @@ export default function HomeScreen() {
     clearSearch,
     openUserSearch,
     openUserProfile,
+    openListDetail,
     refreshSocialFeed,
     loadMoreSocialFeed,
   } = useHomeViewModel();
@@ -308,6 +328,7 @@ export default function HomeScreen() {
             onRetry={refreshSocialFeed}
             onOpenSearch={openUserSearch}
             onOpenUser={openUserProfile}
+            onOpenList={(listId) => openListDetail(listId)}
             onLoadMore={loadMoreSocialFeed}
           />
         </>
@@ -537,6 +558,20 @@ const styles = StyleSheet.create({
   },
   socialInlineLink: {
     color: '#93c5fd',
+    fontWeight: '700',
+  },
+  inlinePill: {
+    alignSelf: 'flex-start',
+    minHeight: 34,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#35506d',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  inlinePillText: {
+    color: '#bfdbfe',
+    fontSize: 12,
     fontWeight: '700',
   },
   socialFooter: {

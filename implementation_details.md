@@ -1,169 +1,183 @@
-# Fase 6 - Social: usuarios, follows y feed Details
+# Fase 7 - Listas personalizadas Details
 
 ## Repository Context
 
 - Relevant files:
-- `backend/app/data/models/follow.py`
+- `backend/app/data/models/list.py`
+- `backend/app/data/models/list_item.py`
 - `backend/app/data/models/activity.py`
-- `backend/app/data/repositories/user_repository.py`
-- `backend/app/data/repositories/follow_repository.py`
+- `backend/app/data/repositories/list_repository.py`
 - `backend/app/data/repositories/activity_repository.py`
+- `backend/app/domain/entities/lists.py`
 - `backend/app/domain/entities/social.py`
-- `backend/app/domain/repositories/i_user_repository.py`
-- `backend/app/domain/repositories/i_follow_repository.py`
+- `backend/app/domain/repositories/i_list_repository.py`
 - `backend/app/domain/repositories/i_activity_repository.py`
 - `backend/app/domain/services/activity_publisher.py`
-- `backend/app/domain/usecases/social`
-- `backend/app/domain/usecases/reviews/create_review.py`
-- `backend/app/domain/usecases/watchlog/create_watch_log.py`
+- `backend/app/domain/usecases/lists`
+- `backend/app/presentation/routers/lists.py`
 - `backend/app/presentation/routers/social.py`
+- `backend/app/presentation/schemas/lists.py`
 - `backend/app/presentation/schemas/social.py`
 - `backend/app/main.py`
-- `backend/alembic/versions/0006_social_graph_feed.py`
+- `backend/alembic/versions/0007_lists.py`
+- `mobile/src/domain/entities/lists.ts`
 - `mobile/src/domain/entities/social.ts`
-- `mobile/src/data/repositories/SocialRepository.ts`
+- `mobile/src/data/repositories/ListsRepository.ts`
+- `mobile/src/presentation/features/lists`
+- `mobile/src/presentation/features/profile/ProfileScreen.tsx`
+- `mobile/src/presentation/features/profile/ProfileViewModel.ts`
+- `mobile/src/presentation/features/social/PublicProfileScreen.tsx`
+- `mobile/src/presentation/features/social/PublicProfileViewModel.ts`
 - `mobile/src/presentation/features/home/HomeScreen.tsx`
 - `mobile/src/presentation/features/home/HomeViewModel.ts`
-- `mobile/src/presentation/features/social`
-- `mobile/app/user-search.tsx`
-- `mobile/app/user-profile.tsx`
-- `tests/test_social.py`
+- `mobile/app/my-lists.tsx`
+- `mobile/app/list-detail.tsx`
+- `tests/test_lists.py`
 - Existing patterns to follow:
 - Clean Architecture con entidades, interfaces, repositorios concretos y use cases por vertical slice
 - Routers FastAPI finos que delegan reglas de negocio a casos de uso
 - Tests HTTP async con `AsyncClient` y helpers de login reutilizables
 - Repositorios mobile HTTP simples con mapeo explicito hacia entidades de dominio
 - Constraints:
-- El feed social es privado al usuario autenticado y contiene solo actividad de usuarios seguidos
-- La paginacion del feed usa cursor estable, nunca offset
-- El perfil publico no expone `email` ni otros datos internos
-- La generacion de actividades esta centralizada fuera de routers
-- `list_created` queda soportado en backend pero sin emision/render en esta fase
+- Fase 6 ya estaba cerrada; el feed social mantiene cursor opaco por `(created_at, id)` y la publicacion de actividad sigue fuera de routers
+- Las listas privadas ajenas responden `404`
+- `list_created` solo se publica para listas publicas
+- El reorder mobile es por swap entre dos items seleccionados, no drag and drop
+- La metadata de media en listas es best effort; si TMDB no responde o no esta inicializado, `media_summary` puede venir `null`
 
 ## Decisions Locked
 
-- `GET /users/search` requiere autenticacion y devuelve resultados ligeros para UI de descubrimiento
-- `GET /users/{username}` expone un perfil publico con identidad visible, bio/avatar si existen y estado de follow respecto al usuario actual
-- `POST /users/{id}/follow` y `DELETE /users/{id}/follow` son idempotentes desde el punto de vista del cliente
-- `GET /feed` devuelve items ordenados por `created_at DESC` con desempate estable por `id DESC`
-- El cursor del feed es opaco y derivado de `(created_at, id)` para evitar duplicados entre paginas
-- Las actividades de `review`, `watch_log` y `follow` se crean desde casos de uso o un servicio reutilizable
-- `list_created` queda modelado en el enum/tipo de actividad aunque la emision efectiva se active en la fase 7
-- El perfil publico usa un contrato propio y no reutiliza `UserPublic` con `email`
+- `GET /lists/me` devuelve summaries de listas propias ordenadas por `updated_at DESC`
+- `GET /users/{username}/lists` expone solo listas publicas del usuario
+- `GET /lists/{id}` permite ver listas propias o listas publicas ajenas; listas privadas ajenas responden `404`
+- `POST /lists/{id}/items` rechaza duplicados con `409`
+- `DELETE /lists/{id}/items/{tmdb_id}/{media_type}` es idempotente para simplificar mobile
+- `PATCH /lists/{id}/items/reorder` intercambia `position` entre dos items concretos y falla con `404` si falta alguno
+- `list_created` amplía su contrato con `list_name`, `items_count` e `is_public`
+- El feed social solo devuelve `list_created` cuando la lista sigue existiendo y es publica
+- El perfil propio y el perfil publico siguen separados; no se mezclan estados de listas entre ambos
 
 ## Phase Notes
 
 ### Phase 1
 
 - Detailed tasks:
-- Actualizar docs de implementacion para la fase 6
-- Crear `tests/test_social.py`
-- Cubrir busqueda por username, perfil publico, follow/unfollow, self-follow prohibido y feed paginado por cursor
-- Cubrir generacion de actividades al crear resena, watch log y follow
+- Crear `tests/test_lists.py`
+- Fijar contratos de creacion, validacion, privacidad, ownership, duplicados, reorder y feed social
+- Asegurar que `list_created` no aparezca para listas privadas
 - Findings:
-- El repositorio de usuario actual tuvo que ampliarse para busqueda y lectura publica
-- Separar `tests/test_social.py` redujo acoplamiento con `tests/test_reviews.py`
+- La Fase 6 ya tenia `list_created` modelado pero sin emision ni render mobile
+- Fue necesario cerrar una politica explicita para privacidad y duplicados antes de tocar persistencia
 - Tests:
-- `pytest tests/test_social.py`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
 - Review notes:
-- Follow/unfollow se fijaron como idempotentes para simplificar mobile
+- Se fijo `404` para listas privadas ajenas y `409` para duplicados de item
 - Status:
 - completed
 
 ### Phase 2
 
 - Detailed tasks:
-- Crear modelos `follows` y `activities` con migracion y constraints
-- Introducir entidades de dominio para perfil publico, activity actor y feed items
-- Extender interfaces/repositorios para busqueda de usuarios, lectura de perfil publico, follow graph y feed
-- Crear casos de uso para search users, get public profile, follow user, unfollow user y list feed
-- Crear `ActivityPublisher` para desacoplar `create_review` y `create_watch_log` de la persistencia concreta del feed
+- Crear tablas `lists` y `list_items` con migracion `0007`
+- Anadir entidades de dominio para summary, detail, items y owner
+- Crear `ListRepository` e interfaz `IListRepository`
+- Implementar use cases para CRUD de listas, add/remove item y swap de posiciones
+- Extender `ActivityPublisher` e `IActivityRepository` para `publish_list_created`
 - Findings:
-- `create_review` y `create_watch_log` quedaron conectados a publicacion de actividad sin meter logica en routers
-- El feed se resolvio con una sola query agregada y mapeo a union discriminada en backend
+- El repo no tenia `media_cache` persistida; la metadata de media se resolvio como enriquecimiento best effort usando la infraestructura TMDB ya existente
+- Se mantuvo `position` sin unique a nivel DB para simplificar el swap atomico sin meter una estrategia mas compleja
 - Tests:
-- `pytest tests/test_social.py`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
 - Review notes:
-- SQLite de tests soporta correctamente unicidad compuesta, self-reference y orden por cursor con desempate por `id`
+- El ownership y la visibilidad viven en dominio/repositorio, no en routers
 - Status:
 - completed
 
 ### Phase 3
 
 - Detailed tasks:
-- Crear schemas de presentacion para busqueda, perfil publico, feed item y pagina con cursor
-- Anadir router social con endpoints de usuarios/follow/feed
+- Crear router `lists` y schemas dedicados
 - Registrar modelos y router nuevos en `main.py`
-- Mapear entidades a respuestas sin filtrar accidentalmente campos privados
+- Ampliar `ListCreatedActivityResponse` y la entidad `ListCreatedActivity`
+- Actualizar `ActivityRepository` para devolver `list_name`, `items_count` e `is_public` sin romper el feed existente
 - Findings:
-- El contrato de perfil publico elimina por completo `email`
-- El feed ya queda preparado a nivel de contrato para `list_created` sin romper mobile mas adelante
+- El feed social de Fase 6 no necesitó cambiar su cursor ni su orden para soportar listas
+- `list_created` se filtra por visibilidad publica en el agregado del feed para no filtrar listas privadas
 - Tests:
-- `pytest tests/test_social.py`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
 - Review notes:
-- El cursor es suficientemente estable para timestamps compartidos gracias al desempate por `id`
+- La ampliacion del contrato social convive con `review`, `watch_log` y `follow` sin romper sus tests previos
 - Status:
 - completed
 
 ### Phase 4
 
 - Detailed tasks:
-- Crear entidades mobile para public profile, user search result, follow state y feed item
-- Anadir repositorio HTTP social y wiring de navegacion
-- Integrar bloque social dentro de `Home` debajo del feed actual
-- Implementar pantalla de busqueda y pantalla de perfil publico
-- Resolver follow/unfollow con actualizacion local en perfil y refetch simple en `Home`
+- Crear entidades y repositorio HTTP de listas en mobile
+- Anadir `my-lists` y `list-detail`
+- Integrar listas propias en `ProfileScreen`
+- Integrar listas publicas en `PublicProfileScreen`
+- Integrar `list_created` en el bloque social de `Home`
+- Implementar swap por dos toques con feedback visual simple
 - Findings:
-- `ProfileScreen` del usuario autenticado no se mezclo con el perfil publico, evitando estados cruzados
-- `Home` conserva el contenido de descubrimiento y anade una seccion social separada con su propio loading/error
+- Se reutilizo una sola pantalla de detalle con modo editable o lectura, respetando la separacion entre perfil propio y perfil publico
+- El swap se apoyo en `LayoutAnimation` y `Animated` para evitar dependencias nuevas de gestos
 - Tests:
 - `npx tsc --noEmit`
 - Review notes:
-- La paginacion incremental filtra ids repetidos para blindar duplicados entre cargas
+- El copy y los fallbacks muestran placeholder y `movie/tv #tmdb_id` cuando falta metadata
 - Status:
 - completed
 
 ### Phase 5
 
 - Detailed tasks:
-- Ejecutar checks completos
-- Revisar diff con foco en privacidad, paginacion y side effects de actividad
-- Registrar findings, accepted risks y trabajo diferido
+- Ejecutar la suite de listas, la suite social, la suite completa backend y TypeScript
+- Revisar puntos de friccion reales en metadata TMDB, feed social y UX de swap
+- Actualizar docs con riesgos aceptados
 - Findings:
-- `pytest tests/test_social.py` pasa
-- `pytest tests/` pasa con 67 tests verdes
+- `test_lists.py` pasa con 8 tests verdes
+- `test_social.py` pasa con 9 tests verdes
+- `pytest ..\tests -q` pasa con 75 tests verdes
 - `npx tsc --noEmit` pasa
-- No se ha ejecutado una prueba manual en Expo dentro de esta sesion
+- No se ha ejecutado Expo en esta sesion
 - Tests:
-- `pytest tests/test_social.py`
-- `pytest tests/`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
 - `npx tsc --noEmit`
 - Review notes:
-- Se acepta como riesgo residual la falta de validacion visual/manual en Expo
+- Se acepta como riesgo residual la falta de validacion manual/visual en Expo
 - Status:
 - completed
 
 ## Review Findings
 
-- fixed: el perfil publico no reutiliza `UserPublic` con `email`, evitando fuga de datos privados
-- fixed: el feed usa cursor opaco por `(created_at, id)` y cubre paginacion sin duplicados en tests
-- fixed: la emision de actividades desde reviews/watchlog/follow vive fuera de routers
-- accepted risk: falta validacion manual en Expo para UX fina del feed social, empty states y transiciones de follow
+- fixed: el feed social mantiene cursor opaco por `(created_at, id)` y la ampliacion de `list_created` no rompe la Fase 6
+- fixed: las listas privadas ajenas quedan ocultas con `404` y no aparecen en feed ni en perfil publico
+- fixed: `list_created` solo se publica para listas publicas
+- fixed: el mobile soporta `list_created` y navega al detalle publico de la lista
+- accepted risk: la metadata de media depende de enriquecimiento best effort y puede ser `null` si TMDB falla o no esta disponible
+- accepted risk: falta validacion manual en Expo para confirmar la sensacion visual del swap y la navegacion real desde el feed social
 
 ## Deferred Work
 
-- Recomendaciones de cuentas
-- Notificaciones por follow o actividad nueva
-- Reacciones/comentarios sobre items del feed
-- Exposicion UI de `list_created` antes de la fase 7
-- Privacidad avanzada de perfil o feed
+- Slugs publicos de listas
+- Cache persistente/local de metadata TMDB para listas
+- Listas colaborativas
+- Likes, comentarios o guardados sobre listas
+- Drag and drop avanzado para reorder
+- Hardening visual del swap y microinteracciones tras prueba en dispositivo real
 
 ## Final Confidence Check
 
 - Confidence score:
-- 9/10
+- 8.5/10
 - Likely code review callouts:
-- La actividad `list_created` esta preparada en backend pero aun no se emite ni se representa en mobile
-- El bloque social de `Home` puede pedir una segunda pasada de UX una vez se pruebe en dispositivo real
+- El enriquecimiento de metadata de media hace llamadas best effort a TMDB y puede merecer una capa de cache si el slice crece
+- `list_created` depende de la visibilidad actual de la lista; si una lista publica se borra o se vuelve privada, su evento deja de renderizarse en feed
+- La UX de swap necesita validacion manual para confirmar que el feedback visual es suficientemente claro en dispositivo real
 - Residual risks:
-- Falta validacion manual en Expo para confirmar espaciado, copies y ritmo visual del feed social
+- No se ha ejecutado una prueba manual en Expo dentro de esta sesion
+- El slice no introduce una estrategia de cache persistente para metadata de listas

@@ -1,20 +1,24 @@
-# PlotSkip - notas para levantarlo en varios PCs
+# PlotSkip - errores reales al montarlo en Windows
 
-Este documento recoge los errores reales que han salido al preparar el proyecto en Windows y como dejarlos resueltos sin usar scripts propios de arranque. La idea es que el flujo diario sea simple:
+Este documento resume los errores que han salido preparando el proyecto en Windows y aclara un punto importante: el tunnel del backend y el tunnel de Expo no son la misma cosa.
+
+Flujo recomendado hoy:
 
 ```powershell
 # Terminal 1 - backend
-cd C:\Users\juanm\Documents\GitHub\PlotSkip\backend
+cd C:\ruta\PlotSkip\backend
 .\.venv\Scripts\activate
 uvicorn app.main:app --reload
 
-# Terminal 2 - tunel backend
-ngrok 8000
+# Terminal 2 - backend publico
+ngrok http 8000
 
 # Terminal 3 - app mobile
-cd C:\Users\juanm\Documents\GitHub\PlotSkip\mobile
-npx expo start --tunnel
+cd C:\ruta\PlotSkip\mobile
+npx expo start --lan
 ```
+
+Usa `npx expo start --tunnel` solo como fallback si la red no deja usar LAN.
 
 ## 1. Backend: arrancar desde la carpeta correcta
 
@@ -24,12 +28,12 @@ Error:
 ModuleNotFoundError: No module named 'app'
 ```
 
-Causa: se ejecuto `uvicorn app.main:app --reload` desde la raiz del repo. El paquete `app` esta dentro de `backend/`.
+Causa: se ejecuto `uvicorn app.main:app --reload` desde la raiz del repo.
 
 Solucion:
 
 ```powershell
-cd C:\Users\juanm\Documents\GitHub\PlotSkip\backend
+cd C:\ruta\PlotSkip\backend
 .\.venv\Scripts\activate
 uvicorn app.main:app --reload
 ```
@@ -42,151 +46,78 @@ backend\.venv\Scripts\uvicorn.exe app.main:app --reload --app-dir backend
 
 ## 2. Neon: `DATABASE_URL`
 
-El proyecto ya no usa Docker ni PostgreSQL local. La base de datos va en Neon.
+El proyecto usa Neon, no PostgreSQL local.
 
-Archivo:
-
-```text
-backend/.env
-```
-
-Formato correcto:
+Formato correcto en `backend/.env`:
 
 ```env
 DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST/DB?sslmode=require&channel_binding=require
 ```
 
-Neon normalmente copia una URL que empieza por:
-
-```text
-postgresql://...
-```
-
-Hay que cambiar solo el prefijo:
-
-```text
-postgresql+asyncpg://...
-```
-
-Error si esta vacia:
+Errores tipicos:
 
 ```text
 Could not parse SQLAlchemy URL from string ''
-```
-
-Error si la contrasena no coincide:
-
-```text
 asyncpg.exceptions.InvalidPasswordError: password authentication failed
 ```
 
-En ese caso, copiar de nuevo la connection string desde Neon. Si se ha pegado una clave en chat o docs, rotarla despues.
+Solucion: copiar otra vez la connection string desde Neon y cambiar solo el prefijo a `postgresql+asyncpg://`.
 
-## 3. Alembic: migraciones
+## 3. Alembic: ruta correcta
 
-Ejecutar migraciones desde la raiz del repo:
+Desde `backend/`:
 
 ```powershell
-cd C:\Users\juanm\Documents\GitHub\PlotSkip
+alembic upgrade head
+```
+
+Desde la raiz del repo:
+
+```powershell
 backend\.venv\Scripts\alembic.exe -c backend\alembic.ini upgrade head
 ```
 
-No ejecutarlo asi estando dentro de `backend/`:
-
-```powershell
-backend\.venv\Scripts\alembic.exe -c backend\alembic.ini upgrade head
-```
-
-Desde `backend/`, esa ruta se convierte en `backend/backend/...` y falla con:
-
-```text
-El sistema no puede encontrar la ruta especificada.
-```
+No mezcles ambos contextos o acabas apuntando a rutas duplicadas.
 
 ## 4. Node/npm/npx
 
-El proyecto mobile usa Expo SDK 54. Conviene usar Node 20 LTS. En este PC habia Node 22 instalado y `npm`/`npx` estaban rotos.
+El proyecto mobile esta fijado alrededor de Node 20 LTS.
 
-Errores vistos:
-
-```text
-Cannot find module 'C:\Users\...\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js'
-Cannot find module '...\npx-cli.js'
-```
-
-Solucion recomendada para un PC nuevo:
+Comprobacion:
 
 ```powershell
-nvm install 20
-nvm use 20
 node -v
 npm -v
 npx --version
 ```
 
-Versiones esperadas:
-
-```text
-node v20.x.x
-npm funciona
-npx funciona
-```
-
-Luego instalar dependencias mobile:
+Si `npm` o `npx` estan rotos, reinstala Node con `nvm-windows`:
 
 ```powershell
-cd C:\Users\juanm\Documents\GitHub\PlotSkip\mobile
-npm ci
+nvm install 20
+nvm use 20
 ```
 
-Usar `npm ci`, no `npm install`, para respetar `package-lock.json`.
+Importante:
 
-## 5. ngrok como comando corto
+- Node 20 es la recomendacion del repo.
+- No documentamos Node 20 como "arreglo garantizado" de Expo tunnel. Puede evitar problemas locales, pero no resuelve un fallo del servicio tunnel de Expo.
 
-El comando original de ngrok es:
+## 5. ngrok del backend
+
+Comando oficial:
 
 ```powershell
 ngrok http 8000
 ```
 
-Pero para este proyecto queremos poder escribir:
+Si quieres un alias tipo `ngrok 8000`, tratelo como atajo local, no como requisito del repo.
 
-```powershell
-ngrok 8000
-```
-
-Para conseguirlo en Windows, se dejo un wrapper `ngrok.cmd` en una carpeta que ya esta en `PATH`:
-
-```text
-C:\Users\juanm\AppData\Roaming\npm\ngrok.cmd
-```
-
-Ese wrapper traduce:
-
-```text
-ngrok 8000
-```
-
-a:
-
-```text
-ngrok.exe http 8000
-```
-
-En un PC nuevo hay dos opciones:
-
-1. Usar el comando oficial:
-
-```powershell
-ngrok http 8000
-```
-
-2. Crear un wrapper equivalente si se quiere el comando corto `ngrok 8000`.
-
-El binario real de ngrok puede estar en cualquier ruta, pero debe estar instalado y accesible. Verificar:
+Verificacion:
 
 ```powershell
 ngrok version
+ngrok config check
 ```
 
 ## 6. Authtoken de ngrok
@@ -204,19 +135,11 @@ Solucion:
 ngrok config add-authtoken TU_TOKEN
 ```
 
-Verificar:
+Esto solo arregla el tunnel del backend.
 
-```powershell
-ngrok config check
-```
+## 7. URL publica del backend en la app
 
-Importante: si el token se pega en chat o en una captura, conviene rotarlo en el dashboard de ngrok.
-
-## 7. URL de ngrok en la app mobile
-
-La URL publica de ngrok no va en `api.ts`.
-
-Sitio correcto:
+La URL publica del backend va en:
 
 ```text
 mobile/.env.local
@@ -228,130 +151,63 @@ Contenido:
 EXPO_PUBLIC_BACKEND_URL=https://xxxx.ngrok-free.dev
 ```
 
-El codigo la lee aqui:
+Si la URL de ngrok cambia:
 
-```text
-mobile/src/infrastructure/http/backendUrl.ts
-```
+1. Copiala otra vez.
+2. Pegala en `mobile/.env.local`.
+3. Reinicia Expo.
 
-Si ngrok cambia de URL:
+## 8. Expo tunnel no es backend tunnel
 
-1. Copiar la nueva URL.
-2. Pegarla en `mobile/.env.local`.
-3. Reiniciar Expo.
+Este es el error de concepto mas importante de los docs anteriores.
 
-```powershell
-cd C:\Users\juanm\Documents\GitHub\PlotSkip\mobile
-npx expo start --tunnel
-```
+- `ngrok http 8000` expone la API backend.
+- `npx expo start --tunnel` intenta exponer Metro y la sesion de Expo Go.
+- Que uno funcione no implica que el otro funcione.
 
-`mobile/.env.local` no se sube a git.
+Consecuencia:
 
-## 8. Diferencia entre dos tuneles
+- Puedes tener backend accesible por ngrok y aun asi no poder abrir la app con Expo Go si `--tunnel` falla.
 
-Cuando se ejecuta Expo con `--tunnel`, puede aparecer otro proceso de ngrok para Metro/Expo. Ese tunel apunta a otro puerto, normalmente `8081`.
+## 9. Por que `--tunnel` falla en el PC de practicas
 
-El backend necesita su propio tunel:
+La causa mas probable no esta en el codigo de PlotSkip, sino en la combinacion de estos factores:
 
-```powershell
-ngrok 8000
-```
+1. La red del centro puede aislar clientes o bloquear trafico necesario para LAN.
+2. El repo actual usa Expo SDK `54.0.33` con `@expo/ws-tunnel` en el lockfile, no `@expo/ngrok`.
+3. Expo sigue documentando `--tunnel`, pero su servicio compartido ha tenido fallos aguas arriba en 2026.
 
-Comprobar tuneles activos:
+Conclusion practica:
 
-```powershell
-Invoke-RestMethod http://127.0.0.1:4040/api/tunnels
-Invoke-RestMethod http://127.0.0.1:4041/api/tunnels
-```
+- Si el PC de practicas no puede usar `npx expo start --tunnel`, no hay una correccion fiable que podamos meter en el repo para forzarlo a funcionar.
+- Lo que si podemos hacer es documentar bien el limite y mover el flujo recomendado a opciones mas estables.
 
-El backend debe apuntar a:
+## 10. Senales para distinguir el tipo de fallo
 
-```text
-http://localhost:8000
-```
-
-Expo/Metro suele apuntar a:
-
-```text
-http://localhost:8081
-```
-
-## 9. TMDB API key
-
-Archivo:
-
-```text
-backend/.env
-```
-
-Variable:
-
-```env
-TMDB_API_KEY=tu_api_key
-```
-
-Sin esa key, auth puede funcionar, pero las pantallas que pidan home, busqueda o detalle de peliculas/series pueden fallar.
-
-Tras cambiar `.env`, reiniciar backend:
-
-```powershell
-CTRL+C
-uvicorn app.main:app --reload
-```
-
-## 10. Comprobaciones rapidas
-
-Backend local:
+Si falla Expo tunnel pero el backend responde por ngrok:
 
 ```powershell
 Invoke-WebRequest http://127.0.0.1:8000/health -UseBasicParsing
-```
-
-Backend via ngrok:
-
-```powershell
 Invoke-WebRequest https://xxxx.ngrok-free.dev/health -UseBasicParsing
 ```
 
-Migraciones:
+Entonces:
 
-```powershell
-cd C:\Users\juanm\Documents\GitHub\PlotSkip
-backend\.venv\Scripts\alembic.exe -c backend\alembic.ini upgrade head
-```
+- el backend esta bien
+- la URL publica de la API esta bien
+- el problema esta en Expo LAN o Expo tunnel, no en FastAPI
 
-Mobile:
+## 11. Que usar en su lugar
 
-```powershell
-cd C:\Users\juanm\Documents\GitHub\PlotSkip\mobile
-npx expo start --tunnel
-```
+Orden recomendado:
 
-## 11. Flujo final deseado
+1. `npx expo start --lan` si PC y movil estan en la misma red y se ven entre si.
+2. Emulador Android en el propio PC si la red del centro bloquea LAN.
+3. `npx expo start --tunnel` solo como intento extra, no como paso obligatorio del setup.
 
-Terminal 1:
+## 12. Resumen corto
 
-```powershell
-cd C:\Users\juanm\Documents\GitHub\PlotSkip\backend
-.\.venv\Scripts\activate
-uvicorn app.main:app --reload
-```
-
-Terminal 2:
-
-```powershell
-ngrok 8000
-```
-
-Copiar la URL HTTPS a:
-
-```text
-mobile/.env.local
-```
-
-Terminal 3:
-
-```powershell
-cd C:\Users\juanm\Documents\GitHub\PlotSkip\mobile
-npx expo start --tunnel
-```
+- El backend se publica con ngrok.
+- Expo Go depende de LAN o del tunnel de Expo.
+- El repo no controla la disponibilidad del tunnel de Expo.
+- El error de los docs antiguos era tratar `@expo/ngrok` y Node 20 como si explicaran por si solos el fallo actual de `--tunnel`.

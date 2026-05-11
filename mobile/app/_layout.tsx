@@ -37,6 +37,14 @@ export default function RootLayout() {
         name="user-profile"
         options={{ headerShown: true, title: 'Perfil publico' }}
       />
+      <Stack.Screen
+        name="my-lists"
+        options={{ headerShown: true, title: 'Mis listas' }}
+      />
+      <Stack.Screen
+        name="list-detail"
+        options={{ headerShown: true, title: 'Lista' }}
+      />
     </Stack>
   );
 }

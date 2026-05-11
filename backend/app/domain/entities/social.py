@@ -83,3 +83,6 @@ class FollowActivity(BaseActivity):
 @dataclass
 class ListCreatedActivity(BaseActivity):
     list_id: int | None
+    list_name: str | None
+    items_count: int
+    is_public: bool

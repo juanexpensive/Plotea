@@ -137,6 +137,10 @@ export function useHomeViewModel() {
     router.push({ pathname: '/user-profile', params: { username } });
   }
 
+  function openListDetail(listId: number, editable = '0') {
+    router.push({ pathname: '/list-detail', params: { list_id: listId, editable } });
+  }
+
   return {
     feed,
     loading,
@@ -155,6 +159,7 @@ export function useHomeViewModel() {
     clearSearch,
     openUserSearch,
     openUserProfile,
+    openListDetail,
     refreshSocialFeed,
     loadMoreSocialFeed,
   };

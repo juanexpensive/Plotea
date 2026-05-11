@@ -1,9 +1,11 @@
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.data.models.activity import Activity as ActivityModel
 from app.data.models.follow import Follow as FollowModel
+from app.data.models.list import List as ListModel
+from app.data.models.list_item import ListItem as ListItemModel
 from app.data.models.review import Review as ReviewModel
 from app.data.models.user import User as UserModel
 from app.data.models.watch_log import WatchLog as WatchLogModel
@@ -42,6 +44,10 @@ class ActivityRepository(IActivityRepository):
         )
         await self._session.commit()
 
+    async def create_list_created_activity(self, user_id: int, list_id: int) -> None:
+        self._session.add(ActivityModel(user_id=user_id, activity_type="list_created", list_id=list_id))
+        await self._session.commit()
+
     async def list_feed(
         self,
         follower_id: int,
@@ -50,6 +56,12 @@ class ActivityRepository(IActivityRepository):
     ) -> list[BaseActivity]:
         actor_user = aliased(UserModel)
         followed_user = aliased(UserModel)
+        list_model = aliased(ListModel)
+        list_items_count = (
+            select(ListItemModel.list_id, func.count(ListItemModel.id).label("items_count"))
+            .group_by(ListItemModel.list_id)
+            .subquery()
+        )
 
         query = (
             select(
@@ -58,6 +70,8 @@ class ActivityRepository(IActivityRepository):
                 ReviewModel,
                 WatchLogModel,
                 followed_user,
+                list_model,
+                list_items_count.c.items_count,
             )
             .join(
                 FollowModel,
@@ -67,7 +81,15 @@ class ActivityRepository(IActivityRepository):
             .outerjoin(ReviewModel, ReviewModel.id == ActivityModel.review_id)
             .outerjoin(WatchLogModel, WatchLogModel.id == ActivityModel.watch_log_id)
             .outerjoin(followed_user, followed_user.id == ActivityModel.followed_user_id)
+            .outerjoin(list_model, list_model.id == ActivityModel.list_id)
+            .outerjoin(list_items_count, list_items_count.c.list_id == list_model.id)
             .where(FollowModel.follower_id == follower_id)
+            .where(
+                or_(
+                    ActivityModel.activity_type != "list_created",
+                    and_(list_model.id.is_not(None), list_model.is_public.is_(True)),
+                )
+            )
             .order_by(ActivityModel.created_at.desc(), ActivityModel.id.desc())
             .limit(limit)
         )
@@ -87,7 +109,7 @@ class ActivityRepository(IActivityRepository):
         return [self._to_entity(row) for row in result.all()]
 
     def _to_entity(self, row) -> BaseActivity:
-        activity_model, actor_model, review_model, watch_log_model, followed_user_model = row
+        activity_model, actor_model, review_model, watch_log_model, followed_user_model, list_model, list_items_count = row
         actor = ActivityActor(
             id=actor_model.id,
             username=actor_model.username,
@@ -145,4 +167,7 @@ class ActivityRepository(IActivityRepository):
             created_at=activity_model.created_at,
             actor=actor,
             list_id=activity_model.list_id,
+            list_name=list_model.name if list_model is not None else None,
+            items_count=int(list_items_count or 0),
+            is_public=bool(list_model.is_public) if list_model is not None else False,
         )

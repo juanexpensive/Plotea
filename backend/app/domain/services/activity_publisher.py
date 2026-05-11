@@ -13,3 +13,6 @@ class ActivityPublisher:
 
     async def publish_follow(self, user_id: int, followed_user_id: int) -> None:
         await self._activity_repo.create_follow_activity(user_id, followed_user_id)
+
+    async def publish_list_created(self, user_id: int, list_id: int) -> None:
+        await self._activity_repo.create_list_created_activity(user_id, list_id)

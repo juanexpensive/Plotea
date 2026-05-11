@@ -1,10 +1,11 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ListSummary } from '../../../domain/entities/lists';
 import { usePublicProfileViewModel } from './PublicProfileViewModel';
 
 export default function PublicProfileScreen() {
   const { username } = useLocalSearchParams<{ username?: string }>();
-  const { profile, loading, savingFollow, error, toggleFollow } = usePublicProfileViewModel(username);
+  const { profile, lists, loading, savingFollow, error, toggleFollow } = usePublicProfileViewModel(username);
 
   if (loading) {
     return (
@@ -55,6 +56,18 @@ export default function PublicProfileScreen() {
         </Text>
       </Pressable>
 
+      <View style={styles.listsSection}>
+        <Text style={styles.sectionTitle}>Listas publicas</Text>
+        {lists.length === 0 ? <Text style={styles.emptyText}>Todavia no hay listas publicas.</Text> : null}
+        {lists.map((list) => (
+          <PublicListCard
+            key={list.id}
+            list={list}
+            onPress={() => router.push({ pathname: '/list-detail', params: { list_id: list.id, editable: '0' } })}
+          />
+        ))}
+      </View>
+
       {error ? <Text style={styles.inlineError}>{error}</Text> : null}
     </ScrollView>
   );
@@ -66,6 +79,18 @@ function StatCard({ label, value }: { label: string; value: number }) {
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
+  );
+}
+
+function PublicListCard({ list, onPress }: { list: ListSummary; onPress: () => void }) {
+  return (
+    <Pressable style={({ pressed }) => [styles.listCard, pressed ? styles.listCardPressed : null]} onPress={onPress}>
+      <Text style={styles.listCardTitle}>{list.name}</Text>
+      {list.description ? <Text style={styles.listCardBody}>{list.description}</Text> : null}
+      <Text style={styles.listCardMeta}>
+        {list.items_count} {list.items_count === 1 ? 'obra' : 'obras'}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -182,5 +207,47 @@ const styles = StyleSheet.create({
     color: '#fca5a5',
     fontSize: 14,
     textAlign: 'center',
+  },
+  listsSection: {
+    width: '100%',
+    gap: 12,
+    marginTop: 12,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    alignSelf: 'flex-start',
+  },
+  emptyText: {
+    color: '#888',
+    fontSize: 13,
+    alignSelf: 'flex-start',
+  },
+  listCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 12,
+    backgroundColor: '#181818',
+    padding: 14,
+    gap: 8,
+  },
+  listCardPressed: {
+    opacity: 0.82,
+  },
+  listCardTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  listCardBody: {
+    color: '#cfcfcf',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  listCardMeta: {
+    color: '#999',
+    fontSize: 12,
   },
 });

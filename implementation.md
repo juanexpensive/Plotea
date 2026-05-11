@@ -1,74 +1,74 @@
-# Fase 6 - Social: usuarios, follows y feed
+# Fase 7 - Listas personalizadas
 
 ## Objetivo
 
-- Implementar el slice social base para descubrir usuarios, seguir cuentas y consumir un feed cronologico de actividad reciente de personas seguidas, manteniendo la logica en dominio y preparando el terreno para futuras listas y notificaciones.
+- Implementar el slice completo de listas personalizadas sobre la base social ya cerrada en la Fase 6: listas propias y publicas, orden manual por intercambio de posicion, activacion real de `list_created` en backend y render real de `list_created` en mobile.
 
 ## Alcance
 
 - En alcance:
-- Busqueda de usuarios por `username` con resultados ligeros
-- Perfil publico basico sin exponer datos privados
-- Modelo `follows` con restricciones para evitar self-follow y duplicados
-- Modelo `activities` con soporte para `review`, `watch_log`, `list_created` y `follow`
-- Endpoints `GET /users/search`, `GET /users/{username}`, `POST /users/{id}/follow`, `DELETE /users/{id}/follow`, `GET /feed`
-- Feed con cursor pagination estable
-- Integracion mobile para buscar usuarios, abrir perfil publico, seguir/dejar de seguir y ver feed
+- Modelos `lists` y `list_items` con ownership, visibilidad publica/privada y orden manual por `position`
+- Endpoints `GET /lists/me`, `POST /lists`, `GET /lists/{id}`, `PUT /lists/{id}`, `DELETE /lists/{id}`, `GET /users/{username}/lists`, `POST /lists/{id}/items`, `DELETE /lists/{id}/items/{tmdb_id}/{media_type}`, `PATCH /lists/{id}/items/reorder`
+- Publicacion de actividad `list_created` solo para listas publicas
+- Contrato social ampliado para `list_created` con `list_id`, `list_name`, `items_count` e `is_public`
+- Integracion mobile para listas propias, lista publica y navegacion desde perfil/feed social
+- Reordenado mobile por dos toques con feedback visual simple
 - Fuera de alcance:
-- Recomendaciones algoritimicas de usuarios
-- Notificaciones push o inbox social
-- Likes/comentarios sobre actividades del feed
-- Perfil editable o ajustes de privacidad avanzados
-- Actividad `list_created` visible en UI antes de existir la fase de listas
+- Slugs publicos de listas
+- Listas colaborativas
+- Likes, comentarios o follows sobre listas
+- Drag and drop complejo con librerias de gestos
+- Cache persistente de metadata TMDB
 
 ## Fases
 
-### Fase 1: Contratos y tests backend
+### Fase 1: Contratos y tests backend de listas
 
-- Goal: fijar desde tests el contrato social de busqueda, perfil publico, follow/unfollow y feed con cursor
-- Expected files or systems: `tests/test_social.py`, `implementation.md`, `implementation_details.md`
-- Validation: los tests describen self-follow prohibido, idempotencia de follow/unfollow, perfil publico sin email y paginacion del feed sin duplicados
-- Review gate: el contrato backend queda cerrado antes de tocar modelos y persistencia
+- Goal: fijar desde tests el contrato de listas, permisos, duplicados, reorder y `list_created`
+- Expected files or systems: `tests/test_lists.py`, `implementation.md`, `implementation_details.md`
+- Validation: los tests describen privacidad `404`, duplicados `409`, borrado de item idempotente, swap de posiciones y feed con `list_created`
+- Review gate: la politica de visibilidad y los payloads de reorder/feed quedan cerrados antes de tocar persistencia
 - Estado: completada
 
-### Fase 2: Dominio, persistencia y actividades backend
+### Fase 2: Dominio, persistencia y actividad backend
 
-- Goal: implementar `follows` y `activities` con casos de uso y persistencia alineados con Clean Architecture
-- Expected files or systems: modelos, migracion, entidades, repositorios, casos de uso y servicio de aplicacion para publicar actividad
-- Validation: `pytest tests/test_social.py`
-- Review gate: las actividades nacen en casos de uso o servicios de aplicacion; el feed usa cursor y no offset
+- Goal: implementar modelos, migracion, repositorios y casos de uso del slice de listas
+- Expected files or systems: modelos, migracion `0007`, entidades, interfaces, repositorio `ListRepository`, use cases y `ActivityPublisher`
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py`
+- Review gate: ownership, visibilidad publica/privada y swap atomico quedan resueltos en dominio, sin logica de negocio en routers
 - Estado: completada
 
-### Fase 3: Endpoints y contratos de presentacion
+### Fase 3: Endpoints y ampliacion del contrato social
 
-- Goal: exponer busqueda, perfil publico, follow/unfollow y feed con schemas estables para mobile
-- Expected files or systems: routers y schemas de `users` y `feed`, wiring en `main.py`
-- Validation: `pytest tests/test_social.py`
-- Review gate: el perfil publico no devuelve email ni campos sensibles; los cursores son opacos y estables
+- Goal: exponer el API de listas y ampliar `list_created` dentro del feed social ya existente
+- Expected files or systems: router `lists`, schemas `lists`, ajustes en `social` y wiring en `main.py`
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py`
+- Review gate: el feed mantiene cursor opaco y orden estable de Fase 6 sin romper `review`, `watch_log` ni `follow`
 - Estado: completada
 
-### Fase 4: Integracion mobile social
+### Fase 4: Integracion mobile de listas
 
-- Goal: conectar el backend social con una UX minima viable en mobile
-- Expected files or systems: entidades y repositorios mobile, bloque social en `Home`, pantalla de busqueda y perfil publico
+- Goal: conectar listas propias y publicas con la app mobile respetando la separacion ya fijada en Fase 6
+- Expected files or systems: entidades/repo de listas, pantallas `my-lists` y `list-detail`, integracion en `Profile`, `PublicProfile` y `Home`
 - Validation: `npx tsc --noEmit`
-- Review gate: follow/unfollow actualiza contador/estado sin inconsistencias y el feed pagina sin repetir items
+- Review gate: listas propias viven en perfil propio, listas publicas en perfil ajeno/feed, y el swap por dos toques funciona con feedback simple sin drag and drop
 - Estado: completada
 
 ### Fase 5: QA, self-review y riesgos
 
-- Goal: ejecutar checks, revisar diffs y registrar riesgos reales antes de cerrar la fase
+- Goal: ejecutar checks, revisar diff y documentar riesgos residuales reales
 - Expected files or systems: docs de implementacion, backend y mobile
-- Validation: `pytest tests/test_social.py`, `pytest tests/`, `npx tsc --noEmit`
-- Review gate: quedan documentados riesgos residuales, supuestos y trabajo diferido
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py`, `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`, `npx tsc --noEmit`
+- Review gate: quedan reflejados los limites reales de metadata TMDB y la necesidad de validacion manual en Expo
 - Estado: completada
 
 ## Cierre
 
-- Backend con follows, actividades y feed social validados por tests
-- Mobile con feed, busqueda y perfil publico funcionales sobre los contratos nuevos
+- Backend con listas, items, reorder y `list_created` validados por tests
+- Mobile con listas propias, listas publicas y tarjeta `list_created` integrada en el feed social existente
 - Validaciones ejecutadas:
-- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py`
-- `backend\.venv\Scripts\python.exe -m pytest ..\tests\`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
 - `npx tsc --noEmit`
-- Riesgo residual aceptado: falta validacion manual en Expo para confirmar UX fina, empty states y transiciones visuales del bloque social
+- Riesgo residual aceptado: falta validacion manual en Expo para confirmar ritmo visual del swap, feedback de seleccion y navegacion real desde el feed social
