@@ -3,48 +3,53 @@
 ## Repository Context
 
 - Relevant files:
-- `backend/app/data/models/user.py`
+- `backend/app/data/models/follow.py`
+- `backend/app/data/models/activity.py`
 - `backend/app/data/repositories/user_repository.py`
-- `backend/app/domain/entities/user.py`
+- `backend/app/data/repositories/follow_repository.py`
+- `backend/app/data/repositories/activity_repository.py`
+- `backend/app/domain/entities/social.py`
 - `backend/app/domain/repositories/i_user_repository.py`
-- `backend/app/domain/usecases/auth/register.py`
+- `backend/app/domain/repositories/i_follow_repository.py`
+- `backend/app/domain/repositories/i_activity_repository.py`
+- `backend/app/domain/services/activity_publisher.py`
+- `backend/app/domain/usecases/social`
 - `backend/app/domain/usecases/reviews/create_review.py`
 - `backend/app/domain/usecases/watchlog/create_watch_log.py`
-- `backend/app/presentation/routers/auth.py`
-- `backend/app/presentation/routers/reviews.py`
-- `backend/app/presentation/routers/watch_log.py`
-- `backend/app/presentation/schemas/auth.py`
+- `backend/app/presentation/routers/social.py`
+- `backend/app/presentation/schemas/social.py`
 - `backend/app/main.py`
-- `backend/alembic/versions`
-- `mobile/src/domain/entities/auth.ts`
-- `mobile/src/domain/entities/media.ts`
-- `mobile/src/data/repositories/AuthRepository.ts`
-- `mobile/src/presentation/features/profile/ProfileScreen.tsx`
-- `mobile/src/presentation/features/profile/ProfileViewModel.ts`
+- `backend/alembic/versions/0006_social_graph_feed.py`
+- `mobile/src/domain/entities/social.ts`
+- `mobile/src/data/repositories/SocialRepository.ts`
 - `mobile/src/presentation/features/home/HomeScreen.tsx`
 - `mobile/src/presentation/features/home/HomeViewModel.ts`
+- `mobile/src/presentation/features/social`
+- `mobile/app/user-search.tsx`
+- `mobile/app/user-profile.tsx`
+- `tests/test_social.py`
 - Existing patterns to follow:
 - Clean Architecture con entidades, interfaces, repositorios concretos y use cases por vertical slice
 - Routers FastAPI finos que delegan reglas de negocio a casos de uso
 - Tests HTTP async con `AsyncClient` y helpers de login reutilizables
 - Repositorios mobile HTTP simples con mapeo explicito hacia entidades de dominio
 - Constraints:
-- El feed social debe ser privado al usuario autenticado y contener solo actividad de usuarios seguidos
-- La paginacion del feed debe ser por cursor estable, nunca por offset
-- El perfil publico no puede exponer `email` ni otros datos internos
-- La generacion de actividades debe centralizarse fuera de routers para evitar drift entre endpoints
-- `list_created` se soporta en backend aunque su emision real pueda quedar diferida hasta la fase 7
+- El feed social es privado al usuario autenticado y contiene solo actividad de usuarios seguidos
+- La paginacion del feed usa cursor estable, nunca offset
+- El perfil publico no expone `email` ni otros datos internos
+- La generacion de actividades esta centralizada fuera de routers
+- `list_created` queda soportado en backend pero sin emision/render en esta fase
 
 ## Decisions Locked
 
 - `GET /users/search` requiere autenticacion y devuelve resultados ligeros para UI de descubrimiento
 - `GET /users/{username}` expone un perfil publico con identidad visible, bio/avatar si existen y estado de follow respecto al usuario actual
-- `POST /users/{id}/follow` y `DELETE /users/{id}/follow` son idempotentes desde el punto de vista del cliente; los duplicados no crean relaciones extra
+- `POST /users/{id}/follow` y `DELETE /users/{id}/follow` son idempotentes desde el punto de vista del cliente
 - `GET /feed` devuelve items ordenados por `created_at DESC` con desempate estable por `id DESC`
-- El cursor del feed sera opaco y derivado de `(created_at, id)` para evitar duplicados entre paginas
-- Las actividades de `review`, `watch_log` y `follow` se crean desde casos de uso o un servicio de dominio/aplicacion reutilizable
+- El cursor del feed es opaco y derivado de `(created_at, id)` para evitar duplicados entre paginas
+- Las actividades de `review`, `watch_log` y `follow` se crean desde casos de uso o un servicio reutilizable
 - `list_created` queda modelado en el enum/tipo de actividad aunque la emision efectiva se active en la fase 7
-- El perfil publico no reutiliza directamente `UserPublic` si el contrato actual sigue incluyendo `email`
+- El perfil publico usa un contrato propio y no reutiliza `UserPublic` con `email`
 
 ## Phase Notes
 
@@ -52,94 +57,98 @@
 
 - Detailed tasks:
 - Actualizar docs de implementacion para la fase 6
-- Crear tests del contrato social antes de tocar persistencia
+- Crear `tests/test_social.py`
 - Cubrir busqueda por username, perfil publico, follow/unfollow, self-follow prohibido y feed paginado por cursor
-- Cubrir generacion de actividades al crear resena y watch log
+- Cubrir generacion de actividades al crear resena, watch log y follow
 - Findings:
-- El repositorio de usuario actual solo cubre `get_by_*` y `create`; necesitara ampliarse para busqueda y lectura publica
-- `tests/test_reviews.py` ya contiene helpers utiles; decidir si extraer `tests/test_social.py` para reducir acoplamiento
+- El repositorio de usuario actual tuvo que ampliarse para busqueda y lectura publica
+- Separar `tests/test_social.py` redujo acoplamiento con `tests/test_reviews.py`
 - Tests:
 - `pytest tests/test_social.py`
 - Review notes:
-- Confirmar si follow duplicado responde `200/204` idempotente o `409`; recomendacion: `200/204` para simplificar mobile
+- Follow/unfollow se fijaron como idempotentes para simplificar mobile
 - Status:
-- pending
+- completed
 
 ### Phase 2
 
 - Detailed tasks:
-- Crear modelos `follows` y `activities` con migraciones y constraints
-- Introducir entidades de dominio para follow, activity y cursor de feed si aporta claridad
+- Crear modelos `follows` y `activities` con migracion y constraints
+- Introducir entidades de dominio para perfil publico, activity actor y feed items
 - Extender interfaces/repositorios para busqueda de usuarios, lectura de perfil publico, follow graph y feed
 - Crear casos de uso para search users, get public profile, follow user, unfollow user y list feed
-- Crear servicio de publicacion de actividad para desacoplar `create_review` y `create_watch_log` de la persistencia concreta del feed
+- Crear `ActivityPublisher` para desacoplar `create_review` y `create_watch_log` de la persistencia concreta del feed
 - Findings:
-- `create_review` y `create_watch_log` son los primeros puntos reales de emision de actividad
-- Hay riesgo de duplicar logica si follow y emision de actividad se hacen desde routers; debe evitarse
+- `create_review` y `create_watch_log` quedaron conectados a publicacion de actividad sin meter logica en routers
+- El feed se resolvio con una sola query agregada y mapeo a union discriminada en backend
 - Tests:
 - `pytest tests/test_social.py`
 - Review notes:
-- Verificar comportamiento de unicidad compuesta y self-reference en SQLite de tests y en la BD real
+- SQLite de tests soporta correctamente unicidad compuesta, self-reference y orden por cursor con desempate por `id`
 - Status:
-- pending
+- completed
 
 ### Phase 3
 
 - Detailed tasks:
-- Crear schemas de presentacion para resultados de busqueda, perfil publico, follow state, feed item y pagina con cursor
-- Anadir router `users` y posiblemente router `feed` o endpoint agrupado segun el estilo actual del proyecto
-- Registrar nuevos routers en `backend/app/main.py`
+- Crear schemas de presentacion para busqueda, perfil publico, feed item y pagina con cursor
+- Anadir router social con endpoints de usuarios/follow/feed
+- Registrar modelos y router nuevos en `main.py`
 - Mapear entidades a respuestas sin filtrar accidentalmente campos privados
 - Findings:
-- El tipo `UserPublic` actual incluye `email`, lo que entra en conflicto con la puerta de revision del roadmap
-- El contrato del feed debe ser suficientemente generico para soportar `list_created` mas adelante sin redisenar el endpoint
+- El contrato de perfil publico elimina por completo `email`
+- El feed ya queda preparado a nivel de contrato para `list_created` sin romper mobile mas adelante
 - Tests:
 - `pytest tests/test_social.py`
 - Review notes:
-- Revisar con lupa la forma del cursor y la estabilidad del orden cuando varios items comparten timestamp
+- El cursor es suficientemente estable para timestamps compartidos gracias al desempate por `id`
 - Status:
-- pending
+- completed
 
 ### Phase 4
 
 - Detailed tasks:
 - Crear entidades mobile para public profile, user search result, follow state y feed item
-- Anadir repositorio HTTP social y wiring de autenticacion
-- Implementar pantalla o seccion de feed social y flujo de busqueda de usuarios
-- Implementar perfil publico con CTA de seguir/dejar de seguir
-- Resolver actualizacion optimista o refetch minimal para follow/unfollow y paginacion del feed
+- Anadir repositorio HTTP social y wiring de navegacion
+- Integrar bloque social dentro de `Home` debajo del feed actual
+- Implementar pantalla de busqueda y pantalla de perfil publico
+- Resolver follow/unfollow con actualizacion local en perfil y refetch simple en `Home`
 - Findings:
-- `ProfileScreen` actual es solo para el usuario autenticado; conviene no forzarlo a cubrir tambien perfil publico si eso complica estados
-- `HomeScreen` ya consume un feed de descubrimiento de media; hay que decidir si el feed social vive ahi o en una surface separada para no mezclar conceptos
+- `ProfileScreen` del usuario autenticado no se mezclo con el perfil publico, evitando estados cruzados
+- `Home` conserva el contenido de descubrimiento y anade una seccion social separada con su propio loading/error
 - Tests:
 - `npx tsc --noEmit`
 - Review notes:
-- Evitar estados globales nuevos si el slice puede resolverse con view models locales y repositorios existentes
+- La paginacion incremental filtra ids repetidos para blindar duplicados entre cargas
 - Status:
-- pending
+- completed
 
 ### Phase 5
 
 - Detailed tasks:
 - Ejecutar checks completos
-- Revisar diff con enfoque en privacidad, paginacion y side effects de actividad
+- Revisar diff con foco en privacidad, paginacion y side effects de actividad
 - Registrar findings, accepted risks y trabajo diferido
 - Findings:
-- Haran falta pruebas manuales de navegacion mobile para validar empty states, cursores y transiciones de follow
+- `pytest tests/test_social.py` pasa
+- `pytest tests/` pasa con 67 tests verdes
+- `npx tsc --noEmit` pasa
+- No se ha ejecutado una prueba manual en Expo dentro de esta sesion
 - Tests:
 - `pytest tests/test_social.py`
 - `pytest tests/`
 - `npx tsc --noEmit`
 - Review notes:
-- Confirmar si la ausencia de una prueba visual/manual en Expo queda como riesgo aceptado o requiere cierre previo
+- Se acepta como riesgo residual la falta de validacion visual/manual en Expo
 - Status:
-- pending
+- completed
 
 ## Review Findings
 
-- open: `backend/app/domain/entities/user.py` define `UserPublic` con `email`; si se reutiliza tal cual, el perfil publico filtrara datos privados
-- open: el proyecto aun no tiene infraestructura de feed o cursor reusable; conviene fijar una forma simple y estable antes de implementar mobile
-- open: `create_review` y `create_watch_log` necesitaran un punto comun para publicar actividad sin acoplar los routers
+- fixed: el perfil publico no reutiliza `UserPublic` con `email`, evitando fuga de datos privados
+- fixed: el feed usa cursor opaco por `(created_at, id)` y cubre paginacion sin duplicados en tests
+- fixed: la emision de actividades desde reviews/watchlog/follow vive fuera de routers
+- accepted risk: falta validacion manual en Expo para UX fina del feed social, empty states y transiciones de follow
 
 ## Deferred Work
 
@@ -152,11 +161,9 @@
 ## Final Confidence Check
 
 - Confidence score:
-- 8/10
+- 9/10
 - Likely code review callouts:
-- Si no se redefine el contrato publico de usuario, se podria exponer `email` por accidente
-- Si el cursor se basa solo en timestamp, apareceran duplicados o saltos entre paginas
-- Si la emision de actividades se reparte entre varios use cases sin abstraccion comun, crecera el coste de mantenimiento al entrar listas/notificaciones
+- La actividad `list_created` esta preparada en backend pero aun no se emite ni se representa en mobile
+- El bloque social de `Home` puede pedir una segunda pasada de UX una vez se pruebe en dispositivo real
 - Residual risks:
-- Aun falta decidir la superficie mobile exacta del feed social frente al feed de descubrimiento actual
-- La validacion de UX real en Expo seguira siendo necesaria aunque `npx tsc --noEmit` pase
+- Falta validacion manual en Expo para confirmar espaciado, copies y ritmo visual del feed social

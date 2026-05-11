@@ -26,18 +26,18 @@
 ### Fase 1: Contratos y tests backend
 
 - Goal: fijar desde tests el contrato social de busqueda, perfil publico, follow/unfollow y feed con cursor
-- Expected files or systems: `tests/test_social.py` o extension de `tests/test_reviews.py`, `implementation.md`, `implementation_details.md`
-- Validation: los tests describen self-follow prohibido, follow unico, perfil publico sin email y paginacion del feed sin duplicados
+- Expected files or systems: `tests/test_social.py`, `implementation.md`, `implementation_details.md`
+- Validation: los tests describen self-follow prohibido, idempotencia de follow/unfollow, perfil publico sin email y paginacion del feed sin duplicados
 - Review gate: el contrato backend queda cerrado antes de tocar modelos y persistencia
-- Estado: pendiente
+- Estado: completada
 
 ### Fase 2: Dominio, persistencia y actividades backend
 
 - Goal: implementar `follows` y `activities` con casos de uso y persistencia alineados con Clean Architecture
-- Expected files or systems: modelos, migraciones, entidades, repositorios, casos de uso y servicios de aplicacion para publicar actividad
+- Expected files or systems: modelos, migracion, entidades, repositorios, casos de uso y servicio de aplicacion para publicar actividad
 - Validation: `pytest tests/test_social.py`
 - Review gate: las actividades nacen en casos de uso o servicios de aplicacion; el feed usa cursor y no offset
-- Estado: pendiente
+- Estado: completada
 
 ### Fase 3: Endpoints y contratos de presentacion
 
@@ -45,15 +45,15 @@
 - Expected files or systems: routers y schemas de `users` y `feed`, wiring en `main.py`
 - Validation: `pytest tests/test_social.py`
 - Review gate: el perfil publico no devuelve email ni campos sensibles; los cursores son opacos y estables
-- Estado: pendiente
+- Estado: completada
 
 ### Fase 4: Integracion mobile social
 
 - Goal: conectar el backend social con una UX minima viable en mobile
-- Expected files or systems: entidades y repositorios mobile, pantalla/feed social, perfil publico y busqueda
+- Expected files or systems: entidades y repositorios mobile, bloque social en `Home`, pantalla de busqueda y perfil publico
 - Validation: `npx tsc --noEmit`
 - Review gate: follow/unfollow actualiza contador/estado sin inconsistencias y el feed pagina sin repetir items
-- Estado: pendiente
+- Estado: completada
 
 ### Fase 5: QA, self-review y riesgos
 
@@ -61,10 +61,14 @@
 - Expected files or systems: docs de implementacion, backend y mobile
 - Validation: `pytest tests/test_social.py`, `pytest tests/`, `npx tsc --noEmit`
 - Review gate: quedan documentados riesgos residuales, supuestos y trabajo diferido
-- Estado: pendiente
+- Estado: completada
 
-## Cierre esperado
+## Cierre
 
 - Backend con follows, actividades y feed social validados por tests
 - Mobile con feed, busqueda y perfil publico funcionales sobre los contratos nuevos
-- Riesgos de privacidad, paginacion y generacion de actividades documentados antes de pasar a la siguiente fase
+- Validaciones ejecutadas:
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\`
+- `npx tsc --noEmit`
+- Riesgo residual aceptado: falta validacion manual en Expo para confirmar UX fina, empty states y transiciones visuales del bloque social
