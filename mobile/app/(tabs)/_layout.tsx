@@ -3,6 +3,7 @@ import { Redirect, Tabs } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { hasValidSession } from '../../src/data/repositories/AuthRepository';
+import { darkDesign } from '../../src/presentation/theme/darkDesign';
 
 export default function TabsLayout() {
   const [ready, setReady] = useState(false);
@@ -17,8 +18,8 @@ export default function TabsLayout() {
 
   if (!ready) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#fff" />
+      <View style={{ flex: 1, backgroundColor: darkDesign.colors.canvas, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
       </View>
     );
   }
@@ -31,9 +32,12 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: '#111', borderTopColor: '#222' },
-        tabBarActiveTintColor: '#fff',
-        tabBarInactiveTintColor: '#555',
+        tabBarStyle: {
+          backgroundColor: darkDesign.colors.canvasRaised,
+          borderTopColor: darkDesign.colors.border,
+        },
+        tabBarActiveTintColor: darkDesign.colors.accent,
+        tabBarInactiveTintColor: darkDesign.colors.textFaint,
       }}
     >
       <Tabs.Screen

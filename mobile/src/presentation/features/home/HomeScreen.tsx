@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,6 +14,7 @@ import {
 } from 'react-native';
 import { MediaItem } from '../../../domain/entities/media';
 import { ActivityItem } from '../../../domain/entities/social';
+import { darkDesign } from '../../theme/darkDesign';
 import { useHomeViewModel } from './HomeViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
@@ -20,19 +22,21 @@ const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
 function MediaCard({ item }: { item: MediaItem }) {
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={styles.mediaCard}
       onPress={() => router.push({ pathname: '/detail', params: { tmdb_id: item.tmdb_id, media_type: item.media_type } })}
       activeOpacity={0.7}
     >
       {item.poster_path ? (
-        <Image
-          source={{ uri: `${TMDB_IMAGE}${item.poster_path}` }}
-          style={styles.poster}
-        />
+        <Image source={{ uri: `${TMDB_IMAGE}${item.poster_path}` }} style={styles.poster} />
       ) : (
         <View style={[styles.poster, styles.posterFallback]} />
       )}
+      <View style={styles.mediaMetaRow}>
+        <Text style={styles.mediaBadge}>{item.media_type === 'movie' ? 'Pelicula' : 'Serie'}</Text>
+        <Text style={styles.mediaScore}>{item.vote_average.toFixed(1)}</Text>
+      </View>
       <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+      <Text style={styles.cardMeta}>{item.release_date ? item.release_date.slice(0, 4) : 'Proximamente'}</Text>
     </TouchableOpacity>
   );
 }
@@ -65,7 +69,7 @@ function SearchResults({
   if (loading) {
     return (
       <View style={styles.searchState}>
-        <ActivityIndicator size="small" color="#fff" />
+        <ActivityIndicator size="small" color={darkDesign.colors.accent} />
       </View>
     );
   }
@@ -136,7 +140,7 @@ function SocialFeed({
 
       {loading ? (
         <View style={styles.socialState}>
-          <ActivityIndicator size="small" color="#fff" />
+          <ActivityIndicator size="small" color={darkDesign.colors.accent} />
         </View>
       ) : null}
 
@@ -167,7 +171,7 @@ function SocialFeed({
             <SocialActivityCard key={item.id} item={item} onOpenUser={onOpenUser} onOpenList={onOpenList} />
           ))}
           <View style={styles.socialFooter}>
-            {refreshing || loadingMore ? <ActivityIndicator size="small" color="#fff" /> : null}
+            {refreshing || loadingMore ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
             {!refreshing && !loadingMore ? (
               <Pressable style={styles.loadMoreButton} onPress={onLoadMore}>
                 <Text style={styles.loadMoreButtonText}>Cargar mas</Text>
@@ -215,9 +219,7 @@ function SocialActivityCard({
           <Text style={styles.socialCardBody}>
             ha registrado un visionado de {item.media_type === 'movie' ? 'pelicula' : 'serie'} #{item.tmdb_id}.
           </Text>
-          <Text style={styles.socialCardAccent}>
-            {item.watched_at} · {formatRating(item.rating)}
-          </Text>
+          <Text style={styles.socialCardAccent}>{`${item.watched_at} - ${formatRating(item.rating)}`}</Text>
         </>
       ) : null}
       {item.activity_type === 'follow' ? (
@@ -248,6 +250,34 @@ function SocialActivityCard({
   );
 }
 
+function FeaturedCard({ item }: { item: MediaItem }) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.featuredCard, pressed ? styles.cardPressed : null]}
+      onPress={() => router.push({ pathname: '/detail', params: { tmdb_id: item.tmdb_id, media_type: item.media_type } })}
+    >
+      {item.poster_path ? (
+        <Image source={{ uri: `${TMDB_IMAGE}${item.poster_path}` }} style={styles.featuredPoster} />
+      ) : (
+        <View style={[styles.featuredPoster, styles.posterFallback]} />
+      )}
+      <View style={styles.featuredBody}>
+        <Text style={styles.featuredKicker}>Seleccion destacada</Text>
+        <Text style={styles.featuredTitle} numberOfLines={2}>{item.title}</Text>
+        <Text style={styles.featuredDescription}>
+          {item.media_type === 'movie' ? 'Pelicula' : 'Serie'} con nota {item.vote_average.toFixed(1)}
+          {item.release_date ? ` - ${item.release_date.slice(0, 4)}` : ''}
+        </Text>
+        <View style={styles.featuredFooter}>
+          <View style={styles.featuredPill}>
+            <Text style={styles.featuredPillText}>Abrir ficha</Text>
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function HomeScreen() {
   const {
     feed,
@@ -272,10 +302,13 @@ export default function HomeScreen() {
     loadMoreSocialFeed,
   } = useHomeViewModel();
 
+  const featured = feed?.trending[0] ?? null;
+
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#fff" />
+        <StatusBar style="light" />
+        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
       </View>
     );
   }
@@ -283,30 +316,52 @@ export default function HomeScreen() {
   if (error || !feed) {
     return (
       <View style={styles.centered}>
+        <StatusBar style="light" />
         <Text style={styles.errorText}>{error ?? 'Error desconocido'}</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.screen}>
-      <Text style={styles.appTitle}>PlotSkip</Text>
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Buscar peliculas o series"
-          placeholderTextColor="#777"
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="search"
-        />
-        {query.length > 0 && (
-          <Pressable style={styles.clearButton} onPress={clearSearch}>
-            <Text style={styles.clearButtonText}>x</Text>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent}>
+      <StatusBar style="light" />
+      <View style={styles.heroShell}>
+        <View style={styles.heroHeader}>
+          <View>
+            <Text style={styles.heroEyebrow}>PlotSkip</Text>
+            <Text style={styles.appTitle}>Descubre que ver y que esta viendo tu circulo.</Text>
+          </View>
+          <Pressable style={styles.heroUtility} onPress={openUserSearch}>
+            <Text style={styles.heroUtilityText}>Usuarios</Text>
           </Pressable>
-        )}
+        </View>
+        <Text style={styles.heroCopy}>
+          Explora tendencias, retoma pendientes y ponte al dia con la actividad de la gente que sigues.
+        </Text>
+
+        <View style={styles.searchShell}>
+          <Text style={styles.searchLabel}>Buscar peliculas o series</Text>
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Ej. Severance, Dune, The Bear"
+              placeholderTextColor={darkDesign.colors.textFaint}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+              selectionColor={darkDesign.colors.accent}
+            />
+            {query.length > 0 ? (
+              <Pressable style={styles.clearButton} onPress={clearSearch}>
+                <Text style={styles.clearButtonText}>Limpiar</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+
+        {featured ? <FeaturedCard item={featured} /> : null}
       </View>
       {isSearching ? (
         <SearchResults
@@ -340,58 +395,110 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#111',
+    backgroundColor: darkDesign.colors.canvas,
+  },
+  screenContent: {
+    paddingTop: 56,
+    paddingBottom: 32,
   },
   centered: {
     flex: 1,
-    backgroundColor: '#111',
+    backgroundColor: darkDesign.colors.canvas,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  heroShell: {
+    paddingHorizontal: 16,
+    paddingBottom: 28,
+    gap: 16,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  heroEyebrow: {
+    color: darkDesign.colors.accentSoft,
+    ...darkDesign.typography.micro,
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    marginBottom: 8,
   },
   appTitle: {
-    color: '#fff',
-    fontSize: 26,
-    fontWeight: 'bold',
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.hero,
+    maxWidth: 280,
+  },
+  heroUtility: {
+    minHeight: 32,
+    borderRadius: darkDesign.radii.pill,
+    borderWidth: 1,
+    borderColor: darkDesign.colors.borderStrong,
+    backgroundColor: darkDesign.colors.canvasRaised,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroUtilityText: {
+    color: darkDesign.colors.textSoft,
+    ...darkDesign.typography.micro,
+    fontWeight: '600',
+  },
+  heroCopy: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.body,
+    maxWidth: 540,
+  },
+  searchShell: {
+    borderWidth: 1,
+    borderColor: darkDesign.colors.border,
+    borderRadius: darkDesign.radii.xl,
+    backgroundColor: darkDesign.colors.panel,
     padding: 16,
-    paddingTop: 52,
+    gap: 10,
+    ...darkDesign.shadows.card,
+  },
+  searchLabel: {
+    color: darkDesign.colors.textSoft,
+    ...darkDesign.typography.caption,
+    fontWeight: '600',
   },
   searchContainer: {
-    marginHorizontal: 16,
-    marginBottom: 24,
     minHeight: 46,
-    borderRadius: 8,
-    backgroundColor: '#1d1d1d',
+    borderRadius: darkDesign.radii.sm,
+    backgroundColor: darkDesign.colors.canvasInset,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: darkDesign.colors.borderStrong,
     flexDirection: 'row',
     alignItems: 'center',
   },
   searchInput: {
     flex: 1,
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 15,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   clearButton: {
-    width: 42,
+    minWidth: 72,
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 12,
   },
   clearButtonText: {
-    color: '#aaa',
-    fontSize: 18,
-    lineHeight: 18,
+    color: darkDesign.colors.accentSoft,
+    ...darkDesign.typography.micro,
     fontWeight: '700',
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.section,
     paddingHorizontal: 16,
     marginBottom: 10,
   },
@@ -399,30 +506,54 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 10,
   },
-  card: {
+  mediaCard: {
     width: 110,
   },
   poster: {
     width: 110,
     height: 165,
-    borderRadius: 8,
-    backgroundColor: '#333',
+    borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.borderStrong,
   },
   posterFallback: {
-    backgroundColor: '#333',
+    backgroundColor: darkDesign.colors.borderStrong,
+  },
+  mediaMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 8,
+  },
+  mediaBadge: {
+    color: darkDesign.colors.textFaint,
+    ...darkDesign.typography.micro,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  mediaScore: {
+    color: darkDesign.colors.warning,
+    ...darkDesign.typography.micro,
+    fontWeight: '700',
   },
   cardTitle: {
-    color: '#ccc',
-    fontSize: 11,
+    color: darkDesign.colors.textSoft,
+    fontSize: 12,
+    lineHeight: 16,
     marginTop: 6,
   },
+  cardMeta: {
+    color: darkDesign.colors.textFaint,
+    ...darkDesign.typography.micro,
+    marginTop: 2,
+  },
   errorText: {
-    color: '#f66',
+    color: darkDesign.colors.danger,
     fontSize: 14,
     textAlign: 'center',
   },
   emptyText: {
-    color: '#aaa',
+    color: darkDesign.colors.textMuted,
     fontSize: 14,
   },
   searchState: {
@@ -449,13 +580,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   socialSubtitle: {
-    color: '#888',
+    color: darkDesign.colors.textMuted,
     fontSize: 13,
-    paddingHorizontal: 16,
     marginTop: -6,
   },
   socialAction: {
-    color: '#93c5fd',
+    color: darkDesign.colors.accentSoft,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -468,48 +598,49 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     minHeight: 38,
-    borderRadius: 999,
+    borderRadius: darkDesign.radii.sm,
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: darkDesign.colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 14,
+    backgroundColor: darkDesign.colors.canvasRaised,
   },
   retryButtonText: {
-    color: '#ddd',
+    color: darkDesign.colors.textSoft,
     fontSize: 12,
     fontWeight: '700',
   },
   socialEmptyCard: {
     marginHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 12,
-    backgroundColor: '#181818',
+    borderColor: darkDesign.colors.border,
+    borderRadius: darkDesign.radii.xl,
+    backgroundColor: darkDesign.colors.panel,
     padding: 16,
     gap: 10,
+    ...darkDesign.shadows.soft,
   },
   socialEmptyTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.section,
   },
   socialEmptyBody: {
-    color: '#bbb',
+    color: darkDesign.colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
   },
   primaryAction: {
     minHeight: 42,
-    borderRadius: 999,
-    backgroundColor: '#fff',
+    borderRadius: darkDesign.radii.sm,
+    backgroundColor: darkDesign.colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
     alignSelf: 'flex-start',
   },
   primaryActionText: {
-    color: '#111',
+    color: darkDesign.colors.onAccent,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -520,9 +651,9 @@ const styles = StyleSheet.create({
   },
   socialCard: {
     borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 12,
-    backgroundColor: '#161616',
+    borderColor: darkDesign.colors.border,
+    borderRadius: darkDesign.radii.xl,
+    backgroundColor: darkDesign.colors.panel,
     padding: 14,
     gap: 8,
   },
@@ -533,44 +664,45 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   socialActor: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 15,
     fontWeight: '700',
   },
   socialMeta: {
-    color: '#888',
+    color: darkDesign.colors.textFaint,
     fontSize: 12,
   },
   socialCardBody: {
-    color: '#d1d5db',
+    color: darkDesign.colors.textSoft,
     fontSize: 14,
     lineHeight: 21,
   },
   socialCardAccent: {
-    color: '#facc15',
+    color: darkDesign.colors.warning,
     fontSize: 13,
     fontWeight: '700',
   },
   socialPreview: {
-    color: '#bdbdbd',
+    color: darkDesign.colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
   },
   socialInlineLink: {
-    color: '#93c5fd',
+    color: darkDesign.colors.accentSoft,
     fontWeight: '700',
   },
   inlinePill: {
     alignSelf: 'flex-start',
     minHeight: 34,
-    borderRadius: 999,
+    borderRadius: darkDesign.radii.sm,
     borderWidth: 1,
-    borderColor: '#35506d',
+    borderColor: darkDesign.colors.borderStrong,
+    backgroundColor: darkDesign.colors.canvasRaised,
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
   inlinePillText: {
-    color: '#bfdbfe',
+    color: darkDesign.colors.textSoft,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -582,16 +714,68 @@ const styles = StyleSheet.create({
   },
   loadMoreButton: {
     minHeight: 38,
-    borderRadius: 999,
+    borderRadius: darkDesign.radii.sm,
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: darkDesign.colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 14,
+    backgroundColor: darkDesign.colors.canvasRaised,
   },
   loadMoreButtonText: {
-    color: '#ddd',
+    color: darkDesign.colors.textSoft,
     fontSize: 12,
     fontWeight: '700',
+  },
+  featuredCard: {
+    borderWidth: 1,
+    borderColor: darkDesign.colors.border,
+    borderRadius: darkDesign.radii.xl,
+    backgroundColor: darkDesign.colors.panelStrong,
+    overflow: 'hidden',
+    ...darkDesign.shadows.card,
+  },
+  featuredPoster: {
+    width: '100%',
+    height: 220,
+    backgroundColor: darkDesign.colors.borderStrong,
+  },
+  featuredBody: {
+    padding: 16,
+    gap: 8,
+  },
+  featuredKicker: {
+    color: darkDesign.colors.accentSoft,
+    ...darkDesign.typography.micro,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  featuredTitle: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.title,
+  },
+  featuredDescription: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.body,
+  },
+  featuredFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginTop: 4,
+  },
+  featuredPill: {
+    minHeight: 36,
+    borderRadius: darkDesign.radii.sm,
+    backgroundColor: darkDesign.colors.accent,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featuredPillText: {
+    color: darkDesign.colors.onAccent,
+    ...darkDesign.typography.button,
+  },
+  cardPressed: {
+    opacity: 0.9,
   },
 });

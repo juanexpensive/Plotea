@@ -1,8 +1,18 @@
 import { Stack } from 'expo-router';
+import { darkDesign } from '../src/presentation/theme/darkDesign';
 
 export default function RootLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: darkDesign.colors.canvas },
+        headerStyle: { backgroundColor: darkDesign.colors.canvasRaised },
+        headerTintColor: darkDesign.colors.text,
+        headerTitleStyle: { color: darkDesign.colors.text, fontWeight: '600' },
+        headerShadowVisible: false,
+      }}
+    >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen
         name="login"
