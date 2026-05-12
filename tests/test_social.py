@@ -1,11 +1,29 @@
 from datetime import date, datetime, timezone
 
+import httpx
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models.activity import Activity as ActivityModel
+from app.main import app
+from app.presentation.routers.media import get_tmdb_client
+
+
+class FakeTmdbClient:
+    def __init__(self, payloads: dict[tuple[str, int], dict] | None = None, error: Exception | None = None) -> None:
+        self.payloads = payloads or {}
+        self.error = error
+        self.calls: list[dict] = []
+
+    async def get(self, path: str, params: dict | None = None) -> dict:
+        self.calls.append({"path": path, "params": params})
+        if self.error is not None:
+            raise self.error
+
+        media_type, tmdb_id = path.strip("/").split("/")
+        return self.payloads[(media_type, int(tmdb_id))]
 
 
 async def _register_and_login(
@@ -94,6 +112,171 @@ async def test_public_profile_exposes_counts_without_email(async_client: AsyncCl
     assert body["reviews_count"] == 1
     assert body["watch_logs_count"] == 1
     assert body["is_following"] is True
+
+
+@pytest.mark.asyncio
+async def test_update_my_profile_normalizes_fields(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "profile@example.com", "profileowner")
+
+    response = await async_client.put(
+        "/users/me",
+        json={
+            "display_name": "  Perfil Owner  ",
+            "bio": "  Me gusta registrar peliculas  ",
+            "avatar_url": "  https://example.com/avatar.png  ",
+        },
+        headers=_headers(owner),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["display_name"] == "Perfil Owner"
+    assert body["bio"] == "Me gusta registrar peliculas"
+    assert body["avatar_url"] == "https://example.com/avatar.png"
+
+
+@pytest.mark.asyncio
+async def test_update_my_profile_rejects_unsafe_avatar_url(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "unsafe-avatar@example.com", "unsafeavatar")
+
+    response = await async_client.put(
+        "/users/me",
+        json={"avatar_url": "file:///tmp/avatar.png"},
+        headers=_headers(owner),
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_update_my_profile_rejects_blank_display_name(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "blank-display@example.com", "blankdisplay")
+
+    response = await async_client.put(
+        "/users/me",
+        json={"display_name": "   "},
+        headers=_headers(owner),
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_get_user_stats_returns_empty_values_without_watch_log(async_client: AsyncClient):
+    viewer = await _register_and_login(async_client, "viewer-stats@example.com", "viewerstats")
+    await _register_and_login(async_client, "empty-stats@example.com", "emptystats")
+
+    response = await async_client.get("/users/emptystats/stats", headers=_headers(viewer))
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "watched_count": 0,
+        "estimated_hours": 0.0,
+        "top_genres": [],
+        "average_rating": None,
+    }
+
+
+@pytest.mark.asyncio
+async def test_get_user_stats_returns_not_found_for_unknown_user(async_client: AsyncClient):
+    viewer = await _register_and_login(async_client, "viewer-missing@example.com", "viewermissing")
+
+    response = await async_client.get("/users/ghost/stats", headers=_headers(viewer))
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_user_stats_aggregates_watch_log_and_tmdb(async_client: AsyncClient):
+    viewer = await _register_and_login(async_client, "viewer-agg@example.com", "vieweragg")
+    owner = await _register_and_login(async_client, "stats-owner@example.com", "statsowner")
+
+    await async_client.post(
+        "/watchlog",
+        json={"tmdb_id": 550, "media_type": "movie", "watched_at": "2026-05-10", "rating": 8},
+        headers=_headers(owner),
+    )
+    await async_client.post(
+        "/watchlog",
+        json={"tmdb_id": 1399, "media_type": "tv", "watched_at": "2026-05-11", "rating": 6},
+        headers=_headers(owner),
+    )
+    await async_client.post(
+        "/watchlog",
+        json={"tmdb_id": 551, "media_type": "movie", "watched_at": "2026-05-12"},
+        headers=_headers(owner),
+    )
+
+    fake_tmdb = FakeTmdbClient(
+        payloads={
+            ("movie", 550): {
+                "id": 550,
+                "title": "Fight Club",
+                "runtime": 139,
+                "genres": [{"name": "Drama"}, {"name": "Thriller"}],
+            },
+            ("tv", 1399): {
+                "id": 1399,
+                "name": "Game of Thrones",
+                "episode_run_time": [60],
+                "genres": [{"name": "Drama"}, {"name": "Fantasy"}],
+            },
+            ("movie", 551): {
+                "id": 551,
+                "title": "Otro titulo",
+                "runtime": None,
+                "genres": [{"name": "Drama"}, {"name": "Comedy"}],
+            },
+        }
+    )
+    app.dependency_overrides[get_tmdb_client] = lambda: fake_tmdb
+
+    response = await async_client.get("/users/statsowner/stats", headers=_headers(viewer))
+
+    app.dependency_overrides.pop(get_tmdb_client, None)
+    assert response.status_code == 200
+    assert response.json() == {
+        "watched_count": 3,
+        "estimated_hours": 3.3,
+        "top_genres": [
+            {"name": "Drama", "count": 3},
+            {"name": "Comedy", "count": 1},
+            {"name": "Fantasy", "count": 1},
+        ],
+        "average_rating": 7.0,
+    }
+    assert fake_tmdb.calls == [
+        {"path": "/movie/551", "params": None},
+        {"path": "/tv/1399", "params": None},
+        {"path": "/movie/550", "params": None},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_user_stats_degrades_when_tmdb_request_fails(async_client: AsyncClient):
+    viewer = await _register_and_login(async_client, "viewer-degrade@example.com", "viewerdegrade")
+    owner = await _register_and_login(async_client, "degrade-owner@example.com", "degradeowner")
+
+    await async_client.post(
+        "/watchlog",
+        json={"tmdb_id": 42, "media_type": "movie", "watched_at": "2026-05-10", "rating": 9},
+        headers=_headers(owner),
+    )
+
+    request = httpx.Request("GET", "https://api.themoviedb.org/3/movie/42")
+    fake_tmdb = FakeTmdbClient(error=httpx.RequestError("Network failed", request=request))
+    app.dependency_overrides[get_tmdb_client] = lambda: fake_tmdb
+
+    response = await async_client.get("/users/degradeowner/stats", headers=_headers(viewer))
+
+    app.dependency_overrides.pop(get_tmdb_client, None)
+    assert response.status_code == 200
+    assert response.json() == {
+        "watched_count": 1,
+        "estimated_hours": 0.0,
+        "top_genres": [],
+        "average_rating": 9.0,
+    }
 
 
 @pytest.mark.asyncio

@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class PublicUserSummaryResponse(BaseModel):
@@ -24,6 +24,57 @@ class PublicUserProfileResponse(BaseModel):
     reviews_count: int
     watch_logs_count: int
     is_following: bool
+
+
+class UpdateMyProfileRequest(BaseModel):
+    display_name: str | None = Field(default=None, max_length=100)
+    bio: str | None = Field(default=None, max_length=280)
+    avatar_url: str | None = Field(default=None, max_length=500)
+
+    @field_validator("display_name")
+    @classmethod
+    def validate_display_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        trimmed = value.strip()
+        if trimmed == "":
+            raise ValueError("display_name cannot be blank")
+        return trimmed
+
+    @field_validator("bio")
+    @classmethod
+    def normalize_bio(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        trimmed = value.strip()
+        return trimmed or None
+
+    @field_validator("avatar_url")
+    @classmethod
+    def validate_avatar_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        trimmed = value.strip()
+        if trimmed == "":
+            return None
+        if not (trimmed.startswith("http://") or trimmed.startswith("https://")):
+            raise ValueError("avatar_url must be an absolute http or https URL")
+        return trimmed
+
+
+class GenreStatResponse(BaseModel):
+    name: str
+    count: int
+
+
+class PublicUserStatsResponse(BaseModel):
+    watched_count: int
+    estimated_hours: float
+    top_genres: list[GenreStatResponse]
+    average_rating: float | None
 
 
 class ActivityActorResponse(BaseModel):

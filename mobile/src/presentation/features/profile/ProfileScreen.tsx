@@ -1,11 +1,36 @@
 import { router } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ListSummary } from '../../../domain/entities/lists';
 import { SavedMediaStatus } from '../../../domain/entities/media';
 import { useProfileViewModel } from './ProfileViewModel';
+import { UserStatsSection } from '../social/UserStatsSection';
 
 export default function ProfileScreen() {
-  const { user, lists, mediaStatuses, watchLogCount, loading, loggingOut, error, handleLogout } = useProfileViewModel();
+  const {
+    user,
+    lists,
+    mediaStatuses,
+    stats,
+    watchLogCount,
+    loading,
+    loggingOut,
+    savingProfile,
+    statsLoading,
+    error,
+    statsError,
+    successMessage,
+    isEditing,
+    displayNameDraft,
+    bioDraft,
+    avatarUrlDraft,
+    setDisplayNameDraft,
+    setBioDraft,
+    setAvatarUrlDraft,
+    handleLogout,
+    startEditing,
+    cancelEditing,
+    saveProfile,
+  } = useProfileViewModel();
 
   if (loading) {
     return (
@@ -28,12 +53,69 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent}>
       <Text style={styles.title}>Perfil</Text>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initial}</Text>
-      </View>
+      {user.avatar_url ? (
+        <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+      ) : (
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initial}</Text>
+        </View>
+      )}
       <Text style={styles.name}>{user.display_name ?? user.username}</Text>
       <Text style={styles.meta}>@{user.username}</Text>
       <Text style={styles.meta}>{user.email}</Text>
+      {user.bio ? <Text style={styles.bio}>{user.bio}</Text> : null}
+      <Pressable style={({ pressed }) => [styles.secondaryButton, pressed ? styles.statusSectionPressed : null]} onPress={isEditing ? cancelEditing : startEditing}>
+        <Text style={styles.secondaryButtonText}>{isEditing ? 'Cancelar edicion' : 'Editar perfil'}</Text>
+      </Pressable>
+      {isEditing ? (
+        <View style={styles.editorCard}>
+          <Text style={styles.inputLabel}>Nombre visible</Text>
+          <TextInput
+            style={styles.input}
+            value={displayNameDraft}
+            onChangeText={setDisplayNameDraft}
+            placeholder="Como quieres mostrarte"
+            placeholderTextColor="#777"
+          />
+          <Text style={styles.inputLabel}>Bio</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={bioDraft}
+            onChangeText={setBioDraft}
+            placeholder="Cuenta algo sobre ti"
+            placeholderTextColor="#777"
+            multiline
+            textAlignVertical="top"
+          />
+          <Text style={styles.inputLabel}>Avatar URL</Text>
+          <TextInput
+            style={styles.input}
+            value={avatarUrlDraft}
+            onChangeText={setAvatarUrlDraft}
+            placeholder="https://..."
+            placeholderTextColor="#777"
+            autoCapitalize="none"
+          />
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed ? styles.statusSectionPressed : null,
+              savingProfile ? styles.logoutButtonDisabled : null,
+            ]}
+            onPress={saveProfile}
+            disabled={savingProfile}
+          >
+            <Text style={styles.primaryButtonText}>{savingProfile ? 'Guardando...' : 'Guardar cambios'}</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      <UserStatsSection
+        stats={stats}
+        loading={statsLoading}
+        error={statsError}
+        title="Tu actividad"
+      />
       <View style={styles.library}>
         <Pressable
           style={({ pressed }) => [styles.statusSection, pressed ? styles.statusSectionPressed : null]}
@@ -76,6 +158,7 @@ export default function ProfileScreen() {
           {loggingOut ? 'Cerrando sesion...' : 'Cerrar sesion'}
         </Text>
       </Pressable>
+      {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
       {error ? <Text style={styles.inlineError}>{error}</Text> : null}
     </ScrollView>
   );
@@ -184,6 +267,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 16,
+    backgroundColor: '#333',
+  },
   avatarText: {
     color: '#fff',
     fontSize: 32,
@@ -199,6 +289,71 @@ const styles = StyleSheet.create({
     color: '#ccc',
     fontSize: 14,
     marginBottom: 4,
+  },
+  bio: {
+    color: '#d4d4d4',
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+    marginTop: 8,
+    maxWidth: 320,
+  },
+  secondaryButton: {
+    marginTop: 12,
+    minHeight: 42,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#93c5fd',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  secondaryButtonText: {
+    color: '#93c5fd',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  editorCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 12,
+    backgroundColor: '#181818',
+    padding: 14,
+    gap: 10,
+    marginTop: 16,
+  },
+  inputLabel: {
+    color: '#ddd',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  input: {
+    minHeight: 46,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#333',
+    backgroundColor: '#121212',
+    color: '#fff',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  textArea: {
+    minHeight: 90,
+  },
+  primaryButton: {
+    minHeight: 44,
+    borderRadius: 999,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  primaryButtonText: {
+    color: '#111',
+    fontSize: 14,
+    fontWeight: '700',
   },
   library: {
     width: '100%',
@@ -281,6 +436,12 @@ const styles = StyleSheet.create({
   },
   inlineError: {
     color: '#fca5a5',
+    fontSize: 14,
+    marginTop: 14,
+    textAlign: 'center',
+  },
+  successText: {
+    color: '#86efac',
     fontSize: 14,
     marginTop: 14,
     textAlign: 'center',

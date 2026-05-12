@@ -4,10 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.data.repositories.activity_repository import ActivityRepository
 from app.data.repositories.follow_repository import FollowRepository
 from app.data.repositories.user_repository import UserRepository
+from app.data.repositories.watch_log_repository import WatchLogRepository
 from app.domain.entities.social import (
     BaseActivity,
     FollowActivity,
     ListCreatedActivity,
+    PublicUserStats,
     PublicUserProfile,
     PublicUserSummary,
     ReviewActivity,
@@ -15,23 +17,32 @@ from app.domain.entities.social import (
 )
 from app.domain.entities.user import User
 from app.domain.services.activity_publisher import ActivityPublisher
+from app.domain.services.i_tmdb_client import ITmdbClient
+from app.domain.services.user_stats_aggregator import UserStatsAggregator
 from app.domain.usecases.social.follow_user import FollowUserUseCase
 from app.domain.usecases.social.get_public_profile import GetPublicProfileUseCase
+from app.domain.usecases.social.get_user_stats import GetUserStatsUseCase
 from app.domain.usecases.social.list_feed import ListFeedUseCase
 from app.domain.usecases.social.search_users import SearchUsersUseCase
 from app.domain.usecases.social.unfollow_user import UnfollowUserUseCase
+from app.domain.usecases.social.update_my_profile import UpdateMyProfileUseCase
 from app.infrastructure.database import get_db
 from app.presentation.dependencies import get_current_user
+from app.presentation.routers.media import get_tmdb_client
 from app.presentation.schemas.auth import MessageResponse
+from app.presentation.schemas.auth import UserResponse
 from app.presentation.schemas.social import (
     ActivityActorResponse,
     FeedResponse,
     FollowActivityResponse,
     FollowedUserResponse,
+    GenreStatResponse,
     ListCreatedActivityResponse,
     PublicUserProfileResponse,
+    PublicUserStatsResponse,
     PublicUserSummaryResponse,
     ReviewActivityResponse,
+    UpdateMyProfileRequest,
     WatchLogActivityResponse,
 )
 
@@ -61,6 +72,27 @@ def _to_profile_response(user: PublicUserProfile) -> PublicUserProfileResponse:
         reviews_count=user.reviews_count,
         watch_logs_count=user.watch_logs_count,
         is_following=user.is_following,
+    )
+
+
+def _to_user_response(user: User) -> UserResponse:
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        username=user.username,
+        display_name=user.display_name,
+        bio=user.bio,
+        avatar_url=user.avatar_url,
+        created_at=user.created_at,
+    )
+
+
+def _to_stats_response(stats: PublicUserStats) -> PublicUserStatsResponse:
+    return PublicUserStatsResponse(
+        watched_count=stats.watched_count,
+        estimated_hours=stats.estimated_hours,
+        top_genres=[GenreStatResponse(name=item.name, count=item.count) for item in stats.top_genres],
+        average_rating=stats.average_rating,
     )
 
 
@@ -152,6 +184,38 @@ async def get_public_profile(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return _to_profile_response(user)
+
+
+@router.put("/users/me", response_model=UserResponse)
+async def update_my_profile(
+    data: UpdateMyProfileRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    fields_set = data.model_fields_set
+    updated = await UpdateMyProfileUseCase(UserRepository(session)).execute(
+        current_user.id,
+        data.display_name if "display_name" in fields_set else current_user.display_name,
+        data.bio if "bio" in fields_set else current_user.bio,
+        data.avatar_url if "avatar_url" in fields_set else current_user.avatar_url,
+    )
+    return _to_user_response(updated)
+
+
+@router.get("/users/{username}/stats", response_model=PublicUserStatsResponse)
+async def get_user_stats(
+    username: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+    tmdb: ITmdbClient = Depends(get_tmdb_client),
+) -> PublicUserStatsResponse:
+    del current_user
+    stats = await GetUserStatsUseCase(
+        UserRepository(session),
+        WatchLogRepository(session),
+        UserStatsAggregator(tmdb),
+    ).execute(username)
+    return _to_stats_response(stats)
 
 
 @router.post("/users/{user_id}/follow", response_model=MessageResponse, status_code=status.HTTP_200_OK)

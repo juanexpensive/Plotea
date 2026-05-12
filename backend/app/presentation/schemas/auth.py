@@ -14,6 +14,8 @@ class UserResponse(BaseModel):
     email: str
     username: str
     display_name: str | None
+    bio: str | None = None
+    avatar_url: str | None = None
     created_at: datetime
 
 

@@ -1,74 +1,81 @@
-# Fase 7 - Listas personalizadas
+# Fase 8 - Perfil, estadisticas y edicion de usuario
 
 ## Objetivo
 
-- Implementar el slice completo de listas personalizadas sobre la base social ya cerrada en la Fase 6: listas propias y publicas, orden manual por intercambio de posicion, activacion real de `list_created` en backend y render real de `list_created` en mobile.
+- Convertir el perfil en una vista util de identidad y actividad con edicion del perfil propio, estadisticas publicas calculadas desde `watch_log` y consumo real en mobile para perfil propio y publico.
 
 ## Alcance
 
 - En alcance:
-- Modelos `lists` y `list_items` con ownership, visibilidad publica/privada y orden manual por `position`
-- Endpoints `GET /lists/me`, `POST /lists`, `GET /lists/{id}`, `PUT /lists/{id}`, `DELETE /lists/{id}`, `GET /users/{username}/lists`, `POST /lists/{id}/items`, `DELETE /lists/{id}/items/{tmdb_id}/{media_type}`, `PATCH /lists/{id}/items/reorder`
-- Publicacion de actividad `list_created` solo para listas publicas
-- Contrato social ampliado para `list_created` con `list_id`, `list_name`, `items_count` e `is_public`
-- Integracion mobile para listas propias, lista publica y navegacion desde perfil/feed social
-- Reordenado mobile por dos toques con feedback visual simple
+- `PUT /users/me` para editar `display_name`, `bio` y `avatar_url`
+- `GET /users/{username}/stats` con `watched_count`, `estimated_hours`, `top_genres` y `average_rating`
+- Ampliacion de `GET /auth/me` para devolver `bio` y `avatar_url`
+- Agregacion de stats desde `watch_log` con enriquecimiento TMDB best effort
+- Mobile: modo simple de edicion en perfil propio
+- Mobile: bloque de stats detalladas en perfil propio y publico
+- Render de avatar remoto cuando `avatar_url` exista
 - Fuera de alcance:
-- Slugs publicos de listas
-- Listas colaborativas
-- Likes, comentarios o follows sobre listas
-- Drag and drop complejo con librerias de gestos
+- Subida de binarios de avatar
 - Cache persistente de metadata TMDB
+- Cambios de username o email
+- Recalculo offline o jobs en background para stats
 
 ## Fases
 
-### Fase 1: Contratos y tests backend de listas
+### Fase 1: Contratos y tests backend de perfil/stats
 
-- Goal: fijar desde tests el contrato de listas, permisos, duplicados, reorder y `list_created`
-- Expected files or systems: `tests/test_lists.py`, `implementation.md`, `implementation_details.md`
-- Validation: los tests describen privacidad `404`, duplicados `409`, borrado de item idempotente, swap de posiciones y feed con `list_created`
-- Review gate: la politica de visibilidad y los payloads de reorder/feed quedan cerrados antes de tocar persistencia
+- Goal: fijar con tests el contrato de `PUT /users/me`, `GET /users/{username}/stats` y `GET /auth/me`
+- Expected files or systems: `tests/test_social.py`, `tests/test_login.py`
+- Validation: tests cubren trimming, URLs inseguras, perfil vacio, usuario inexistente y calculo de stats con degradacion controlada
+- Review gate: el shape de los endpoints y la semantica exacta de las stats quedan cerrados antes de tocar produccion
 - Estado: completada
 
-### Fase 2: Dominio, persistencia y actividad backend
+### Fase 2: Dominio y persistencia backend
 
-- Goal: implementar modelos, migracion, repositorios y casos de uso del slice de listas
-- Expected files or systems: modelos, migracion `0007`, entidades, interfaces, repositorio `ListRepository`, use cases y `ActivityPublisher`
-- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py`
-- Review gate: ownership, visibilidad publica/privada y swap atomico quedan resueltos en dominio, sin logica de negocio en routers
+- Goal: encapsular actualizacion de perfil y agregacion de stats respetando Clean Architecture
+- Expected files or systems: `IUserRepository`, `UserRepository`, entidades sociales, servicio `UserStatsAggregator`, use cases de `social`
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- Review gate: routers siguen finos y la dependencia de TMDB queda detras de un servicio reutilizable
 - Estado: completada
 
-### Fase 3: Endpoints y ampliacion del contrato social
+### Fase 3: Endpoints y schemas backend
 
-- Goal: exponer el API de listas y ampliar `list_created` dentro del feed social ya existente
-- Expected files or systems: router `lists`, schemas `lists`, ajustes en `social` y wiring en `main.py`
-- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py`
-- Review gate: el feed mantiene cursor opaco y orden estable de Fase 6 sin romper `review`, `watch_log` ni `follow`
+- Goal: exponer los nuevos contratos HTTP sin romper el perfil publico existente
+- Expected files or systems: `backend/app/presentation/schemas/auth.py`, `backend/app/presentation/schemas/social.py`, `backend/app/presentation/routers/auth.py`, `backend/app/presentation/routers/social.py`
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_login.py -q`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- Review gate: `GET /users/{username}` mantiene su contrato y las stats viven en endpoint separado
 - Estado: completada
 
-### Fase 4: Integracion mobile de listas
+### Fase 4: Mobile perfil propio
 
-- Goal: conectar listas propias y publicas con la app mobile respetando la separacion ya fijada en Fase 6
-- Expected files or systems: entidades/repo de listas, pantallas `my-lists` y `list-detail`, integracion en `Profile`, `PublicProfile` y `Home`
+- Goal: permitir edicion simple del perfil propio y mostrar stats sin romper listas, diario ni logout
+- Expected files or systems: entidades auth/social, `SocialRepository`, `ProfileViewModel`, `ProfileScreen`
 - Validation: `npx tsc --noEmit`
-- Review gate: listas propias viven en perfil propio, listas publicas en perfil ajeno/feed, y el swap por dos toques funciona con feedback simple sin drag and drop
+- Review gate: guardar perfil es seguro, el no-op no borra datos y los errores de stats no bloquean la pantalla completa
 - Estado: completada
 
-### Fase 5: QA, self-review y riesgos
+### Fase 5: Mobile perfil publico y stats
 
-- Goal: ejecutar checks, revisar diff y documentar riesgos residuales reales
+- Goal: enriquecer el perfil publico con avatar remoto y stats detalladas manteniendo follow y listas
+- Expected files or systems: `PublicProfileViewModel`, `PublicProfileScreen`, componente compartido `UserStatsSection`
+- Validation: `npx tsc --noEmit`
+- Review gate: el perfil publico sigue siendo de solo lectura salvo follow y el fallo de stats se aísla del resto
+- Estado: completada
+
+### Fase 6: QA, self-review y riesgos
+
+- Goal: ejecutar checks finales, revisar diff y dejar riesgos residuales documentados
 - Expected files or systems: docs de implementacion, backend y mobile
-- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py`, `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`, `npx tsc --noEmit`
-- Review gate: quedan reflejados los limites reales de metadata TMDB y la necesidad de validacion manual en Expo
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_login.py -q`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`, `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`, `npx tsc --noEmit`
+- Review gate: quedan explicitados los limites actuales de TMDB y la falta de validacion manual en Expo
 - Estado: completada
 
 ## Cierre
 
-- Backend con listas, items, reorder y `list_created` validados por tests
-- Mobile con listas propias, listas publicas y tarjeta `list_created` integrada en el feed social existente
+- Backend con edicion de perfil propio, `auth/me` ampliado y stats publicas desde `watch_log`
+- Mobile con edicion inline del perfil propio, avatar remoto y bloque compartido de stats en perfil propio/publico
 - Validaciones ejecutadas:
-- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_login.py -q`
 - `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
-- `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
 - `npx tsc --noEmit`
-- Riesgo residual aceptado: falta validacion manual en Expo para confirmar ritmo visual del swap, feedback de seleccion y navegacion real desde el feed social
+- Riesgo residual aceptado: las stats dependen de enriquecimiento TMDB best effort y no se ha hecho validacion manual en Expo en esta sesion

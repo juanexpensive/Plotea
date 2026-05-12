@@ -1,183 +1,185 @@
-# Fase 7 - Listas personalizadas Details
+# Fase 8 - Perfil, estadisticas y edicion de usuario Details
 
 ## Repository Context
 
 - Relevant files:
-- `backend/app/data/models/list.py`
-- `backend/app/data/models/list_item.py`
-- `backend/app/data/models/activity.py`
-- `backend/app/data/repositories/list_repository.py`
-- `backend/app/data/repositories/activity_repository.py`
-- `backend/app/domain/entities/lists.py`
 - `backend/app/domain/entities/social.py`
-- `backend/app/domain/repositories/i_list_repository.py`
-- `backend/app/domain/repositories/i_activity_repository.py`
-- `backend/app/domain/services/activity_publisher.py`
-- `backend/app/domain/usecases/lists`
-- `backend/app/presentation/routers/lists.py`
-- `backend/app/presentation/routers/social.py`
-- `backend/app/presentation/schemas/lists.py`
+- `backend/app/domain/repositories/i_user_repository.py`
+- `backend/app/data/repositories/user_repository.py`
+- `backend/app/data/repositories/watch_log_repository.py`
+- `backend/app/domain/services/user_stats_aggregator.py`
+- `backend/app/domain/usecases/social/get_user_stats.py`
+- `backend/app/domain/usecases/social/update_my_profile.py`
+- `backend/app/presentation/schemas/auth.py`
 - `backend/app/presentation/schemas/social.py`
-- `backend/app/main.py`
-- `backend/alembic/versions/0007_lists.py`
-- `mobile/src/domain/entities/lists.ts`
+- `backend/app/presentation/routers/auth.py`
+- `backend/app/presentation/routers/social.py`
+- `mobile/src/domain/entities/auth.ts`
 - `mobile/src/domain/entities/social.ts`
-- `mobile/src/data/repositories/ListsRepository.ts`
-- `mobile/src/presentation/features/lists`
-- `mobile/src/presentation/features/profile/ProfileScreen.tsx`
+- `mobile/src/data/repositories/SocialRepository.ts`
 - `mobile/src/presentation/features/profile/ProfileViewModel.ts`
-- `mobile/src/presentation/features/social/PublicProfileScreen.tsx`
+- `mobile/src/presentation/features/profile/ProfileScreen.tsx`
 - `mobile/src/presentation/features/social/PublicProfileViewModel.ts`
-- `mobile/src/presentation/features/home/HomeScreen.tsx`
-- `mobile/src/presentation/features/home/HomeViewModel.ts`
-- `mobile/app/my-lists.tsx`
-- `mobile/app/list-detail.tsx`
-- `tests/test_lists.py`
+- `mobile/src/presentation/features/social/PublicProfileScreen.tsx`
+- `mobile/src/presentation/features/social/UserStatsSection.tsx`
+- `tests/test_login.py`
+- `tests/test_social.py`
 - Existing patterns to follow:
-- Clean Architecture con entidades, interfaces, repositorios concretos y use cases por vertical slice
-- Routers FastAPI finos que delegan reglas de negocio a casos de uso
-- Tests HTTP async con `AsyncClient` y helpers de login reutilizables
-- Repositorios mobile HTTP simples con mapeo explicito hacia entidades de dominio
+- Clean Architecture con entidades, repositorios y use cases por vertical slice
+- FastAPI con schemas Pydantic y dependencia TMDB ya compartida desde `media`
+- Mobile con repositorios HTTP simples, view models locales por pantalla y UI en Expo Router
 - Constraints:
-- Fase 6 ya estaba cerrada; el feed social mantiene cursor opaco por `(created_at, id)` y la publicacion de actividad sigue fuera de routers
-- Las listas privadas ajenas responden `404`
-- `list_created` solo se publica para listas publicas
-- El reorder mobile es por swap entre dos items seleccionados, no drag and drop
-- La metadata de media en listas es best effort; si TMDB no responde o no esta inicializado, `media_summary` puede venir `null`
+- Las stats debian calcularse solo desde `watch_log`
+- `avatar_url` no admite binarios ni rutas locales
+- No se introduce cache persistente TMDB en esta fase
+- El perfil publico existente no debia cambiar su contrato base
 
 ## Decisions Locked
 
-- `GET /lists/me` devuelve summaries de listas propias ordenadas por `updated_at DESC`
-- `GET /users/{username}/lists` expone solo listas publicas del usuario
-- `GET /lists/{id}` permite ver listas propias o listas publicas ajenas; listas privadas ajenas responden `404`
-- `POST /lists/{id}/items` rechaza duplicados con `409`
-- `DELETE /lists/{id}/items/{tmdb_id}/{media_type}` es idempotente para simplificar mobile
-- `PATCH /lists/{id}/items/reorder` intercambia `position` entre dos items concretos y falla con `404` si falta alguno
-- `list_created` amplía su contrato con `list_name`, `items_count` e `is_public`
-- El feed social solo devuelve `list_created` cuando la lista sigue existiendo y es publica
-- El perfil propio y el perfil publico siguen separados; no se mezclan estados de listas entre ambos
+- `PUT /users/me` actualiza solo `display_name`, `bio` y `avatar_url`
+- Los campos omitidos en `PUT /users/me` preservan el valor actual; `null` explicito limpia el campo
+- `display_name` rechaza strings en blanco tras `trim`
+- `bio` y `avatar_url` aceptan `null`; string en blanco se normaliza a `null`
+- `avatar_url` solo acepta URLs absolutas `http/https`
+- `GET /auth/me` devuelve ahora `bio` y `avatar_url`
+- `GET /users/{username}/stats` devuelve `watched_count`, `estimated_hours`, `top_genres` y `average_rating`
+- `estimated_hours` se redondea a un decimal y usa solo runtimes TMDB disponibles
+- `top_genres` devuelve top 3 estable por conteo descendente y nombre ascendente
+- Fallos parciales de TMDB no rompen el endpoint de stats; solo degradan horas/generos
+- En mobile, errores de stats no bloquean la carga del perfil propio ni del perfil publico
 
 ## Phase Notes
 
 ### Phase 1
 
 - Detailed tasks:
-- Crear `tests/test_lists.py`
-- Fijar contratos de creacion, validacion, privacidad, ownership, duplicados, reorder y feed social
-- Asegurar que `list_created` no aparezca para listas privadas
+- Extender `tests/test_login.py` para fijar `bio` y `avatar_url` en `/auth/me`
+- Anadir tests de actualizacion de perfil y stats en `tests/test_social.py`
+- Montar `FakeTmdbClient` con payloads por `(media_type, tmdb_id)` para stats
 - Findings:
-- La Fase 6 ya tenia `list_created` modelado pero sin emision ni render mobile
-- Fue necesario cerrar una politica explicita para privacidad y duplicados antes de tocar persistencia
+- El contrato de perfil propio no distinguiÃ³ entre campo omitido y `null` hasta fijarlo en tests
+- Las stats requerian una regla explicita de degradacion si TMDB falla
 - Tests:
-- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_login.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
 - Review notes:
-- Se fijo `404` para listas privadas ajenas y `409` para duplicados de item
+- Se fijÃ³ 422 para `display_name` en blanco y para `avatar_url` insegura
 - Status:
 - completed
 
 ### Phase 2
 
 - Detailed tasks:
-- Crear tablas `lists` y `list_items` con migracion `0007`
-- Anadir entidades de dominio para summary, detail, items y owner
-- Crear `ListRepository` e interfaz `IListRepository`
-- Implementar use cases para CRUD de listas, add/remove item y swap de posiciones
-- Extender `ActivityPublisher` e `IActivityRepository` para `publish_list_created`
+- Extender `IUserRepository` y `UserRepository` con `update_profile`
+- Crear `PublicUserStats` y `GenreStat`
+- Crear `UserStatsAggregator` sobre `GetMediaDetailUseCase`
+- Crear `GetUserStatsUseCase` y `UpdateMyProfileUseCase`
 - Findings:
-- El repo no tenia `media_cache` persistida; la metadata de media se resolvio como enriquecimiento best effort usando la infraestructura TMDB ya existente
-- Se mantuvo `position` sin unique a nivel DB para simplificar el swap atomico sin meter una estrategia mas compleja
+- Reutilizar `GetMediaDetailUseCase` evitÃ³ duplicar parsing de runtime y generos entre movie/tv
+- El no-op de `PUT /users/me` requiriÃ³ preservar campos no enviados usando `model_fields_set`
 - Tests:
-- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
 - Review notes:
-- El ownership y la visibilidad viven en dominio/repositorio, no en routers
+- La logica de TMDB queda encapsulada en servicio y no en router
 - Status:
 - completed
 
 ### Phase 3
 
 - Detailed tasks:
-- Crear router `lists` y schemas dedicados
-- Registrar modelos y router nuevos en `main.py`
-- Ampliar `ListCreatedActivityResponse` y la entidad `ListCreatedActivity`
-- Actualizar `ActivityRepository` para devolver `list_name`, `items_count` e `is_public` sin romper el feed existente
+- Ampliar `UserResponse` con `bio` y `avatar_url`
+- Crear `UpdateMyProfileRequest`, `GenreStatResponse` y `PublicUserStatsResponse`
+- Exponer `PUT /users/me` y `GET /users/{username}/stats`
 - Findings:
-- El feed social de Fase 6 no necesitó cambiar su cursor ni su orden para soportar listas
-- `list_created` se filtra por visibilidad publica en el agregado del feed para no filtrar listas privadas
+- `PUT /users/me` usa `UserResponse` porque es un endpoint propio y necesita `email`
+- `GET /users/{username}/stats` se apoyÃ³ en la dependencia `get_tmdb_client` ya existente
 - Tests:
-- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_login.py -q`
 - `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
 - Review notes:
-- La ampliacion del contrato social convive con `review`, `watch_log` y `follow` sin romper sus tests previos
+- El perfil publico base sigue sin exponer email y las stats viven separadas
 - Status:
 - completed
 
 ### Phase 4
 
 - Detailed tasks:
-- Crear entidades y repositorio HTTP de listas en mobile
-- Anadir `my-lists` y `list-detail`
-- Integrar listas propias en `ProfileScreen`
-- Integrar listas publicas en `PublicProfileScreen`
-- Integrar `list_created` en el bloque social de `Home`
-- Implementar swap por dos toques con feedback visual simple
+- Ampliar `User` mobile con `bio` y `avatar_url`
+- Anadir `updateMyProfile` y `getUserStats` en `SocialRepository`
+- Extender `ProfileViewModel` con modo de edicion, borradores y guardado
+- Renderizar formulario inline y avatar remoto en `ProfileScreen`
 - Findings:
-- Se reutilizo una sola pantalla de detalle con modo editable o lectura, respetando la separacion entre perfil propio y perfil publico
-- El swap se apoyo en `LayoutAnimation` y `Animated` para evitar dependencias nuevas de gestos
+- Cargar stats en segunda llamada despues de `getMe` evitÃ³ bloquear toda la pantalla si TMDB falla
+- La edicion inline permitiÃ³ mantener la fase pequena sin abrir nueva ruta
 - Tests:
 - `npx tsc --noEmit`
 - Review notes:
-- El copy y los fallbacks muestran placeholder y `movie/tv #tmdb_id` cuando falta metadata
+- El feedback de guardado y cancelacion queda dentro de la misma pantalla
 - Status:
 - completed
 
 ### Phase 5
 
 - Detailed tasks:
-- Ejecutar la suite de listas, la suite social, la suite completa backend y TypeScript
-- Revisar puntos de friccion reales en metadata TMDB, feed social y UX de swap
-- Actualizar docs con riesgos aceptados
+- Crear entidad `PublicUserStats` mobile y componente compartido `UserStatsSection`
+- Extender `PublicProfileViewModel` para cargar stats de forma aislada
+- Renderizar avatar remoto y bloque de stats en `PublicProfileScreen`
 - Findings:
-- `test_lists.py` pasa con 8 tests verdes
-- `test_social.py` pasa con 9 tests verdes
-- `pytest ..\tests -q` pasa con 75 tests verdes
+- Se mantuvieron los contadores base del perfil publico y se aÃ±adieron stats detalladas aparte
+- `UserStatsSection` evita duplicacion fuerte entre perfil propio y publico
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- El perfil publico sigue siendo read-only salvo la accion de follow
+- Status:
+- completed
+
+### Phase 6
+
+- Detailed tasks:
+- Ejecutar tests del slice nuevo y TypeScript
+- Revisar diff y actualizar docs de implementacion
+- Registrar riesgos residuales reales
+- Findings:
+- `test_login.py` pasa con 4 tests verdes
+- `test_social.py` pasa con 16 tests verdes
 - `npx tsc --noEmit` pasa
 - No se ha ejecutado Expo en esta sesion
 - Tests:
-- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_login.py -q`
 - `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
-- `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
 - `npx tsc --noEmit`
 - Review notes:
-- Se acepta como riesgo residual la falta de validacion manual/visual en Expo
+- Sigue pendiente la validacion manual en dispositivo para confirmar el flujo de edicion y el render de avatar remoto
 - Status:
 - completed
 
 ## Review Findings
 
-- fixed: el feed social mantiene cursor opaco por `(created_at, id)` y la ampliacion de `list_created` no rompe la Fase 6
-- fixed: las listas privadas ajenas quedan ocultas con `404` y no aparecen en feed ni en perfil publico
-- fixed: `list_created` solo se publica para listas publicas
-- fixed: el mobile soporta `list_created` y navega al detalle publico de la lista
-- accepted risk: la metadata de media depende de enriquecimiento best effort y puede ser `null` si TMDB falla o no esta disponible
-- accepted risk: falta validacion manual en Expo para confirmar la sensacion visual del swap y la navegacion real desde el feed social
+- fixed: `PUT /users/me` preserva campos omitidos y solo limpia cuando llega `null` explicito
+- fixed: las stats se calculan solo desde `watch_log`, sin mezclar `reviews` ni `watchlist`
+- fixed: el endpoint de stats degrada horas/generos cuando TMDB falla sin inventar datos
+- fixed: el perfil propio mobile soporta editar `display_name`, `bio` y `avatar_url`
+- fixed: el perfil publico y el propio comparten bloque de stats sin mezclar estado UI
+- accepted risk: el calculo de stats hace llamadas TMDB por entrada de `watch_log` y aun no introduce cache persistente
+- accepted risk: no hubo validacion visual/manual en Expo en esta sesion
 
 ## Deferred Work
 
-- Slugs publicos de listas
-- Cache persistente/local de metadata TMDB para listas
-- Listas colaborativas
-- Likes, comentarios o guardados sobre listas
-- Drag and drop avanzado para reorder
-- Hardening visual del swap y microinteracciones tras prueba en dispositivo real
+- Cache persistente o memoizacion de metadata TMDB para stats
+- Upload real de avatar y almacenamiento propio
+- Edicion de username o email
+- Recalculo agregado/materializado de stats para usuarios con diarios grandes
+- Hardening visual del formulario de perfil tras prueba en dispositivo real
 
 ## Final Confidence Check
 
 - Confidence score:
-- 8.5/10
+- 8.7/10
 - Likely code review callouts:
-- El enriquecimiento de metadata de media hace llamadas best effort a TMDB y puede merecer una capa de cache si el slice crece
-- `list_created` depende de la visibilidad actual de la lista; si una lista publica se borra o se vuelve privada, su evento deja de renderizarse en feed
-- La UX de swap necesita validacion manual para confirmar que el feedback visual es suficientemente claro en dispositivo real
+- El agregador de stats hace enriquecimiento TMDB secuencial y podria necesitar cache o batching si crece el volumen de `watch_log`
+- `avatar_url` se valida por esquema `http/https`, pero no se valida reachability ni contenido real de imagen
+- La UX de edicion inline y el render de avatar remoto necesitan validacion manual en Expo
 - Residual risks:
-- No se ha ejecutado una prueba manual en Expo dentro de esta sesion
-- El slice no introduce una estrategia de cache persistente para metadata de listas
+- No se ha ejecutado `pytest ..\tests -q` en esta sesion hasta este punto de documentacion
+- Las stats dependen de disponibilidad parcial de TMDB para horas y generos

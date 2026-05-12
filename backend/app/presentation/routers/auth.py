@@ -64,6 +64,8 @@ async def register(
         email=user.email,
         username=user.username,
         display_name=user.display_name,
+        bio=user.bio,
+        avatar_url=user.avatar_url,
         created_at=user.created_at,
     )
 
@@ -107,6 +109,8 @@ async def me(current_user: User = Depends(get_current_user)) -> UserResponse:
         email=current_user.email,
         username=current_user.username,
         display_name=current_user.display_name,
+        bio=current_user.bio,
+        avatar_url=current_user.avatar_url,
         created_at=current_user.created_at,
     )
 

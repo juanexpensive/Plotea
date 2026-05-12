@@ -15,6 +15,18 @@ export interface PublicUserProfile extends PublicUserSummary {
   watch_logs_count: number;
 }
 
+export interface GenreStat {
+  name: string;
+  count: number;
+}
+
+export interface PublicUserStats {
+  watched_count: number;
+  estimated_hours: number;
+  top_genres: GenreStat[];
+  average_rating: number | null;
+}
+
 export interface ActivityActor {
   id: number;
   username: string;

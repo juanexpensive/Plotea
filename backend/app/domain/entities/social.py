@@ -27,6 +27,20 @@ class PublicUserProfile:
 
 
 @dataclass
+class GenreStat:
+    name: str
+    count: int
+
+
+@dataclass
+class PublicUserStats:
+    watched_count: int
+    estimated_hours: float
+    top_genres: list[GenreStat]
+    average_rating: float | None
+
+
+@dataclass
 class ActivityActor:
     id: int
     username: str

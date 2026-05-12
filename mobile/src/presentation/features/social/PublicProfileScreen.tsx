@@ -1,11 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ListSummary } from '../../../domain/entities/lists';
 import { usePublicProfileViewModel } from './PublicProfileViewModel';
+import { UserStatsSection } from './UserStatsSection';
 
 export default function PublicProfileScreen() {
   const { username } = useLocalSearchParams<{ username?: string }>();
-  const { profile, lists, loading, savingFollow, error, toggleFollow } = usePublicProfileViewModel(username);
+  const { profile, lists, stats, loading, savingFollow, statsLoading, error, statsError, toggleFollow } =
+    usePublicProfileViewModel(username);
 
   if (loading) {
     return (
@@ -27,9 +29,13 @@ export default function PublicProfileScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{label.charAt(0).toUpperCase()}</Text>
-      </View>
+      {profile.avatar_url ? (
+        <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+      ) : (
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{label.charAt(0).toUpperCase()}</Text>
+        </View>
+      )}
       <Text style={styles.name}>{label}</Text>
       <Text style={styles.meta}>@{profile.username}</Text>
       {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
@@ -55,6 +61,8 @@ export default function PublicProfileScreen() {
           {savingFollow ? 'Actualizando...' : profile.is_following ? 'Siguiendo' : 'Seguir'}
         </Text>
       </Pressable>
+
+      <UserStatsSection stats={stats} loading={statsLoading} error={statsError} />
 
       <View style={styles.listsSection}>
         <Text style={styles.sectionTitle}>Listas publicas</Text>
@@ -119,6 +127,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 16,
+  },
+  avatarImage: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    marginTop: 16,
+    backgroundColor: '#2b2b2b',
   },
   avatarText: {
     color: '#fff',

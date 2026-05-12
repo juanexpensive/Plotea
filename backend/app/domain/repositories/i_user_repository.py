@@ -29,3 +29,12 @@ class IUserRepository(ABC):
 
     @abstractmethod
     async def update_password_hash(self, user_id: int, password_hash: str) -> None: ...
+
+    @abstractmethod
+    async def update_profile(
+        self,
+        user_id: int,
+        display_name: str | None,
+        bio: str | None,
+        avatar_url: str | None,
+    ) -> User: ...

@@ -146,6 +146,28 @@ class UserRepository(IUserRepository):
         )
         await self._session.commit()
 
+    async def update_profile(
+        self,
+        user_id: int,
+        display_name: str | None,
+        bio: str | None,
+        avatar_url: str | None,
+    ) -> User:
+        await self._session.execute(
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(
+                display_name=display_name,
+                bio=bio,
+                avatar_url=avatar_url,
+            )
+        )
+        await self._session.commit()
+
+        refreshed = await self.get_by_id(user_id)
+        assert refreshed is not None
+        return refreshed
+
     def _to_entity(self, model: UserModel) -> User:
         return User(
             id=model.id,
