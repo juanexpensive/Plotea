@@ -1,27 +1,31 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { PublicUserSummary } from '../../../domain/entities/social';
+import { darkDesign } from '../../theme/darkDesign';
+import { sharedStyles } from '../../theme/sharedStyles';
 import { useUserSearchViewModel } from './UserSearchViewModel';
 
 export default function UserSearchScreen() {
   const { query, results, loading, error, isSearching, setQuery, openProfile } = useUserSearchViewModel();
 
   return (
-    <View style={styles.screen}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Buscar usuarios</Text>
+      <Text style={styles.subtitle}>Encuentra perfiles por nombre de usuario y abre su actividad publica.</Text>
       <TextInput
         style={styles.searchInput}
         value={query}
         onChangeText={setQuery}
         placeholder="Busca por username"
-        placeholderTextColor="#777"
+        placeholderTextColor={darkDesign.colors.textFaint}
         autoCapitalize="none"
         autoCorrect={false}
+        selectionColor={darkDesign.colors.accent}
       />
 
       {!isSearching ? <Text style={styles.helper}>Escribe al menos 2 caracteres.</Text> : null}
       {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="small" color="#fff" />
+        <View style={styles.centeredInline}>
+          <ActivityIndicator size="small" color={darkDesign.colors.accent} />
         </View>
       ) : null}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -34,7 +38,7 @@ export default function UserSearchScreen() {
           <UserRow key={user.id} user={user} onPress={() => openProfile(user.username)} />
         ))}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -42,7 +46,7 @@ function UserRow({ user, onPress }: { user: PublicUserSummary; onPress: () => vo
   const label = user.display_name ?? user.username;
 
   return (
-    <Pressable style={({ pressed }) => [styles.row, pressed ? styles.rowPressed : null]} onPress={onPress}>
+    <Pressable style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]} onPress={onPress}>
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{label.charAt(0).toUpperCase()}</Text>
       </View>
@@ -56,67 +60,39 @@ function UserRow({ user, onPress }: { user: PublicUserSummary; onPress: () => vo
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#111',
-    padding: 20,
-    gap: 14,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
-    marginTop: 8,
-  },
-  searchInput: {
-    minHeight: 46,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#333',
-    backgroundColor: '#1a1a1a',
-    color: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  helper: {
-    color: '#888',
-    fontSize: 14,
-  },
-  centered: {
+  screen: sharedStyles.screen,
+  content: sharedStyles.scrollContent,
+  title: sharedStyles.title,
+  subtitle: sharedStyles.captionMuted,
+  searchInput: sharedStyles.input,
+  helper: sharedStyles.captionMuted,
+  centeredInline: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
+    paddingVertical: darkDesign.spacing.lg,
   },
-  errorText: {
-    color: '#f66',
-    fontSize: 14,
-  },
+  errorText: sharedStyles.errorText,
   list: {
-    gap: 12,
+    gap: darkDesign.spacing.md,
+    paddingBottom: darkDesign.spacing.lg,
   },
   row: {
+    ...sharedStyles.panel,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#333',
-    backgroundColor: '#181818',
-    borderRadius: 12,
-    padding: 12,
+    gap: darkDesign.spacing.md,
   },
-  rowPressed: {
-    opacity: 0.82,
-  },
+  pressed: sharedStyles.pressed,
   avatar: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#2c2c2c',
+    backgroundColor: darkDesign.colors.canvasRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -125,17 +101,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   rowTitle: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 15,
     fontWeight: '700',
   },
-  rowMeta: {
-    color: '#aaa',
-    fontSize: 13,
-  },
+  rowMeta: sharedStyles.captionMuted,
   followingBadge: {
-    color: '#93c5fd',
-    fontSize: 12,
+    color: darkDesign.colors.accentSoft,
+    ...darkDesign.typography.micro,
     fontWeight: '700',
   },
 });

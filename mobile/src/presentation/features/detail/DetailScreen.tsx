@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import {
   ActivityIndicator,
   Image,
@@ -12,6 +13,8 @@ import {
   View,
 } from 'react-native';
 import { Comment, Review, ReviewRating } from '../../../domain/entities/media';
+import { darkDesign } from '../../theme/darkDesign';
+import { sharedStyles } from '../../theme/sharedStyles';
 import { useDetailViewModel } from './DetailViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w500';
@@ -64,7 +67,8 @@ export default function DetailScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#fff" />
+        <StatusBar style="light" />
+        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
       </View>
     );
   }
@@ -72,6 +76,7 @@ export default function DetailScreen() {
   if (error || !detail) {
     return (
       <View style={styles.centered}>
+        <StatusBar style="light" />
         <Text style={styles.errorText}>{error ?? 'Error desconocido'}</Text>
       </View>
     );
@@ -79,6 +84,7 @@ export default function DetailScreen() {
 
   return (
     <ScrollView style={styles.screen}>
+      <StatusBar style="light" />
       {detail.poster_path ? (
         <Image source={{ uri: `${TMDB_IMAGE}${detail.poster_path}` }} style={styles.poster} />
       ) : (
@@ -356,16 +362,17 @@ function ReviewForm({
         value={reviewBody}
         onChangeText={onBodyChange}
         placeholder="Comparte tu opinion"
-        placeholderTextColor="#777"
+        placeholderTextColor={darkDesign.colors.textFaint}
         multiline
         textAlignVertical="top"
+        selectionColor={darkDesign.colors.accent}
       />
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>Contiene spoilers</Text>
         <Switch
           value={reviewContainsSpoilers}
           onValueChange={onSpoilersChange}
-          trackColor={{ false: '#444', true: '#2563eb' }}
+          trackColor={{ false: darkDesign.colors.borderStrong, true: darkDesign.colors.accentDeep }}
           thumbColor="#fff"
         />
       </View>
@@ -559,7 +566,7 @@ function ReviewComments({
         />
       ) : null}
       {threadState.isLoading ? (
-        <ActivityIndicator size="small" color="#fff" />
+        <ActivityIndicator size="small" color={darkDesign.colors.accent} />
       ) : null}
       {threadState.error ? <Text style={styles.inlineError}>{threadState.error}</Text> : null}
       {!threadState.isLoading && threadState.comments.length === 0 ? (
@@ -603,9 +610,10 @@ function CommentComposer({
         value={value}
         onChangeText={onChangeText}
         placeholder={replying ? 'Escribe una respuesta' : 'Escribe un comentario'}
-        placeholderTextColor="#777"
+        placeholderTextColor={darkDesign.colors.textFaint}
         multiline
         textAlignVertical="top"
+        selectionColor={darkDesign.colors.accent}
       />
       <View style={styles.commentComposerActions}>
         <Pressable onPress={onCancel}>
@@ -711,8 +719,9 @@ function WatchLogForm({
         value={watchedAt}
         onChangeText={onWatchedAtChange}
         placeholder="YYYY-MM-DD"
-        placeholderTextColor="#777"
+        placeholderTextColor={darkDesign.colors.textFaint}
         autoCapitalize="none"
+        selectionColor={darkDesign.colors.accent}
       />
       <Text style={styles.formLabel}>Puntuacion</Text>
       <View style={styles.ratingGrid}>
@@ -778,41 +787,35 @@ function StatusButton({
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#111',
-  },
+  screen: sharedStyles.screen,
   centered: {
-    flex: 1,
-    backgroundColor: '#111',
-    justifyContent: 'center',
-    alignItems: 'center',
+    ...sharedStyles.centered,
   },
   poster: {
     width: '100%',
     height: 300,
-    backgroundColor: '#333',
+    backgroundColor: darkDesign.colors.borderStrong,
   },
   posterFallback: {
     width: '100%',
     height: 300,
-    backgroundColor: '#333',
+    backgroundColor: darkDesign.colors.borderStrong,
   },
   content: {
-    padding: 16,
+    padding: darkDesign.spacing.lg,
     gap: 12,
   },
   title: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 22,
     fontWeight: 'bold',
   },
   meta: {
-    color: '#ccc',
+    color: darkDesign.colors.textMuted,
     fontSize: 13,
   },
   genres: {
-    color: '#aaa',
+    color: darkDesign.colors.textFaint,
     fontSize: 13,
   },
   statusActions: {
@@ -824,36 +827,37 @@ const styles = StyleSheet.create({
   statusButton: {
     flex: 1,
     minHeight: 44,
-    borderRadius: 8,
+    borderRadius: darkDesign.radii.sm,
     borderWidth: 1,
-    borderColor: '#555',
+    borderColor: darkDesign.colors.borderStrong,
+    backgroundColor: darkDesign.colors.canvasRaised,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
   },
   statusButtonActive: {
-    backgroundColor: '#fff',
-    borderColor: '#fff',
+    backgroundColor: darkDesign.colors.accent,
+    borderColor: darkDesign.colors.accent,
   },
   statusButtonText: {
-    color: '#ddd',
+    color: darkDesign.colors.textSoft,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
   },
   statusButtonTextActive: {
-    color: '#111',
+    color: darkDesign.colors.onAccent,
   },
   primaryButton: {
     minHeight: 44,
-    borderRadius: 8,
-    backgroundColor: '#2563eb',
+    borderRadius: darkDesign.radii.sm,
+    backgroundColor: darkDesign.colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
   primaryButtonText: {
-    color: '#fff',
+    color: darkDesign.colors.onAccent,
     fontSize: 14,
     fontWeight: '700',
     textAlign: 'center',
@@ -861,7 +865,7 @@ const styles = StyleSheet.create({
   section: {
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: '#252525',
+    borderTopColor: darkDesign.colors.border,
     paddingTop: 16,
   },
   sectionHeader: {
@@ -871,53 +875,41 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 18,
     fontWeight: '700',
   },
   sectionCount: {
-    color: '#999',
+    color: darkDesign.colors.textFaint,
     fontSize: 13,
   },
   secondaryActionText: {
-    color: '#93c5fd',
+    color: darkDesign.colors.accentSoft,
     fontSize: 13,
     fontWeight: '600',
   },
   watchLogForm: {
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 8,
-    backgroundColor: '#181818',
+    ...sharedStyles.panel,
     padding: 12,
-    gap: 10,
   },
   reviewForm: {
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 8,
-    backgroundColor: '#181818',
+    ...sharedStyles.panel,
     padding: 12,
-    gap: 10,
   },
   commentsSection: {
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: '#252525',
+    borderTopColor: darkDesign.colors.border,
     paddingTop: 12,
   },
   commentsTitle: {
-    color: '#ddd',
+    color: darkDesign.colors.textSoft,
     fontSize: 15,
     fontWeight: '700',
   },
   commentComposer: {
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 8,
-    backgroundColor: '#181818',
+    ...sharedStyles.panel,
     padding: 10,
-    gap: 10,
   },
   commentComposerActions: {
     flexDirection: 'row',
@@ -928,18 +920,13 @@ const styles = StyleSheet.create({
     minHeight: 90,
   },
   formLabel: {
-    color: '#ddd',
+    color: darkDesign.colors.textSoft,
     fontSize: 13,
     fontWeight: '700',
   },
   textInput: {
+    ...sharedStyles.input,
     minHeight: 42,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#444',
-    color: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
   },
   bodyInput: {
     minHeight: 120,
@@ -952,23 +939,24 @@ const styles = StyleSheet.create({
   ratingButton: {
     width: 48,
     minHeight: 36,
-    borderRadius: 8,
+    borderRadius: darkDesign.radii.sm,
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: darkDesign.colors.borderStrong,
+    backgroundColor: darkDesign.colors.canvasRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
   ratingButtonActive: {
-    backgroundColor: '#fff',
-    borderColor: '#fff',
+    backgroundColor: darkDesign.colors.accent,
+    borderColor: darkDesign.colors.accent,
   },
   ratingText: {
-    color: '#ddd',
+    color: darkDesign.colors.textSoft,
     fontSize: 13,
     fontWeight: '600',
   },
   ratingTextActive: {
-    color: '#111',
+    color: darkDesign.colors.onAccent,
   },
   switchRow: {
     flexDirection: 'row',
@@ -977,40 +965,25 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   switchLabel: {
-    color: '#ddd',
+    color: darkDesign.colors.textSoft,
     fontSize: 14,
     flex: 1,
   },
   saveReviewButton: {
+    ...sharedStyles.primaryButton,
     minHeight: 44,
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  saveReviewButtonText: {
-    color: '#111',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  saveReviewButtonText: sharedStyles.primaryButtonText,
   deleteReviewButton: {
+    ...sharedStyles.dangerButton,
     minHeight: 42,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#7f1d1d',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  deleteReviewButtonText: {
-    color: '#fca5a5',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  deleteReviewButtonText: sharedStyles.dangerButtonText,
   reviewCard: {
     borderWidth: 1,
-    borderColor: '#2e2e2e',
-    borderRadius: 8,
-    backgroundColor: '#161616',
+    borderColor: darkDesign.colors.border,
+    borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.panel,
     padding: 12,
     gap: 10,
   },
@@ -1021,18 +994,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   reviewAuthor: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 14,
     fontWeight: '700',
     flex: 1,
   },
   reviewRating: {
-    color: '#facc15',
+    color: darkDesign.colors.warning,
     fontSize: 13,
     fontWeight: '700',
   },
   reviewBody: {
-    color: '#d1d5db',
+    color: darkDesign.colors.textSoft,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -1043,30 +1016,31 @@ const styles = StyleSheet.create({
   },
   socialButton: {
     minHeight: 36,
-    borderRadius: 999,
+    borderRadius: darkDesign.radii.sm,
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: darkDesign.colors.borderStrong,
+    backgroundColor: darkDesign.colors.canvasRaised,
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   socialButtonActive: {
-    backgroundColor: '#fff',
-    borderColor: '#fff',
+    backgroundColor: darkDesign.colors.accent,
+    borderColor: darkDesign.colors.accent,
   },
   socialButtonText: {
-    color: '#ddd',
+    color: darkDesign.colors.textSoft,
     fontSize: 12,
     fontWeight: '700',
   },
   socialButtonTextActive: {
-    color: '#111',
+    color: darkDesign.colors.onAccent,
   },
   commentCard: {
     borderWidth: 1,
-    borderColor: '#2f2f2f',
-    borderRadius: 8,
-    backgroundColor: '#141414',
+    borderColor: darkDesign.colors.border,
+    borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.canvasRaised,
     padding: 10,
     gap: 8,
   },
@@ -1077,7 +1051,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   commentAuthor: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 13,
     fontWeight: '700',
     flex: 1,
@@ -1088,44 +1062,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   commentBody: {
-    color: '#d1d5db',
+    color: darkDesign.colors.textSoft,
     fontSize: 14,
     lineHeight: 20,
   },
   deletedCommentBody: {
-    color: '#8b8b8b',
+    color: darkDesign.colors.textFaint,
     fontSize: 14,
     lineHeight: 20,
     fontStyle: 'italic',
   },
-  deleteInlineText: {
-    color: '#fca5a5',
-    fontSize: 12,
-    fontWeight: '700',
-  },
+  deleteInlineText: sharedStyles.dangerButtonText,
   replyContainer: {
     marginLeft: 16,
   },
   spoilerBox: {
-    borderRadius: 8,
-    backgroundColor: '#222',
+    borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.canvasRaised,
     padding: 12,
     gap: 6,
   },
   spoilerText: {
-    color: '#d1d5db',
+    color: darkDesign.colors.textSoft,
     fontSize: 14,
   },
   smallPrimaryButton: {
     minHeight: 34,
-    borderRadius: 8,
-    backgroundColor: '#2563eb',
+    borderRadius: darkDesign.radii.sm,
+    backgroundColor: darkDesign.colors.accent,
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   smallPrimaryButtonText: {
-    color: '#fff',
+    color: darkDesign.colors.onAccent,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -1135,26 +1105,14 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.55,
   },
-  successText: {
-    color: '#86efac',
-    fontSize: 13,
-  },
-  inlineError: {
-    color: '#fca5a5',
-    fontSize: 14,
-  },
-  emptyText: {
-    color: '#777',
-    fontSize: 13,
-  },
+  successText: sharedStyles.successText,
+  inlineError: sharedStyles.errorText,
+  emptyText: sharedStyles.captionMuted,
   overview: {
-    color: '#ccc',
+    color: darkDesign.colors.textMuted,
     fontSize: 14,
     lineHeight: 22,
     marginTop: 4,
   },
-  errorText: {
-    color: '#f66',
-    fontSize: 14,
-  },
+  errorText: sharedStyles.errorText,
 });

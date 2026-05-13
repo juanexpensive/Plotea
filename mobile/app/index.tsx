@@ -2,6 +2,7 @@ import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { hasValidSession } from '../src/data/repositories/AuthRepository';
+import { darkDesign } from '../src/presentation/theme/darkDesign';
 
 export default function Index() {
   const [ready, setReady] = useState(false);
@@ -14,6 +15,6 @@ export default function Index() {
     });
   }, []);
 
-  if (!ready) return <View style={{ flex: 1, backgroundColor: '#111' }} />;
+  if (!ready) return <View style={{ flex: 1, backgroundColor: darkDesign.colors.canvas }} />;
   return <Redirect href={isAuthenticated ? '/(tabs)/home' : '/login'} />;
 }

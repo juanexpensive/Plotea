@@ -1,4 +1,6 @@
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { darkDesign } from '../../theme/darkDesign';
+import { sharedStyles } from '../../theme/sharedStyles';
 import { WatchLogListItem, useWatchLogListViewModel } from './WatchLogListViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
@@ -13,7 +15,7 @@ export default function WatchLogListScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
       </View>
     );
   }
@@ -84,120 +86,69 @@ function WatchLogCard({
       <Pressable
         style={({ pressed }) => [
           styles.deleteButton,
-          pressed ? styles.deleteButtonPressed : null,
-          deleting ? styles.deleteButtonDisabled : null,
+          pressed ? styles.pressed : null,
+          deleting ? styles.disabled : null,
         ]}
         onPress={onDelete}
         disabled={deleting}
       >
-        <Text style={styles.deleteButtonText}>{deleting ? '...' : 'Borrar'}</Text>
+        <Text style={styles.deleteButtonText}>{deleting ? 'Borrando...' : 'Borrar'}</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#111',
-  },
-  content: {
-    padding: 20,
-    gap: 12,
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: '#111',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
+  screen: sharedStyles.screen,
+  content: sharedStyles.scrollContent,
+  centered: sharedStyles.centered,
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
   },
-  title: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  count: {
-    color: '#aaa',
-    fontSize: 15,
-  },
-  emptyText: {
-    color: '#777',
-    fontSize: 14,
-  },
-  inlineError: {
-    color: '#fca5a5',
-    fontSize: 14,
-  },
+  title: sharedStyles.title,
+  count: sharedStyles.captionMuted,
+  emptyText: sharedStyles.captionMuted,
+  inlineError: sharedStyles.errorText,
   list: {
-    gap: 12,
+    gap: darkDesign.spacing.md,
   },
   card: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#333',
-    backgroundColor: '#181818',
-    padding: 10,
-    gap: 10,
+    ...sharedStyles.panel,
+    gap: darkDesign.spacing.md,
   },
   cardMain: {
     flexDirection: 'row',
-    gap: 12,
+    gap: darkDesign.spacing.md,
   },
   poster: {
     width: 72,
     height: 108,
-    borderRadius: 8,
-    backgroundColor: '#333',
+    borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.borderStrong,
   },
   posterFallback: {
-    backgroundColor: '#333',
+    backgroundColor: darkDesign.colors.borderStrong,
   },
   cardBody: {
     flex: 1,
     gap: 5,
   },
   cardTitle: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 16,
     fontWeight: '700',
   },
-  cardMeta: {
-    color: '#aaa',
-    fontSize: 13,
-  },
+  cardMeta: sharedStyles.captionMuted,
   cardRating: {
-    color: '#ddd',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    minHeight: 38,
-    borderRadius: 8,
-    backgroundColor: '#7f1d1d',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteButtonPressed: {
-    opacity: 0.85,
-  },
-  deleteButtonDisabled: {
-    opacity: 0.6,
-  },
-  deleteButtonText: {
-    color: '#fff',
-    fontSize: 14,
+    color: darkDesign.colors.warning,
+    ...darkDesign.typography.caption,
     fontWeight: '700',
   },
-  errorText: {
-    color: '#f66',
-    fontSize: 14,
-    textAlign: 'center',
-  },
+  deleteButton: sharedStyles.dangerButton,
+  deleteButtonText: sharedStyles.dangerButtonText,
+  pressed: sharedStyles.pressed,
+  disabled: sharedStyles.disabled,
+  errorText: sharedStyles.errorText,
 });

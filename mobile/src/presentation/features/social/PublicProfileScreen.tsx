@@ -1,6 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ListSummary } from '../../../domain/entities/lists';
+import { darkDesign } from '../../theme/darkDesign';
+import { sharedStyles } from '../../theme/sharedStyles';
 import { usePublicProfileViewModel } from './PublicProfileViewModel';
 import { UserStatsSection } from './UserStatsSection';
 
@@ -12,7 +14,7 @@ export default function PublicProfileScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
       </View>
     );
   }
@@ -49,15 +51,14 @@ export default function PublicProfileScreen() {
 
       <Pressable
         style={({ pressed }) => [
-          styles.followButton,
-          profile.is_following ? styles.followButtonActive : null,
-          pressed ? styles.followButtonPressed : null,
-          savingFollow ? styles.followButtonDisabled : null,
+          profile.is_following ? styles.followButtonActive : styles.followButton,
+          pressed ? styles.pressed : null,
+          savingFollow ? styles.disabled : null,
         ]}
         onPress={toggleFollow}
         disabled={savingFollow}
       >
-        <Text style={[styles.followButtonText, profile.is_following ? styles.followButtonTextActive : null]}>
+        <Text style={profile.is_following ? styles.followButtonTextActive : styles.followButtonText}>
           {savingFollow ? 'Actualizando...' : profile.is_following ? 'Siguiendo' : 'Seguir'}
         </Text>
       </Pressable>
@@ -92,7 +93,7 @@ function StatCard({ label, value }: { label: string; value: number }) {
 
 function PublicListCard({ list, onPress }: { list: ListSummary; onPress: () => void }) {
   return (
-    <Pressable style={({ pressed }) => [styles.listCard, pressed ? styles.listCardPressed : null]} onPress={onPress}>
+    <Pressable style={({ pressed }) => [styles.listCard, pressed ? styles.pressed : null]} onPress={onPress}>
       <Text style={styles.listCardTitle}>{list.name}</Text>
       {list.description ? <Text style={styles.listCardBody}>{list.description}</Text> : null}
       <Text style={styles.listCardMeta}>
@@ -103,56 +104,42 @@ function PublicListCard({ list, onPress }: { list: ListSummary; onPress: () => v
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#111',
-  },
+  screen: sharedStyles.screen,
   content: {
-    padding: 24,
+    ...sharedStyles.scrollContent,
     alignItems: 'center',
-    gap: 12,
   },
-  centered: {
-    flex: 1,
-    backgroundColor: '#111',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
+  centered: sharedStyles.centered,
   avatar: {
     width: 92,
     height: 92,
     borderRadius: 46,
-    backgroundColor: '#2b2b2b',
+    backgroundColor: darkDesign.colors.canvasRaised,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 8,
   },
   avatarImage: {
     width: 92,
     height: 92,
     borderRadius: 46,
-    marginTop: 16,
-    backgroundColor: '#2b2b2b',
+    marginTop: 8,
+    backgroundColor: darkDesign.colors.canvasRaised,
   },
   avatarText: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 36,
     fontWeight: '700',
   },
   name: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 24,
     fontWeight: '700',
   },
-  meta: {
-    color: '#aaa',
-    fontSize: 14,
-  },
+  meta: sharedStyles.captionMuted,
   bio: {
-    color: '#d4d4d4',
-    fontSize: 14,
-    lineHeight: 22,
+    color: darkDesign.colors.textSoft,
+    ...darkDesign.typography.body,
     textAlign: 'center',
     maxWidth: 320,
   },
@@ -160,109 +147,52 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: darkDesign.spacing.md,
     justifyContent: 'center',
-    marginTop: 8,
   },
   statCard: {
     width: '47%',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 12,
-    backgroundColor: '#181818',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    ...sharedStyles.panel,
+    paddingVertical: darkDesign.spacing.lg,
     alignItems: 'center',
-    gap: 6,
   },
   statValue: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 20,
     fontWeight: '700',
   },
   statLabel: {
-    color: '#999',
-    fontSize: 12,
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.micro,
   },
-  followButton: {
-    marginTop: 8,
-    minHeight: 44,
-    minWidth: 180,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#93c5fd',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  followButtonActive: {
-    backgroundColor: '#fff',
-    borderColor: '#fff',
-  },
-  followButtonPressed: {
-    opacity: 0.82,
-  },
-  followButtonDisabled: {
-    opacity: 0.6,
-  },
+  followButton: sharedStyles.secondaryButton,
+  followButtonActive: sharedStyles.primaryButton,
   followButtonText: {
-    color: '#93c5fd',
-    fontSize: 14,
-    fontWeight: '700',
+    color: darkDesign.colors.accentSoft,
+    ...darkDesign.typography.button,
   },
-  followButtonTextActive: {
-    color: '#111',
-  },
-  errorText: {
-    color: '#f66',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  inlineError: {
-    color: '#fca5a5',
-    fontSize: 14,
-    textAlign: 'center',
-  },
+  followButtonTextActive: sharedStyles.primaryButtonText,
+  errorText: sharedStyles.errorText,
+  inlineError: sharedStyles.errorText,
   listsSection: {
     width: '100%',
-    gap: 12,
-    marginTop: 12,
+    gap: darkDesign.spacing.md,
+    marginTop: darkDesign.spacing.sm,
   },
   sectionTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.section,
     alignSelf: 'flex-start',
   },
-  emptyText: {
-    color: '#888',
-    fontSize: 13,
-    alignSelf: 'flex-start',
-  },
-  listCard: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 12,
-    backgroundColor: '#181818',
-    padding: 14,
-    gap: 8,
-  },
-  listCardPressed: {
-    opacity: 0.82,
-  },
+  emptyText: sharedStyles.captionMuted,
+  listCard: sharedStyles.panel,
   listCardTitle: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 15,
     fontWeight: '700',
   },
-  listCardBody: {
-    color: '#cfcfcf',
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  listCardMeta: {
-    color: '#999',
-    fontSize: 12,
-  },
+  listCardBody: sharedStyles.body,
+  listCardMeta: sharedStyles.captionMuted,
+  pressed: sharedStyles.pressed,
+  disabled: sharedStyles.disabled,
 });

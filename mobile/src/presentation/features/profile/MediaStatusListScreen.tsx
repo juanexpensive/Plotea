@@ -1,5 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { darkDesign } from '../../theme/darkDesign';
+import { sharedStyles } from '../../theme/sharedStyles';
 import { MediaStatusListItem, useMediaStatusListViewModel } from './MediaStatusListViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
@@ -11,7 +13,7 @@ export default function MediaStatusListScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
       </View>
     );
   }
@@ -52,85 +54,54 @@ function MediaStatusCard({ item, onPress }: { item: MediaStatusListItem; onPress
     item.detail?.title ?? `${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`;
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed ? styles.cardPressed : null]}
-      onPress={onPress}
-    >
+    <Pressable style={({ pressed }) => [styles.card, pressed ? styles.pressed : null]} onPress={onPress}>
       {item.detail?.poster_path ? (
         <Image source={{ uri: `${TMDB_IMAGE}${item.detail.poster_path}` }} style={styles.poster} />
       ) : (
         <View style={[styles.poster, styles.posterFallback]} />
       )}
-      <Text style={styles.cardTitle} numberOfLines={2}>
-        {title}
-      </Text>
+      <Text style={styles.cardTitle} numberOfLines={2}>{title}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#111',
-  },
-  content: {
-    padding: 20,
-    gap: 12,
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: '#111',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
+  screen: sharedStyles.screen,
+  content: sharedStyles.scrollContent,
+  centered: sharedStyles.centered,
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
   },
-  title: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  count: {
-    color: '#aaa',
-    fontSize: 15,
-  },
-  emptyText: {
-    color: '#777',
-    fontSize: 14,
-  },
+  title: sharedStyles.title,
+  count: sharedStyles.captionMuted,
+  emptyText: sharedStyles.captionMuted,
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: darkDesign.spacing.md,
   },
   card: {
     width: 110,
   },
-  cardPressed: {
-    opacity: 0.7,
+  pressed: {
+    opacity: 0.72,
   },
   poster: {
     width: 110,
     height: 165,
-    borderRadius: 8,
-    backgroundColor: '#333',
+    borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.borderStrong,
   },
   posterFallback: {
-    backgroundColor: '#333',
+    backgroundColor: darkDesign.colors.borderStrong,
   },
   cardTitle: {
-    color: '#ccc',
-    fontSize: 11,
+    color: darkDesign.colors.textSoft,
+    fontSize: 12,
+    lineHeight: 16,
     marginTop: 6,
   },
-  errorText: {
-    color: '#f66',
-    fontSize: 14,
-    textAlign: 'center',
-  },
+  errorText: sharedStyles.errorText,
 });

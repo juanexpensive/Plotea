@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { PublicUserStats } from '../../../domain/entities/social';
+import { darkDesign } from '../../theme/darkDesign';
+import { sharedStyles } from '../../theme/sharedStyles';
 
 export function UserStatsSection({
   stats,
@@ -35,9 +37,7 @@ export function UserStatsSection({
               <View style={styles.genreList}>
                 {stats.top_genres.map((genre) => (
                   <View key={genre.name} style={styles.genreChip}>
-                    <Text style={styles.genreText}>
-                      {genre.name} · {genre.count}
-                    </Text>
+                    <Text style={styles.genreText}>{`${genre.name} - ${genre.count}`}</Text>
                   </View>
                 ))}
               </View>
@@ -61,77 +61,60 @@ function StatCard({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   section: {
     width: '100%',
-    gap: 12,
+    gap: darkDesign.spacing.md,
   },
   title: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.section,
   },
   grid: {
     width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: darkDesign.spacing.md,
   },
   card: {
     width: '47%',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 12,
-    backgroundColor: '#181818',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    ...sharedStyles.panel,
+    paddingVertical: darkDesign.spacing.lg,
     alignItems: 'center',
-    gap: 6,
   },
   value: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 20,
     fontWeight: '700',
   },
   label: {
-    color: '#999',
-    fontSize: 12,
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.micro,
     textAlign: 'center',
   },
   genreBlock: {
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 12,
-    backgroundColor: '#181818',
-    padding: 14,
-    gap: 10,
+    ...sharedStyles.panel,
   },
   genreTitle: {
-    color: '#fff',
-    fontSize: 14,
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.caption,
     fontWeight: '700',
   },
   genreList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: darkDesign.spacing.sm,
   },
   genreChip: {
-    borderRadius: 999,
+    borderRadius: darkDesign.radii.sm,
     borderWidth: 1,
-    borderColor: '#3b3b3b',
-    backgroundColor: '#121212',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderColor: darkDesign.colors.borderStrong,
+    backgroundColor: darkDesign.colors.canvasInset,
+    paddingVertical: darkDesign.spacing.sm,
+    paddingHorizontal: darkDesign.spacing.md,
   },
   genreText: {
-    color: '#ddd',
-    fontSize: 12,
+    color: darkDesign.colors.textSoft,
+    ...darkDesign.typography.micro,
     fontWeight: '600',
   },
-  meta: {
-    color: '#888',
-    fontSize: 13,
-  },
-  error: {
-    color: '#fca5a5',
-    fontSize: 13,
-  },
+  meta: sharedStyles.captionMuted,
+  error: sharedStyles.errorText,
 });

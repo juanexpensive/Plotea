@@ -1,5 +1,8 @@
-import { Button, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { darkDesign } from '../../theme/darkDesign';
+import { sharedStyles } from '../../theme/sharedStyles';
+import { AuthFormLayout } from './AuthFormLayout';
 import { useResetPasswordViewModel } from './ResetPasswordViewModel';
 
 export default function ResetPasswordScreen() {
@@ -17,45 +20,79 @@ export default function ResetPasswordScreen() {
   } = useResetPasswordViewModel(params.token);
 
   return (
-    <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 16 }}>
-        Nueva contrasena
-      </Text>
-
-      <Text style={{ marginBottom: 16 }}>
-        Abre esta pantalla desde el enlace del correo o pega aqui el token si hace falta.
-      </Text>
-
-      <Text>Token</Text>
+    <AuthFormLayout
+      eyebrow="Nueva contrasena"
+      title="Define una contrasena nueva y vuelve a entrar."
+      subtitle="Abre esta pantalla desde el enlace del correo o pega aqui el token si hace falta."
+    >
+      <Text style={styles.label}>Token</Text>
       <TextInput
         value={token}
         onChangeText={setToken}
         autoCapitalize="none"
         placeholder="token de recuperacion"
-        style={{ borderWidth: 1, borderColor: '#ccc', padding: 8, marginBottom: 16 }}
+        placeholderTextColor={darkDesign.colors.textFaint}
+        style={styles.input}
+        selectionColor={darkDesign.colors.accent}
       />
 
-      <Text>Nueva contrasena</Text>
+      <Text style={styles.label}>Nueva contrasena</Text>
       <TextInput
         value={password}
         onChangeText={setPassword}
         secureTextEntry
         placeholder="********"
-        style={{ borderWidth: 1, borderColor: '#ccc', padding: 8, marginBottom: 16 }}
+        placeholderTextColor={darkDesign.colors.textFaint}
+        style={styles.input}
+        selectionColor={darkDesign.colors.accent}
       />
 
-      {error ? <Text style={{ color: 'red', marginBottom: 16 }}>{error}</Text> : null}
-      {message ? <Text style={{ color: 'green', marginBottom: 16 }}>{message}</Text> : null}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {message ? <Text style={styles.successText}>{message}</Text> : null}
 
-      <Button
-        title={loading ? 'Actualizando...' : 'Cambiar contrasena'}
+      <Pressable
+        style={({ pressed }) => [
+          styles.primaryButton,
+          pressed ? styles.pressed : null,
+          loading ? styles.disabled : null,
+        ]}
         onPress={handleSubmit}
         disabled={loading}
-      />
+      >
+        <Text style={styles.primaryButtonText}>{loading ? 'Actualizando...' : 'Cambiar contrasena'}</Text>
+      </Pressable>
 
-      <View style={{ marginTop: 16 }}>
-        <Button title="Volver a iniciar sesion" onPress={goToLogin} />
+      <View style={styles.footerRow}>
+        <Text style={styles.footerText}>Cuando termines</Text>
+        <Pressable
+          style={({ pressed }) => [styles.secondaryButton, pressed ? styles.pressed : null]}
+          onPress={goToLogin}
+        >
+          <Text style={styles.secondaryButtonText}>Volver al login</Text>
+        </Pressable>
       </View>
-    </View>
+    </AuthFormLayout>
   );
 }
+
+const styles = StyleSheet.create({
+  label: sharedStyles.label,
+  input: sharedStyles.input,
+  errorText: sharedStyles.errorText,
+  successText: sharedStyles.successText,
+  primaryButton: sharedStyles.primaryButton,
+  primaryButtonText: sharedStyles.primaryButtonText,
+  secondaryButton: sharedStyles.secondaryButton,
+  secondaryButtonText: sharedStyles.secondaryButtonText,
+  pressed: sharedStyles.pressed,
+  disabled: sharedStyles.disabled,
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: darkDesign.spacing.md,
+    flexWrap: 'wrap',
+    marginTop: darkDesign.spacing.xs,
+  },
+  footerText: sharedStyles.captionMuted,
+});

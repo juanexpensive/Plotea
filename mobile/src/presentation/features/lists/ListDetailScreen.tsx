@@ -16,6 +16,8 @@ import {
   View,
 } from 'react-native';
 import { ListItem } from '../../../domain/entities/lists';
+import { darkDesign } from '../../theme/darkDesign';
+import { sharedStyles } from '../../theme/sharedStyles';
 import { useListDetailViewModel } from './ListDetailViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
@@ -53,7 +55,7 @@ export default function ListDetailScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
       </View>
     );
   }
@@ -112,30 +114,40 @@ export default function ListDetailScreen() {
                 value={form.name}
                 onChangeText={(value) => updateForm({ name: value })}
                 placeholder="Nombre"
-                placeholderTextColor="#777"
+                placeholderTextColor={darkDesign.colors.textFaint}
+                selectionColor={darkDesign.colors.accent}
               />
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={form.description ?? ''}
                 onChangeText={(value) => updateForm({ description: value })}
                 placeholder="Descripcion"
-                placeholderTextColor="#777"
+                placeholderTextColor={darkDesign.colors.textFaint}
                 multiline
+                selectionColor={darkDesign.colors.accent}
               />
               <View style={styles.toggleRow}>
                 <Text style={styles.toggleLabel}>Lista publica</Text>
                 <Switch
                   value={form.is_public}
                   onValueChange={(value) => updateForm({ is_public: value })}
-                  trackColor={{ false: '#333', true: '#2563eb' }}
+                  trackColor={{ false: darkDesign.colors.borderStrong, true: darkDesign.colors.accentDeep }}
                   thumbColor="#fff"
                 />
               </View>
               <View style={styles.actionsRow}>
-                <Pressable style={styles.primaryButton} onPress={saveMetadata} disabled={saving}>
+                <Pressable
+                  style={({ pressed }) => [styles.primaryButton, pressed ? styles.pressed : null, saving ? styles.disabled : null]}
+                  onPress={saveMetadata}
+                  disabled={saving}
+                >
                   <Text style={styles.primaryButtonText}>{saving ? 'Guardando...' : 'Guardar'}</Text>
                 </Pressable>
-                <Pressable style={styles.dangerButton} onPress={handleDeleteList} disabled={deleting}>
+                <Pressable
+                  style={({ pressed }) => [styles.dangerButton, pressed ? styles.pressed : null, deleting ? styles.disabled : null]}
+                  onPress={handleDeleteList}
+                  disabled={deleting}
+                >
                   <Text style={styles.dangerButtonText}>{deleting ? 'Borrando...' : 'Borrar'}</Text>
                 </Pressable>
               </View>
@@ -150,15 +162,20 @@ export default function ListDetailScreen() {
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Busca una pelicula o serie"
-                placeholderTextColor="#777"
+                placeholderTextColor={darkDesign.colors.textFaint}
+                selectionColor={darkDesign.colors.accent}
               />
-              {searchLoading ? <ActivityIndicator size="small" color="#fff" /> : null}
+              {searchLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
               {searchError ? <Text style={styles.errorText}>{searchError}</Text> : null}
               <View style={styles.searchResults}>
                 {searchResults.slice(0, 6).map((item) => (
-                  <Pressable key={`${item.media_type}-${item.tmdb_id}`} style={styles.searchRow} onPress={() => handleAddItem(item)}>
+                  <Pressable
+                    key={`${item.media_type}-${item.tmdb_id}`}
+                    style={({ pressed }) => [styles.searchRow, pressed ? styles.pressed : null]}
+                    onPress={() => handleAddItem(item)}
+                  >
                     <Text style={styles.searchRowTitle}>{item.title}</Text>
-                    <Text style={styles.searchRowMeta}>{item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #{item.tmdb_id}</Text>
+                    <Text style={styles.searchRowMeta}>{`${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -228,12 +245,12 @@ function AnimatedListCard({
         <View style={styles.itemBody}>
           <Text style={styles.itemTitle}>{title}</Text>
           <Text style={styles.itemMeta}>
-            Posicion {item.position + 1} · {item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #{item.tmdb_id}
+            {`Posicion ${item.position + 1} - ${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`}
           </Text>
         </View>
       </Pressable>
       {editable && onRemove ? (
-        <Pressable style={styles.removeButton} onPress={onRemove}>
+        <Pressable style={({ pressed }) => [styles.removeButton, pressed ? styles.pressed : null]} onPress={onRemove}>
           <Text style={styles.removeButtonText}>Quitar</Text>
         </Pressable>
       ) : null}
@@ -246,147 +263,90 @@ function toItemKey(item: ListItem) {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#111',
-  },
+  screen: sharedStyles.screen,
   content: {
-    padding: 20,
-    gap: 14,
-    paddingBottom: 32,
+    ...sharedStyles.scrollContent,
+    paddingTop: 20,
   },
-  centered: {
-    flex: 1,
-    backgroundColor: '#111',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
+  centered: sharedStyles.centered,
   title: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
+    ...sharedStyles.title,
     marginTop: 8,
   },
   ownerMeta: {
-    color: '#93c5fd',
-    fontSize: 13,
+    color: darkDesign.colors.accentSoft,
+    ...darkDesign.typography.caption,
     fontWeight: '700',
   },
-  description: {
-    color: '#cfcfcf',
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  editorCard: {
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 14,
-    backgroundColor: '#181818',
-    padding: 14,
-    gap: 12,
-  },
+  description: sharedStyles.body,
+  editorCard: sharedStyles.panel,
   cardTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.section,
   },
-  input: {
-    minHeight: 46,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#333',
-    backgroundColor: '#121212',
-    color: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
+  input: sharedStyles.input,
   textArea: {
+    ...sharedStyles.textArea,
     minHeight: 92,
-    textAlignVertical: 'top',
   },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  toggleLabel: {
-    color: '#ddd',
-    fontSize: 14,
-  },
+  toggleLabel: sharedStyles.body,
   actionsRow: {
     flexDirection: 'row',
     gap: 10,
   },
   primaryButton: {
+    ...sharedStyles.primaryButton,
     flex: 1,
     minHeight: 42,
-    borderRadius: 999,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 16,
   },
-  primaryButtonText: {
-    color: '#111',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  primaryButtonText: sharedStyles.primaryButtonText,
   dangerButton: {
+    ...sharedStyles.dangerButton,
     flex: 1,
     minHeight: 42,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#7f1d1d',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 16,
   },
-  dangerButtonText: {
-    color: '#fca5a5',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  dangerButtonText: sharedStyles.dangerButtonText,
   searchResults: {
     gap: 10,
   },
   searchRow: {
     borderTopWidth: 1,
-    borderTopColor: '#2b2b2b',
+    borderTopColor: darkDesign.colors.border,
     paddingTop: 10,
   },
   searchRowTitle: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 14,
     fontWeight: '700',
   },
   searchRowMeta: {
-    color: '#999',
-    fontSize: 12,
+    ...sharedStyles.captionMuted,
     marginTop: 4,
   },
   helper: {
-    color: '#93c5fd',
-    fontSize: 13,
+    color: darkDesign.colors.accentSoft,
+    ...darkDesign.typography.caption,
   },
-  errorText: {
-    color: '#f66',
-    fontSize: 14,
-  },
+  errorText: sharedStyles.errorText,
   itemsList: {
     gap: 12,
   },
   itemCard: {
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: darkDesign.colors.border,
     borderRadius: 14,
-    backgroundColor: '#171717',
+    backgroundColor: darkDesign.colors.panel,
     padding: 12,
     gap: 10,
   },
   itemCardSelected: {
-    borderColor: '#93c5fd',
-    backgroundColor: '#13202d',
+    borderColor: darkDesign.colors.accent,
+    backgroundColor: darkDesign.colors.panelStrong,
   },
   itemMain: {
     flexDirection: 'row',
@@ -397,37 +357,35 @@ const styles = StyleSheet.create({
     width: 54,
     height: 81,
     borderRadius: 8,
-    backgroundColor: '#333',
+    backgroundColor: darkDesign.colors.borderStrong,
   },
   posterFallback: {
-    backgroundColor: '#2f2f2f',
+    backgroundColor: darkDesign.colors.borderStrong,
   },
   itemBody: {
     flex: 1,
     gap: 6,
   },
   itemTitle: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 15,
     fontWeight: '700',
   },
   itemMeta: {
-    color: '#999',
-    fontSize: 12,
+    ...sharedStyles.captionMuted,
     lineHeight: 18,
   },
   removeButton: {
     alignSelf: 'flex-start',
     minHeight: 34,
-    borderRadius: 999,
+    borderRadius: darkDesign.radii.sm,
     borderWidth: 1,
-    borderColor: '#5b2828',
+    borderColor: '#7a3030',
+    backgroundColor: '#2a1515',
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
-  removeButtonText: {
-    color: '#fca5a5',
-    fontSize: 12,
-    fontWeight: '700',
-  },
+  removeButtonText: sharedStyles.dangerButtonText,
+  pressed: sharedStyles.pressed,
+  disabled: sharedStyles.disabled,
 });

@@ -2,8 +2,10 @@ import { router } from 'expo-router';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ListSummary } from '../../../domain/entities/lists';
 import { SavedMediaStatus } from '../../../domain/entities/media';
-import { useProfileViewModel } from './ProfileViewModel';
+import { darkDesign } from '../../theme/darkDesign';
+import { sharedStyles } from '../../theme/sharedStyles';
 import { UserStatsSection } from '../social/UserStatsSection';
+import { useProfileViewModel } from './ProfileViewModel';
 
 export default function ProfileScreen() {
   const {
@@ -35,7 +37,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
       </View>
     );
   }
@@ -64,7 +66,10 @@ export default function ProfileScreen() {
       <Text style={styles.meta}>@{user.username}</Text>
       <Text style={styles.meta}>{user.email}</Text>
       {user.bio ? <Text style={styles.bio}>{user.bio}</Text> : null}
-      <Pressable style={({ pressed }) => [styles.secondaryButton, pressed ? styles.statusSectionPressed : null]} onPress={isEditing ? cancelEditing : startEditing}>
+      <Pressable
+        style={({ pressed }) => [styles.secondaryButton, pressed ? styles.pressed : null]}
+        onPress={isEditing ? cancelEditing : startEditing}
+      >
         <Text style={styles.secondaryButtonText}>{isEditing ? 'Cancelar edicion' : 'Editar perfil'}</Text>
       </Pressable>
       {isEditing ? (
@@ -75,7 +80,8 @@ export default function ProfileScreen() {
             value={displayNameDraft}
             onChangeText={setDisplayNameDraft}
             placeholder="Como quieres mostrarte"
-            placeholderTextColor="#777"
+            placeholderTextColor={darkDesign.colors.textFaint}
+            selectionColor={darkDesign.colors.accent}
           />
           <Text style={styles.inputLabel}>Bio</Text>
           <TextInput
@@ -83,9 +89,10 @@ export default function ProfileScreen() {
             value={bioDraft}
             onChangeText={setBioDraft}
             placeholder="Cuenta algo sobre ti"
-            placeholderTextColor="#777"
+            placeholderTextColor={darkDesign.colors.textFaint}
             multiline
             textAlignVertical="top"
+            selectionColor={darkDesign.colors.accent}
           />
           <Text style={styles.inputLabel}>Avatar URL</Text>
           <TextInput
@@ -93,14 +100,15 @@ export default function ProfileScreen() {
             value={avatarUrlDraft}
             onChangeText={setAvatarUrlDraft}
             placeholder="https://..."
-            placeholderTextColor="#777"
+            placeholderTextColor={darkDesign.colors.textFaint}
             autoCapitalize="none"
+            selectionColor={darkDesign.colors.accent}
           />
           <Pressable
             style={({ pressed }) => [
               styles.primaryButton,
-              pressed ? styles.statusSectionPressed : null,
-              savingProfile ? styles.logoutButtonDisabled : null,
+              pressed ? styles.pressed : null,
+              savingProfile ? styles.disabled : null,
             ]}
             onPress={saveProfile}
             disabled={savingProfile}
@@ -118,7 +126,7 @@ export default function ProfileScreen() {
       />
       <View style={styles.library}>
         <Pressable
-          style={({ pressed }) => [styles.statusSection, pressed ? styles.statusSectionPressed : null]}
+          style={({ pressed }) => [styles.statusSection, pressed ? styles.pressed : null]}
           onPress={() => router.push('/watchlog-list')}
         >
           <View style={styles.sectionHeader}>
@@ -148,15 +156,13 @@ export default function ProfileScreen() {
       <Pressable
         style={({ pressed }) => [
           styles.logoutButton,
-          pressed ? styles.logoutButtonPressed : null,
-          loggingOut ? styles.logoutButtonDisabled : null,
+          pressed ? styles.pressed : null,
+          loggingOut ? styles.disabled : null,
         ]}
         onPress={handleLogout}
         disabled={loggingOut}
       >
-        <Text style={styles.logoutButtonText}>
-          {loggingOut ? 'Cerrando sesion...' : 'Cerrar sesion'}
-        </Text>
+        <Text style={styles.logoutButtonText}>{loggingOut ? 'Cerrando sesion...' : 'Cerrar sesion'}</Text>
       </Pressable>
       {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
       {error ? <Text style={styles.inlineError}>{error}</Text> : null}
@@ -185,17 +191,17 @@ function ListSection({
         lists.slice(0, 3).map((list) => (
           <Pressable
             key={list.id}
-            style={({ pressed }) => [styles.statusItem, pressed ? styles.statusSectionPressed : null]}
+            style={({ pressed }) => [styles.statusItem, pressed ? styles.pressed : null]}
             onPress={() => onOpenList(list.id)}
           >
             <Text style={styles.statusItemText}>{list.name}</Text>
             <Text style={styles.itemMeta}>
-              {list.items_count} {list.items_count === 1 ? 'obra' : 'obras'} · {list.is_public ? 'Publica' : 'Privada'}
+              {`${list.items_count} ${list.items_count === 1 ? 'obra' : 'obras'} - ${list.is_public ? 'Publica' : 'Privada'}`}
             </Text>
           </Pressable>
         ))
       )}
-      <Pressable style={({ pressed }) => [styles.linkButton, pressed ? styles.statusSectionPressed : null]} onPress={onPress}>
+      <Pressable style={({ pressed }) => [styles.linkButton, pressed ? styles.pressed : null]} onPress={onPress}>
         <Text style={styles.linkText}>Ver todas</Text>
       </Pressable>
     </View>
@@ -212,10 +218,7 @@ function MediaStatusSection({
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      style={({ pressed }) => [styles.statusSection, pressed ? styles.statusSectionPressed : null]}
-      onPress={onPress}
-    >
+    <Pressable style={({ pressed }) => [styles.statusSection, pressed ? styles.pressed : null]} onPress={onPress}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{title}</Text>
         <Text style={styles.sectionCount}>{items.length}</Text>
@@ -225,9 +228,7 @@ function MediaStatusSection({
       ) : (
         items.map((item) => (
           <View key={`${item.media_type}-${item.tmdb_id}`} style={styles.statusItem}>
-            <Text style={styles.statusItemText}>
-              {item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #{item.tmdb_id}
-            </Text>
+            <Text style={styles.statusItemText}>{`${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`}</Text>
           </View>
         ))
       )}
@@ -236,33 +237,21 @@ function MediaStatusSection({
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#111',
-  },
+  screen: sharedStyles.screen,
   screenContent: {
-    alignItems: 'center',
-    paddingTop: 64,
-    padding: 24,
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: '#111',
-    justifyContent: 'center',
+    ...sharedStyles.scrollContent,
     alignItems: 'center',
   },
+  centered: sharedStyles.centered,
   title: {
-    color: '#fff',
-    fontSize: 26,
-    fontWeight: 'bold',
+    ...sharedStyles.title,
     alignSelf: 'flex-start',
-    marginBottom: 40,
   },
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#333',
+    backgroundColor: darkDesign.colors.canvasRaised,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -272,104 +261,52 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     marginBottom: 16,
-    backgroundColor: '#333',
+    backgroundColor: darkDesign.colors.canvasRaised,
   },
   avatarText: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   name: {
-    color: '#fff',
+    color: darkDesign.colors.text,
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 8,
   },
-  meta: {
-    color: '#ccc',
-    fontSize: 14,
-    marginBottom: 4,
-  },
+  meta: sharedStyles.captionMuted,
   bio: {
-    color: '#d4d4d4',
-    fontSize: 14,
-    lineHeight: 21,
+    color: darkDesign.colors.textSoft,
+    ...darkDesign.typography.body,
     textAlign: 'center',
-    marginTop: 8,
     maxWidth: 320,
   },
-  secondaryButton: {
-    marginTop: 12,
-    minHeight: 42,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#93c5fd',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-  },
-  secondaryButtonText: {
-    color: '#93c5fd',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  secondaryButton: sharedStyles.secondaryButton,
+  secondaryButtonText: sharedStyles.secondaryButtonText,
   editorCard: {
+    ...sharedStyles.panel,
     width: '100%',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 12,
-    backgroundColor: '#181818',
-    padding: 14,
-    gap: 10,
-    marginTop: 16,
+    marginTop: darkDesign.spacing.sm,
   },
-  inputLabel: {
-    color: '#ddd',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  input: {
-    minHeight: 46,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#333',
-    backgroundColor: '#121212',
-    color: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
+  inputLabel: sharedStyles.label,
+  input: sharedStyles.input,
   textArea: {
+    ...sharedStyles.textArea,
     minHeight: 90,
   },
   primaryButton: {
-    minHeight: 44,
-    borderRadius: 999,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
+    ...sharedStyles.primaryButton,
     marginTop: 4,
   },
-  primaryButtonText: {
-    color: '#111',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  primaryButtonText: sharedStyles.primaryButtonText,
   library: {
     width: '100%',
-    marginTop: 28,
-    gap: 14,
+    marginTop: darkDesign.spacing.md,
+    gap: darkDesign.spacing.md,
   },
   statusSection: {
+    ...sharedStyles.panel,
     width: '100%',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 8,
-    padding: 14,
-    backgroundColor: '#181818',
-  },
-  statusSectionPressed: {
-    opacity: 0.82,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -378,76 +315,47 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.section,
   },
-  sectionCount: {
-    color: '#aaa',
-    fontSize: 13,
-  },
-  emptyText: {
-    color: '#777',
-    fontSize: 13,
-  },
+  sectionCount: sharedStyles.captionMuted,
+  emptyText: sharedStyles.captionMuted,
   statusItem: {
     borderTopWidth: 1,
-    borderTopColor: '#2b2b2b',
+    borderTopColor: darkDesign.colors.border,
     paddingVertical: 10,
   },
   statusItemText: {
-    color: '#ddd',
+    color: darkDesign.colors.textSoft,
     fontSize: 14,
   },
-  itemMeta: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  linkText: {
-    color: '#93c5fd',
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  itemMeta: sharedStyles.captionMuted,
+  linkText: sharedStyles.linkText,
   linkButton: {
     alignSelf: 'flex-start',
     marginTop: 10,
   },
   logoutButton: {
-    marginTop: 28,
+    ...sharedStyles.dangerButton,
     width: '100%',
     maxWidth: 280,
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: '#7f1d1d',
-    alignItems: 'center',
-  },
-  logoutButtonPressed: {
-    opacity: 0.85,
-  },
-  logoutButtonDisabled: {
-    opacity: 0.6,
+    marginTop: darkDesign.spacing.md,
   },
   logoutButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.button,
   },
   inlineError: {
-    color: '#fca5a5',
-    fontSize: 14,
+    ...sharedStyles.errorText,
     marginTop: 14,
     textAlign: 'center',
   },
   successText: {
-    color: '#86efac',
-    fontSize: 14,
+    ...sharedStyles.successText,
     marginTop: 14,
     textAlign: 'center',
   },
-  errorText: {
-    color: '#f66',
-    fontSize: 14,
-  },
+  errorText: sharedStyles.errorText,
+  pressed: sharedStyles.pressed,
+  disabled: sharedStyles.disabled,
 });

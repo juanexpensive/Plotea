@@ -1,55 +1,107 @@
-import { Button, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { darkDesign } from '../../theme/darkDesign';
+import { sharedStyles } from '../../theme/sharedStyles';
+import { AuthFormLayout } from './AuthFormLayout';
 import { useRegisterViewModel } from './RegisterViewModel';
 
 export default function RegisterScreen() {
-  const { email, setEmail, username, setUsername, password, setPassword, loading, error, handleRegister, goToLogin } =
-    useRegisterViewModel();
+  const {
+    email,
+    setEmail,
+    username,
+    setUsername,
+    password,
+    setPassword,
+    loading,
+    error,
+    handleRegister,
+    goToLogin,
+  } = useRegisterViewModel();
 
   return (
-    <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 24 }}>Crear cuenta</Text>
-
-      <Text>Email</Text>
+    <AuthFormLayout
+      eyebrow="Crear cuenta"
+      title="Empieza a guardar lo que ves y lo que no quieres perder de vista."
+      subtitle="Crea tu perfil para llevar tus listas, resenas y visionados en un solo sitio."
+    >
+      <Text style={styles.label}>Email</Text>
       <TextInput
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
         keyboardType="email-address"
         placeholder="tu@email.com"
-        style={{ borderWidth: 1, borderColor: '#ccc', padding: 8, marginBottom: 16 }}
+        placeholderTextColor={darkDesign.colors.textFaint}
+        style={styles.input}
+        selectionColor={darkDesign.colors.accent}
       />
 
-      <Text>Nombre de usuario</Text>
+      <Text style={styles.label}>Nombre de usuario</Text>
       <TextInput
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
         placeholder="usuario123"
-        style={{ borderWidth: 1, borderColor: '#ccc', padding: 8, marginBottom: 16 }}
+        placeholderTextColor={darkDesign.colors.textFaint}
+        style={styles.input}
+        selectionColor={darkDesign.colors.accent}
       />
 
-      <Text>Contraseña</Text>
+      <Text style={styles.label}>Contrasena</Text>
       <TextInput
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        placeholder="••••••••"
-        style={{ borderWidth: 1, borderColor: '#ccc', padding: 8, marginBottom: 24 }}
+        placeholder="********"
+        placeholderTextColor={darkDesign.colors.textFaint}
+        style={styles.input}
+        selectionColor={darkDesign.colors.accent}
       />
 
-      {error && (
-        <Text style={{ color: 'red', marginBottom: 16 }}>{error}</Text>
-      )}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <Button
-        title={loading ? 'Registrando...' : 'Registrarse'}
+      <Pressable
+        style={({ pressed }) => [
+          styles.primaryButton,
+          pressed ? styles.pressed : null,
+          loading ? styles.disabled : null,
+        ]}
         onPress={handleRegister}
         disabled={loading}
-      />
+      >
+        <Text style={styles.primaryButtonText}>{loading ? 'Registrando...' : 'Crear cuenta'}</Text>
+      </Pressable>
 
-      <View style={{ marginTop: 16 }}>
-        <Button title="¿Ya tienes cuenta? Inicia sesión" onPress={goToLogin} />
+      <View style={styles.footerRow}>
+        <Text style={styles.footerText}>Ya tienes cuenta</Text>
+        <Pressable
+          style={({ pressed }) => [styles.secondaryButton, pressed ? styles.pressed : null]}
+          onPress={goToLogin}
+        >
+          <Text style={styles.secondaryButtonText}>Iniciar sesion</Text>
+        </Pressable>
       </View>
-    </View>
+    </AuthFormLayout>
   );
 }
+
+const styles = StyleSheet.create({
+  label: sharedStyles.label,
+  input: sharedStyles.input,
+  errorText: sharedStyles.errorText,
+  primaryButton: sharedStyles.primaryButton,
+  primaryButtonText: sharedStyles.primaryButtonText,
+  secondaryButton: sharedStyles.secondaryButton,
+  secondaryButtonText: sharedStyles.secondaryButtonText,
+  pressed: sharedStyles.pressed,
+  disabled: sharedStyles.disabled,
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: darkDesign.spacing.md,
+    flexWrap: 'wrap',
+    marginTop: darkDesign.spacing.xs,
+  },
+  footerText: sharedStyles.captionMuted,
+});
