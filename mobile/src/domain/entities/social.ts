@@ -27,6 +27,24 @@ export interface PublicUserStats {
   average_rating: number | null;
 }
 
+export interface FavoriteMediaItem {
+  position: number;
+  media: {
+    tmdb_id: number;
+    media_type: 'movie' | 'tv';
+    title: string;
+    poster_path: string | null;
+    vote_average: number;
+    release_date: string | null;
+  };
+}
+
+export interface FavoriteMediaWriteItem {
+  position: number;
+  tmdb_id: number;
+  media_type: 'movie' | 'tv';
+}
+
 export interface ActivityActor {
   id: number;
   username: string;
@@ -83,4 +101,28 @@ export type ActivityItem = ReviewActivity | WatchLogActivity | FollowActivity | 
 export interface FeedPage {
   items: ActivityItem[];
   next_cursor: string | null;
+}
+
+export interface VisualFeedParticipant {
+  id: number;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  activity_type: 'review' | 'watch_log';
+  rating: number | null;
+  created_at: string;
+}
+
+export interface VisualFeedItem {
+  media: {
+    tmdb_id: number;
+    media_type: 'movie' | 'tv';
+    title: string;
+    poster_path: string | null;
+    vote_average: number;
+    release_date: string | null;
+  };
+  participants: VisualFeedParticipant[];
+  recent_activity_count: number;
+  latest_activity_at: string;
 }

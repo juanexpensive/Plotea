@@ -5,8 +5,10 @@ import { tokenStorage } from '../storage/tokenStorage';
 
 const api = axios.create({
   baseURL: BACKEND_URL,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
   },
 });
 

@@ -47,6 +47,10 @@ export interface WatchLogEntry {
   created_at: string;
 }
 
+export interface WatchLogEnrichedEntry extends WatchLogEntry {
+  media: MediaItem;
+}
+
 export interface CreateWatchLogRequest {
   tmdb_id: number;
   media_type: 'movie' | 'tv';

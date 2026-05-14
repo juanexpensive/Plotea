@@ -492,3 +492,138 @@ async def test_feed_contains_review_and_watch_log_activities(async_client: Async
     assert items[1]["activity_type"] == "review"
     assert items[1]["body_preview"].startswith("Una review")
     assert items[1]["contains_spoilers"] is True
+
+
+@pytest.mark.asyncio
+async def test_update_and_get_my_favorite_media(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "favorites@example.com", "favoritesowner")
+
+    fake_tmdb = FakeTmdbClient(
+        payloads={
+            ("movie", 550): {
+                "id": 550,
+                "title": "Fight Club",
+                "poster_path": "/fight.jpg",
+                "vote_average": 8.8,
+                "release_date": "1999-10-15",
+                "runtime": 139,
+                "genres": [{"name": "Drama"}],
+            },
+            ("tv", 1399): {
+                "id": 1399,
+                "name": "Game of Thrones",
+                "poster_path": "/got.jpg",
+                "vote_average": 8.4,
+                "first_air_date": "2011-04-17",
+                "episode_run_time": [60],
+                "genres": [{"name": "Fantasy"}],
+            },
+        }
+    )
+    app.dependency_overrides[get_tmdb_client] = lambda: fake_tmdb
+
+    update_response = await async_client.put(
+        "/users/me/favorites",
+        json={
+            "items": [
+                {"position": 0, "tmdb_id": 550, "media_type": "movie"},
+                {"position": 1, "tmdb_id": 1399, "media_type": "tv"},
+            ]
+        },
+        headers=_headers(owner),
+    )
+    fetch_response = await async_client.get("/users/me/favorites", headers=_headers(owner))
+
+    app.dependency_overrides.pop(get_tmdb_client, None)
+    assert update_response.status_code == 200
+    assert fetch_response.status_code == 200
+    assert fetch_response.json() == [
+        {
+            "position": 0,
+            "media": {
+                "tmdb_id": 550,
+                "media_type": "movie",
+                "title": "Fight Club",
+                "poster_path": "/fight.jpg",
+                "vote_average": 8.8,
+                "release_date": "1999-10-15",
+            },
+        },
+        {
+            "position": 1,
+            "media": {
+                "tmdb_id": 1399,
+                "media_type": "tv",
+                "title": "Game of Thrones",
+                "poster_path": "/got.jpg",
+                "vote_average": 8.4,
+                "release_date": "2011-04-17",
+            },
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_visual_feed_groups_recent_activity_by_media(async_client: AsyncClient):
+    viewer = await _register_and_login(async_client, "visual-viewer@example.com", "visualviewer")
+    actor_one = await _register_and_login(async_client, "visual-one@example.com", "visualone")
+    actor_two = await _register_and_login(async_client, "visual-two@example.com", "visualtwo")
+
+    await async_client.post("/users/2/follow", headers=_headers(viewer))
+    await async_client.post("/users/3/follow", headers=_headers(viewer))
+    await async_client.post(
+        "/watchlog",
+        json={"tmdb_id": 550, "media_type": "movie", "watched_at": "2026-05-10", "rating": 8},
+        headers=_headers(actor_one),
+    )
+    await async_client.post(
+        "/reviews",
+        json={
+            "tmdb_id": 550,
+            "media_type": "movie",
+            "rating": 9,
+            "body": "Muy buena pelicula",
+            "contains_spoilers": False,
+        },
+        headers=_headers(actor_two),
+    )
+    await async_client.post(
+        "/watchlog",
+        json={"tmdb_id": 1399, "media_type": "tv", "watched_at": "2026-05-11"},
+        headers=_headers(actor_one),
+    )
+
+    fake_tmdb = FakeTmdbClient(
+        payloads={
+            ("movie", 550): {
+                "id": 550,
+                "title": "Fight Club",
+                "poster_path": "/fight.jpg",
+                "vote_average": 8.8,
+                "release_date": "1999-10-15",
+                "runtime": 139,
+                "genres": [{"name": "Drama"}],
+            },
+            ("tv", 1399): {
+                "id": 1399,
+                "name": "Game of Thrones",
+                "poster_path": "/got.jpg",
+                "vote_average": 8.4,
+                "first_air_date": "2011-04-17",
+                "episode_run_time": [60],
+                "genres": [{"name": "Fantasy"}],
+            },
+        }
+    )
+    app.dependency_overrides[get_tmdb_client] = lambda: fake_tmdb
+
+    response = await async_client.get("/feed/visual?limit=2", headers=_headers(viewer))
+
+    app.dependency_overrides.pop(get_tmdb_client, None)
+    assert response.status_code == 200
+    items = response.json()
+    assert len(items) == 2
+    assert items[0]["media"]["tmdb_id"] == 1399
+    assert items[1]["media"]["tmdb_id"] == 550
+    assert items[1]["recent_activity_count"] == 2
+    assert {participant["username"] for participant in items[1]["participants"]} == {"visualone", "visualtwo"}

@@ -24,6 +24,7 @@ import app.data.models.user_media_status  # noqa: F401, E402
 import app.data.models.review_vote  # noqa: F401, E402
 import app.data.models.watch_log  # noqa: F401, E402
 import app.data.models.review  # noqa: F401, E402
+import app.data.models.user_favorite_media  # noqa: F401, E402
 
 from app.presentation.routers import auth as auth_router  # noqa: E402
 from app.presentation.routers import lists as lists_router  # noqa: E402

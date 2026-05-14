@@ -3,6 +3,18 @@ from datetime import date, timedelta
 import pytest
 from httpx import AsyncClient
 
+from app.main import app
+from app.presentation.routers.media import get_tmdb_client
+
+
+class FakeTmdbClient:
+    def __init__(self, payloads: dict[tuple[str, int], dict]) -> None:
+        self.payloads = payloads
+
+    async def get(self, path: str, params: dict | None = None) -> dict:
+        media_type, tmdb_id = path.strip("/").split("/")
+        return self.payloads[(media_type, int(tmdb_id))]
+
 
 async def _register_and_login(
     client: AsyncClient,
@@ -193,3 +205,55 @@ async def test_watch_log_rejects_future_date(async_client: AsyncClient):
     )
 
     assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_list_recent_watch_log_returns_media_summary(async_client: AsyncClient):
+    tokens = await _register_and_login(async_client)
+    headers = _headers(tokens)
+
+    await async_client.post(
+        "/watchlog",
+        json={"tmdb_id": 550, "media_type": "movie", "watched_at": "2026-04-28", "rating": 8},
+        headers=headers,
+    )
+    await async_client.post(
+        "/watchlog",
+        json={"tmdb_id": 1399, "media_type": "tv", "watched_at": "2026-04-29"},
+        headers=headers,
+    )
+
+    fake_tmdb = FakeTmdbClient(
+        {
+            ("movie", 550): {
+                "id": 550,
+                "title": "Fight Club",
+                "poster_path": "/fight.jpg",
+                "vote_average": 8.8,
+                "release_date": "1999-10-15",
+                "runtime": 139,
+                "genres": [{"name": "Drama"}],
+            },
+            ("tv", 1399): {
+                "id": 1399,
+                "name": "Game of Thrones",
+                "poster_path": "/got.jpg",
+                "vote_average": 8.4,
+                "first_air_date": "2011-04-17",
+                "episode_run_time": [60],
+                "genres": [{"name": "Fantasy"}],
+            },
+        }
+    )
+    app.dependency_overrides[get_tmdb_client] = lambda: fake_tmdb
+
+    response = await async_client.get("/watchlog/me/recent?limit=2", headers=headers)
+
+    app.dependency_overrides.pop(get_tmdb_client, None)
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 2
+    assert body[0]["media"]["tmdb_id"] == 1399
+    assert body[0]["media"]["title"] == "Game of Thrones"
+    assert body[1]["media"]["tmdb_id"] == 550
+    assert body[1]["media"]["poster_path"] == "/fight.jpg"

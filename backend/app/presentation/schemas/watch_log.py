@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.presentation.schemas.media import MediaItemResponse
+
 
 class WatchLogCreateRequest(BaseModel):
     tmdb_id: int
@@ -18,3 +20,7 @@ class WatchLogResponse(BaseModel):
     watched_at: date
     rating: int | None
     created_at: datetime
+
+
+class WatchLogEnrichedResponse(WatchLogResponse):
+    media: MediaItemResponse

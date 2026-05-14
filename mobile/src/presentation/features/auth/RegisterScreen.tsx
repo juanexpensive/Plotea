@@ -12,6 +12,8 @@ export default function RegisterScreen() {
     setUsername,
     password,
     setPassword,
+    confirmPassword,
+    setConfirmPassword,
     loading,
     error,
     handleRegister,
@@ -51,6 +53,17 @@ export default function RegisterScreen() {
       <TextInput
         value={password}
         onChangeText={setPassword}
+        secureTextEntry
+        placeholder="********"
+        placeholderTextColor={darkDesign.colors.textFaint}
+        style={styles.input}
+        selectionColor={darkDesign.colors.accent}
+      />
+
+      <Text style={styles.label}>Repite la contrasena</Text>
+      <TextInput
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
         secureTextEntry
         placeholder="********"
         placeholderTextColor={darkDesign.colors.textFaint}

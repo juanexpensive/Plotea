@@ -1,5 +1,14 @@
 import api from '../../infrastructure/http/api';
-import { ActivityItem, FeedPage, PublicUserProfile, PublicUserStats, PublicUserSummary } from '../../domain/entities/social';
+import {
+  ActivityItem,
+  FavoriteMediaItem,
+  FavoriteMediaWriteItem,
+  FeedPage,
+  PublicUserProfile,
+  PublicUserStats,
+  PublicUserSummary,
+  VisualFeedItem,
+} from '../../domain/entities/social';
 import { User } from '../../domain/entities/auth';
 
 export async function searchUsers(query: string): Promise<PublicUserSummary[]> {
@@ -38,5 +47,20 @@ export async function getSocialFeed(cursor?: string | null): Promise<FeedPage> {
   const response = await api.get<{ items: ActivityItem[]; next_cursor: string | null }>('/feed', {
     params: cursor ? { cursor } : undefined,
   });
+  return response.data;
+}
+
+export async function getVisualSocialFeed(limit = 12): Promise<VisualFeedItem[]> {
+  const response = await api.get<VisualFeedItem[]>('/feed/visual', { params: { limit } });
+  return response.data;
+}
+
+export async function getMyFavoriteMedia(): Promise<FavoriteMediaItem[]> {
+  const response = await api.get<FavoriteMediaItem[]>('/users/me/favorites');
+  return response.data;
+}
+
+export async function updateMyFavoriteMedia(items: FavoriteMediaWriteItem[]): Promise<FavoriteMediaItem[]> {
+  const response = await api.put<FavoriteMediaItem[]>('/users/me/favorites', { items });
   return response.data;
 }

@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import date, datetime
 
+from app.domain.entities.media import MediaItem
+
 
 @dataclass
 class PublicUserSummary:
@@ -38,6 +40,13 @@ class PublicUserStats:
     estimated_hours: float
     top_genres: list[GenreStat]
     average_rating: float | None
+
+
+@dataclass
+class FavoriteMediaSelection:
+    position: int
+    tmdb_id: int
+    media_type: str
 
 
 @dataclass
@@ -100,3 +109,33 @@ class ListCreatedActivity(BaseActivity):
     list_name: str | None
     items_count: int
     is_public: bool
+
+
+@dataclass
+class VisualFeedParticipant:
+    id: int
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+    activity_type: str
+    rating: int | None
+    created_at: datetime
+
+
+@dataclass
+class VisualFeedItem:
+    media: MediaItem
+    participants: list[VisualFeedParticipant]
+    recent_activity_count: int
+    latest_activity_at: datetime
+
+
+@dataclass
+class RecentWatchLogEntry:
+    id: int
+    tmdb_id: int
+    media_type: str
+    watched_at: date
+    rating: int | None
+    created_at: datetime
+    media: MediaItem

@@ -1,37 +1,62 @@
-import { router } from 'expo-router';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { ListSummary } from '../../../domain/entities/lists';
-import { SavedMediaStatus } from '../../../domain/entities/media';
+import { MediaItem } from '../../../domain/entities/media';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { UserStatsSection } from '../social/UserStatsSection';
 import { useProfileViewModel } from './ProfileViewModel';
 
+const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w300';
+
+function formatRating(rating: number | null) {
+  return rating === null ? 'Sin puntuacion' : `${(rating / 2).toFixed(1)} / 5`;
+}
+
 export default function ProfileScreen() {
   const {
     user,
-    lists,
-    mediaStatuses,
     stats,
-    watchLogCount,
+    favorites,
+    recentWatch,
     loading,
     loggingOut,
     savingProfile,
+    savingFavorites,
     statsLoading,
+    favoritesLoading,
+    recentWatchLoading,
     error,
     statsError,
+    favoritesError,
+    recentWatchError,
     successMessage,
     isEditing,
     displayNameDraft,
     bioDraft,
     avatarUrlDraft,
+    isEditingFavorites,
+    favoriteDrafts,
+    activeFavoriteSlot,
+    favoriteQuery,
+    favoriteSearchResults,
+    favoriteSearchLoading,
+    favoriteSearchError,
     setDisplayNameDraft,
     setBioDraft,
     setAvatarUrlDraft,
+    setActiveFavoriteSlot,
+    setFavoriteQuery,
     handleLogout,
     startEditing,
     cancelEditing,
     saveProfile,
+    startFavoriteEditing,
+    cancelFavoriteEditing,
+    assignFavorite,
+    clearFavoriteSlot,
+    saveFavorites,
+    openDetail,
+    openDiary,
+    openLists,
   } = useProfileViewModel();
 
   if (loading) {
@@ -53,25 +78,32 @@ export default function ProfileScreen() {
   const initial = (user.display_name || user.username).charAt(0).toUpperCase();
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent}>
-      <Text style={styles.title}>Perfil</Text>
-      {user.avatar_url ? (
-        <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
-      ) : (
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <View style={styles.heroCard}>
+        {user.avatar_url ? (
+          <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initial}</Text>
+          </View>
+        )}
+        <Text style={styles.name}>{user.display_name ?? user.username}</Text>
+        <Text style={styles.meta}>@{user.username}</Text>
+        <Text style={styles.meta}>{user.email}</Text>
+        {user.bio ? <Text style={styles.bio}>{user.bio}</Text> : null}
+        <View style={styles.heroActions}>
+          <Pressable style={styles.secondaryButton} onPress={isEditing ? cancelEditing : startEditing}>
+            <Text style={styles.secondaryButtonText}>{isEditing ? 'Cancelar edicion' : 'Editar perfil'}</Text>
+          </Pressable>
+          <Pressable style={styles.secondaryButton} onPress={openDiary}>
+            <Text style={styles.secondaryButtonText}>Diario</Text>
+          </Pressable>
+          <Pressable style={styles.secondaryButton} onPress={openLists}>
+            <Text style={styles.secondaryButtonText}>Listas</Text>
+          </Pressable>
         </View>
-      )}
-      <Text style={styles.name}>{user.display_name ?? user.username}</Text>
-      <Text style={styles.meta}>@{user.username}</Text>
-      <Text style={styles.meta}>{user.email}</Text>
-      {user.bio ? <Text style={styles.bio}>{user.bio}</Text> : null}
-      <Pressable
-        style={({ pressed }) => [styles.secondaryButton, pressed ? styles.pressed : null]}
-        onPress={isEditing ? cancelEditing : startEditing}
-      >
-        <Text style={styles.secondaryButtonText}>{isEditing ? 'Cancelar edicion' : 'Editar perfil'}</Text>
-      </Pressable>
+      </View>
+
       {isEditing ? (
         <View style={styles.editorCard}>
           <Text style={styles.inputLabel}>Nombre visible</Text>
@@ -118,244 +150,320 @@ export default function ProfileScreen() {
         </View>
       ) : null}
 
-      <UserStatsSection
-        stats={stats}
-        loading={statsLoading}
-        error={statsError}
-        title="Tu actividad"
-      />
-      <View style={styles.library}>
-        <Pressable
-          style={({ pressed }) => [styles.statusSection, pressed ? styles.pressed : null]}
-          onPress={() => router.push('/watchlog-list')}
-        >
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Diario</Text>
-            <Text style={styles.sectionCount}>{watchLogCount}</Text>
+      <UserStatsSection stats={stats} loading={statsLoading} error={statsError} title="Tu actividad" />
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Tus 4 favoritas</Text>
+            <Text style={styles.sectionCaption}>Tu identidad visual dentro de PlotSkip.</Text>
           </View>
-          <Text style={styles.emptyText}>
-            {watchLogCount === 0 ? 'Todavia no has registrado visionados.' : 'Ver historial de visionados.'}
-          </Text>
-        </Pressable>
-        <ListSection
-          lists={lists}
-          onPress={() => router.push('/my-lists')}
-          onOpenList={(listId) => router.push({ pathname: '/list-detail', params: { list_id: listId, editable: '1' } })}
-        />
-        <MediaStatusSection
-          title="Vistas"
-          items={mediaStatuses.watched}
-          onPress={() => router.push({ pathname: '/media-status-list', params: { status: 'watched' } })}
-        />
-        <MediaStatusSection
-          title="Quiero verlas"
-          items={mediaStatuses.watchlist}
-          onPress={() => router.push({ pathname: '/media-status-list', params: { status: 'watchlist' } })}
-        />
+          <Pressable style={styles.secondaryButton} onPress={isEditingFavorites ? cancelFavoriteEditing : startFavoriteEditing}>
+            <Text style={styles.secondaryButtonText}>{isEditingFavorites ? 'Cancelar' : 'Editar'}</Text>
+          </Pressable>
+        </View>
+        {favoritesLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
+        {favoritesError ? <Text style={styles.errorText}>{favoritesError}</Text> : null}
+        <View style={styles.favoritesGrid}>
+          {(isEditingFavorites ? favoriteDrafts : Array.from({ length: 4 }, (_, index) => favorites.find((item) => item.position === index)?.media ?? null))
+            .map((item, index) => (
+              <FavoriteSlot
+                key={index}
+                media={item}
+                active={isEditingFavorites && activeFavoriteSlot === index}
+                editable={isEditingFavorites}
+                onSelect={() => setActiveFavoriteSlot(index)}
+                onClear={() => clearFavoriteSlot(index)}
+                onOpen={() => item ? openDetail(item.media_type, item.tmdb_id) : undefined}
+              />
+            ))}
+        </View>
+        {isEditingFavorites ? (
+          <View style={styles.favoriteEditor}>
+            <Text style={styles.favoriteEditorLabel}>Slot activo #{activeFavoriteSlot + 1}</Text>
+            <TextInput
+              style={styles.input}
+              value={favoriteQuery}
+              onChangeText={setFavoriteQuery}
+              placeholder="Busca pelicula o serie"
+              placeholderTextColor={darkDesign.colors.textFaint}
+              autoCapitalize="none"
+              selectionColor={darkDesign.colors.accent}
+            />
+            {favoriteSearchLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
+            {favoriteSearchError ? <Text style={styles.errorText}>{favoriteSearchError}</Text> : null}
+            <View style={styles.favoriteSearchList}>
+              {favoriteSearchResults.slice(0, 8).map((item) => (
+                <Pressable
+                  key={`${item.media_type}-${item.tmdb_id}`}
+                  style={({ pressed }) => [styles.searchRow, pressed ? styles.pressed : null]}
+                  onPress={() => assignFavorite(item)}
+                >
+                  <Text style={styles.searchRowTitle}>{item.title}</Text>
+                  <Text style={styles.searchRowMeta}>
+                    {item.media_type === 'movie' ? 'Pelicula' : 'Serie'}
+                    {item.release_date ? ` · ${item.release_date.slice(0, 4)}` : ''}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable
+              style={({ pressed }) => [styles.primaryButton, pressed ? styles.pressed : null, savingFavorites ? styles.disabled : null]}
+              onPress={saveFavorites}
+              disabled={savingFavorites}
+            >
+              <Text style={styles.primaryButtonText}>{savingFavorites ? 'Guardando...' : 'Guardar favoritas'}</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Ultimos visionados</Text>
+            <Text style={styles.sectionCaption}>Tu rastro mas reciente con nota y caratula.</Text>
+          </View>
+          <Pressable style={styles.secondaryButton} onPress={openDiary}>
+            <Text style={styles.secondaryButtonText}>Abrir diario</Text>
+          </Pressable>
+        </View>
+        {recentWatchLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
+        {recentWatchError ? <Text style={styles.errorText}>{recentWatchError}</Text> : null}
+        {!recentWatchLoading && recentWatch.length === 0 ? (
+          <Text style={styles.emptyText}>Todavia no has registrado visionados recientes.</Text>
+        ) : null}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.recentRow}>
+          {recentWatch.map((item) => (
+            <Pressable
+              key={item.id}
+              style={({ pressed }) => [styles.recentCard, pressed ? styles.pressed : null]}
+              onPress={() => openDetail(item.media.media_type, item.media.tmdb_id)}
+            >
+              {item.media.poster_path ? (
+                <Image source={{ uri: `${TMDB_IMAGE}${item.media.poster_path}` }} style={styles.recentPoster} />
+              ) : (
+                <View style={[styles.recentPoster, styles.posterFallback]} />
+              )}
+              <Text style={styles.recentTitle} numberOfLines={2}>{item.media.title}</Text>
+              <Text style={styles.recentMeta}>{item.watched_at}</Text>
+              <Text style={styles.recentRating}>{formatRating(item.rating)}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
       <Pressable
-        style={({ pressed }) => [
-          styles.logoutButton,
-          pressed ? styles.pressed : null,
-          loggingOut ? styles.disabled : null,
-        ]}
+        style={({ pressed }) => [styles.logoutButton, pressed ? styles.pressed : null, loggingOut ? styles.disabled : null]}
         onPress={handleLogout}
         disabled={loggingOut}
       >
         <Text style={styles.logoutButtonText}>{loggingOut ? 'Cerrando sesion...' : 'Cerrar sesion'}</Text>
       </Pressable>
+
       {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
-      {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </ScrollView>
   );
 }
 
-function ListSection({
-  lists,
-  onPress,
-  onOpenList,
+function FavoriteSlot({
+  media,
+  active,
+  editable,
+  onSelect,
+  onClear,
+  onOpen,
 }: {
-  lists: ListSummary[];
-  onPress: () => void;
-  onOpenList: (listId: number) => void;
+  media: MediaItem | null;
+  active: boolean;
+  editable: boolean;
+  onSelect: () => void;
+  onClear: () => void;
+  onOpen: () => void;
 }) {
   return (
-    <View style={styles.statusSection}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Mis listas</Text>
-        <Text style={styles.sectionCount}>{lists.length}</Text>
-      </View>
-      {lists.length === 0 ? (
-        <Text style={styles.emptyText}>Todavia no has creado listas.</Text>
-      ) : (
-        lists.slice(0, 3).map((list) => (
-          <Pressable
-            key={list.id}
-            style={({ pressed }) => [styles.statusItem, pressed ? styles.pressed : null]}
-            onPress={() => onOpenList(list.id)}
-          >
-            <Text style={styles.statusItemText}>{list.name}</Text>
-            <Text style={styles.itemMeta}>
-              {`${list.items_count} ${list.items_count === 1 ? 'obra' : 'obras'} - ${list.is_public ? 'Publica' : 'Privada'}`}
-            </Text>
-          </Pressable>
-        ))
-      )}
-      <Pressable style={({ pressed }) => [styles.linkButton, pressed ? styles.pressed : null]} onPress={onPress}>
-        <Text style={styles.linkText}>Ver todas</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function MediaStatusSection({
-  title,
-  items,
-  onPress,
-}: {
-  title: string;
-  items: SavedMediaStatus[];
-  onPress: () => void;
-}) {
-  return (
-    <Pressable style={({ pressed }) => [styles.statusSection, pressed ? styles.pressed : null]} onPress={onPress}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionCount}>{items.length}</Text>
-      </View>
-      {items.length === 0 ? (
-        <Text style={styles.emptyText}>Nada guardado todavia.</Text>
-      ) : (
-        items.map((item) => (
-          <View key={`${item.media_type}-${item.tmdb_id}`} style={styles.statusItem}>
-            <Text style={styles.statusItemText}>{`${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`}</Text>
+    <View style={[styles.favoriteSlot, active ? styles.favoriteSlotActive : null]}>
+      <Pressable style={styles.favoriteTapArea} onPress={editable ? onSelect : onOpen} disabled={!editable && media === null}>
+        {media?.poster_path ? (
+          <Image source={{ uri: `${TMDB_IMAGE}${media.poster_path}` }} style={styles.favoritePoster} />
+        ) : (
+          <View style={[styles.favoritePoster, styles.posterFallback, styles.favoritePlaceholder]}>
+            <Text style={styles.favoritePlaceholderText}>Vacante</Text>
           </View>
-        ))
-      )}
-    </Pressable>
+        )}
+        <Text style={styles.favoriteTitle} numberOfLines={2}>{media?.title ?? 'Elige una favorita'}</Text>
+        <Text style={styles.favoriteMeta}>
+          {media ? (media.media_type === 'movie' ? 'Pelicula' : 'Serie') : editable ? 'Toca para seleccionar slot' : 'Slot disponible'}
+        </Text>
+      </Pressable>
+      {editable && media ? (
+        <Pressable style={styles.clearSlotButton} onPress={onClear}>
+          <Text style={styles.clearSlotText}>Quitar</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: sharedStyles.screen,
-  screenContent: {
-    ...sharedStyles.scrollContent,
+  content: sharedStyles.scrollContent,
+  centered: sharedStyles.centered,
+  heroCard: {
+    ...sharedStyles.panel,
     alignItems: 'center',
   },
-  centered: sharedStyles.centered,
-  title: {
-    ...sharedStyles.title,
-    alignSelf: 'flex-start',
-  },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: darkDesign.colors.canvasRaised,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
   },
   avatarImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 16,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: darkDesign.colors.canvasRaised,
   },
   avatarText: {
     color: darkDesign.colors.text,
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '700',
   },
   name: {
     color: darkDesign.colors.text,
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 8,
+    ...darkDesign.typography.title,
   },
   meta: sharedStyles.captionMuted,
   bio: {
     color: darkDesign.colors.textSoft,
     ...darkDesign.typography.body,
     textAlign: 'center',
-    maxWidth: 320,
   },
+  heroActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: darkDesign.spacing.sm,
+    justifyContent: 'center',
+  },
+  section: {
+    gap: darkDesign.spacing.md,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: darkDesign.spacing.md,
+  },
+  sectionTitle: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.section,
+  },
+  sectionCaption: sharedStyles.captionMuted,
   secondaryButton: sharedStyles.secondaryButton,
   secondaryButtonText: sharedStyles.secondaryButtonText,
-  editorCard: {
-    ...sharedStyles.panel,
-    width: '100%',
-    marginTop: darkDesign.spacing.sm,
-  },
+  editorCard: sharedStyles.panel,
   inputLabel: sharedStyles.label,
   input: sharedStyles.input,
   textArea: {
     ...sharedStyles.textArea,
     minHeight: 90,
   },
-  primaryButton: {
-    ...sharedStyles.primaryButton,
-    marginTop: 4,
-  },
+  primaryButton: sharedStyles.primaryButton,
   primaryButtonText: sharedStyles.primaryButtonText,
-  library: {
-    width: '100%',
-    marginTop: darkDesign.spacing.md,
+  favoritesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: darkDesign.spacing.md,
   },
-  statusSection: {
+  favoriteSlot: {
+    width: '47%',
     ...sharedStyles.panel,
-    width: '100%',
+    padding: darkDesign.spacing.md,
   },
-  sectionHeader: {
-    flexDirection: 'row',
+  favoriteSlotActive: {
+    borderColor: darkDesign.colors.accent,
+  },
+  favoriteTapArea: {
+    gap: darkDesign.spacing.sm,
+  },
+  favoritePoster: {
+    width: '100%',
+    height: 180,
+    borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.borderStrong,
+  },
+  favoritePlaceholder: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
+    justifyContent: 'center',
   },
-  sectionTitle: {
+  favoritePlaceholderText: sharedStyles.captionMuted,
+  favoriteTitle: {
     color: darkDesign.colors.text,
-    ...darkDesign.typography.section,
+    ...darkDesign.typography.caption,
+    fontWeight: '700',
   },
-  sectionCount: sharedStyles.captionMuted,
-  emptyText: sharedStyles.captionMuted,
-  statusItem: {
-    borderTopWidth: 1,
-    borderTopColor: darkDesign.colors.border,
-    paddingVertical: 10,
-  },
-  statusItemText: {
-    color: darkDesign.colors.textSoft,
-    fontSize: 14,
-  },
-  itemMeta: sharedStyles.captionMuted,
-  linkText: sharedStyles.linkText,
-  linkButton: {
+  favoriteMeta: sharedStyles.captionMuted,
+  clearSlotButton: {
     alignSelf: 'flex-start',
-    marginTop: 10,
+    marginTop: darkDesign.spacing.xs,
   },
-  logoutButton: {
-    ...sharedStyles.dangerButton,
-    width: '100%',
-    maxWidth: 280,
-    marginTop: darkDesign.spacing.md,
+  clearSlotText: sharedStyles.linkText,
+  favoriteEditor: {
+    ...sharedStyles.panel,
+    padding: darkDesign.spacing.md,
   },
-  logoutButtonText: {
+  favoriteEditorLabel: sharedStyles.label,
+  favoriteSearchList: {
+    gap: darkDesign.spacing.sm,
+  },
+  searchRow: {
+    ...sharedStyles.panel,
+    padding: darkDesign.spacing.md,
+  },
+  searchRowTitle: {
     color: darkDesign.colors.text,
-    ...darkDesign.typography.button,
+    ...darkDesign.typography.caption,
+    fontWeight: '700',
   },
-  inlineError: {
-    ...sharedStyles.errorText,
-    marginTop: 14,
-    textAlign: 'center',
+  searchRowMeta: sharedStyles.captionMuted,
+  recentRow: {
+    gap: darkDesign.spacing.md,
+    paddingRight: darkDesign.spacing.xl,
   },
-  successText: {
-    ...sharedStyles.successText,
-    marginTop: 14,
-    textAlign: 'center',
+  recentCard: {
+    width: 140,
+    ...sharedStyles.panel,
+    padding: darkDesign.spacing.md,
   },
+  recentPoster: {
+    width: '100%',
+    height: 190,
+    borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.borderStrong,
+  },
+  posterFallback: {
+    backgroundColor: darkDesign.colors.borderStrong,
+  },
+  recentTitle: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.caption,
+    fontWeight: '700',
+  },
+  recentMeta: sharedStyles.captionMuted,
+  recentRating: {
+    color: darkDesign.colors.warning,
+    ...darkDesign.typography.caption,
+    fontWeight: '700',
+  },
+  logoutButton: sharedStyles.dangerButton,
+  logoutButtonText: sharedStyles.dangerButtonText,
+  successText: sharedStyles.successText,
   errorText: sharedStyles.errorText,
+  emptyText: sharedStyles.captionMuted,
   pressed: sharedStyles.pressed,
   disabled: sharedStyles.disabled,
 });

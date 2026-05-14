@@ -3,6 +3,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.presentation.schemas.media import MediaItemResponse
+
 
 class PublicUserSummaryResponse(BaseModel):
     id: int
@@ -77,6 +79,11 @@ class PublicUserStatsResponse(BaseModel):
     average_rating: float | None
 
 
+class FavoriteMediaItemResponse(BaseModel):
+    position: int
+    media: MediaItemResponse
+
+
 class ActivityActorResponse(BaseModel):
     id: int
     username: str
@@ -133,6 +140,33 @@ class ListCreatedActivityResponse(BaseModel):
     list_name: str | None
     items_count: int
     is_public: bool
+
+
+class VisualFeedParticipantResponse(BaseModel):
+    id: int
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+    activity_type: Literal["review", "watch_log"]
+    rating: int | None
+    created_at: datetime
+
+
+class VisualFeedItemResponse(BaseModel):
+    media: MediaItemResponse
+    participants: list[VisualFeedParticipantResponse]
+    recent_activity_count: int
+    latest_activity_at: datetime
+
+
+class UpdateFavoriteMediaItemRequest(BaseModel):
+    position: int = Field(ge=0, le=3)
+    tmdb_id: int
+    media_type: Literal["movie", "tv"]
+
+
+class UpdateFavoriteMediaRequest(BaseModel):
+    items: list[UpdateFavoriteMediaItemRequest] = Field(max_length=4)
 
 
 ActivityItemResponse = Annotated[

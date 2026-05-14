@@ -8,12 +8,17 @@ export function useRegisterViewModel() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleRegister() {
-    if (!email || !username || !password) {
+    if (!email || !username || !password || !confirmPassword) {
       setError('Rellena todos los campos');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Las contrasenas no coinciden');
       return;
     }
     setLoading(true);
@@ -44,5 +49,18 @@ export function useRegisterViewModel() {
     router.replace('/login');
   }
 
-  return { email, setEmail, username, setUsername, password, setPassword, loading, error, handleRegister, goToLogin };
+  return {
+    email,
+    setEmail,
+    username,
+    setUsername,
+    password,
+    setPassword,
+    confirmPassword,
+    setConfirmPassword,
+    loading,
+    error,
+    handleRegister,
+    goToLogin,
+  };
 }

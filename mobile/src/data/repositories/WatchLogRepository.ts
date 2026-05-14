@@ -1,5 +1,5 @@
 import api from '../../infrastructure/http/api';
-import { CreateWatchLogRequest, WatchLogEntry } from '../../domain/entities/media';
+import { CreateWatchLogRequest, WatchLogEnrichedEntry, WatchLogEntry } from '../../domain/entities/media';
 
 export async function createWatchLog(data: CreateWatchLogRequest): Promise<WatchLogEntry> {
   const response = await api.post<WatchLogEntry>('/watchlog', data);
@@ -8,6 +8,11 @@ export async function createWatchLog(data: CreateWatchLogRequest): Promise<Watch
 
 export async function getMyWatchLog(): Promise<WatchLogEntry[]> {
   const response = await api.get<WatchLogEntry[]>('/watchlog/me');
+  return response.data;
+}
+
+export async function getMyRecentWatchLog(limit = 10): Promise<WatchLogEnrichedEntry[]> {
+  const response = await api.get<WatchLogEnrichedEntry[]>('/watchlog/me/recent', { params: { limit } });
   return response.data;
 }
 

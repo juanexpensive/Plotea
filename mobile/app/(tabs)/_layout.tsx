@@ -10,10 +10,13 @@ export default function TabsLayout() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    hasValidSession().then((hasSession) => {
-      setIsAuthenticated(hasSession);
-      setReady(true);
-    });
+    hasValidSession()
+      .then((hasSession) => {
+        setIsAuthenticated(hasSession);
+      })
+      .finally(() => {
+        setReady(true);
+      });
   }, []);
 
   if (!ready) {
@@ -46,6 +49,33 @@ export default function TabsLayout() {
           title: 'Inicio',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="social"
+        options={{
+          title: 'Social',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="diary"
+        options={{
+          title: 'Diario',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="lists"
+        options={{
+          title: 'Listas',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bookmark" size={size} color={color} />
           ),
         }}
       />

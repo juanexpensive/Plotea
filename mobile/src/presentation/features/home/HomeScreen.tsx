@@ -283,11 +283,6 @@ export default function HomeScreen() {
     feed,
     loading,
     error,
-    socialItems,
-    socialLoading,
-    socialRefreshing,
-    socialLoadingMore,
-    socialError,
     query,
     searchResults,
     searchLoading,
@@ -295,11 +290,6 @@ export default function HomeScreen() {
     isSearching,
     setQuery,
     clearSearch,
-    openUserSearch,
-    openUserProfile,
-    openListDetail,
-    refreshSocialFeed,
-    loadMoreSocialFeed,
   } = useHomeViewModel();
 
   const featured = feed?.trending[0] ?? null;
@@ -326,18 +316,12 @@ export default function HomeScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent}>
       <StatusBar style="light" />
       <View style={styles.heroShell}>
-        <View style={styles.heroHeader}>
-          <View>
-            <Text style={styles.heroEyebrow}>PlotSkip</Text>
-            <Text style={styles.appTitle}>Descubre que ver y que esta viendo tu circulo.</Text>
-          </View>
-          <Pressable style={styles.heroUtility} onPress={openUserSearch}>
-            <Text style={styles.heroUtilityText}>Usuarios</Text>
+        <View style={styles.topRow}>
+          <Text style={styles.appTitle}>Inicio</Text>
+          <Pressable style={styles.heroUtility} onPress={() => router.push('/(tabs)/social')}>
+            <Text style={styles.heroUtilityText}>Social</Text>
           </Pressable>
         </View>
-        <Text style={styles.heroCopy}>
-          Explora tendencias, retoma pendientes y ponte al dia con la actividad de la gente que sigues.
-        </Text>
 
         <View style={styles.searchShell}>
           <Text style={styles.searchLabel}>Buscar peliculas o series</Text>
@@ -374,18 +358,6 @@ export default function HomeScreen() {
           <MediaRow title="Trending esta semana" data={feed.trending} />
           <MediaRow title="Peliculas populares" data={feed.popular_movies} />
           <MediaRow title="Series populares" data={feed.popular_tv} />
-          <SocialFeed
-            items={socialItems}
-            loading={socialLoading}
-            refreshing={socialRefreshing}
-            loadingMore={socialLoadingMore}
-            error={socialError}
-            onRetry={refreshSocialFeed}
-            onOpenSearch={openUserSearch}
-            onOpenUser={openUserProfile}
-            onOpenList={(listId) => openListDetail(listId)}
-            onLoadMore={loadMoreSocialFeed}
-          />
         </>
       )}
     </ScrollView>
@@ -413,23 +385,15 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     gap: 16,
   },
-  heroHeader: {
+  topRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
   },
-  heroEyebrow: {
-    color: darkDesign.colors.accentSoft,
-    ...darkDesign.typography.micro,
-    textTransform: 'uppercase',
-    letterSpacing: 0.7,
-    marginBottom: 8,
-  },
   appTitle: {
     color: darkDesign.colors.text,
-    ...darkDesign.typography.hero,
-    maxWidth: 280,
+    ...darkDesign.typography.title,
   },
   heroUtility: {
     minHeight: 32,
@@ -445,11 +409,6 @@ const styles = StyleSheet.create({
     color: darkDesign.colors.textSoft,
     ...darkDesign.typography.micro,
     fontWeight: '600',
-  },
-  heroCopy: {
-    color: darkDesign.colors.textMuted,
-    ...darkDesign.typography.body,
-    maxWidth: 540,
   },
   searchShell: {
     borderWidth: 1,

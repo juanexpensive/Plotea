@@ -9,10 +9,13 @@ export default function Index() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    hasValidSession().then((hasSession) => {
-      setIsAuthenticated(hasSession);
-      setReady(true);
-    });
+    hasValidSession()
+      .then((hasSession) => {
+        setIsAuthenticated(hasSession);
+      })
+      .finally(() => {
+        setReady(true);
+      });
   }, []);
 
   if (!ready) return <View style={{ flex: 1, backgroundColor: darkDesign.colors.canvas }} />;

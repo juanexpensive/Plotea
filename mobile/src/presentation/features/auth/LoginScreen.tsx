@@ -23,25 +23,8 @@ export default function LoginScreen() {
     >
       <StatusBar style="light" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.hero}>
-          <View style={styles.kickerRow}>
-            <View style={styles.kickerDot} />
-            <Text style={styles.kicker}>PlotSkip</Text>
-          </View>
-          <Text style={styles.title}>Guarda peliculas, sigue a tu gente y vuelve justo a lo importante.</Text>
-          <Text style={styles.subtitle}>
-            Lleva tu historial, descubre nuevas recomendaciones y comparte lo que vas viendo.
-          </Text>
-          <View style={styles.highlights}>
-            <InfoChip label="Diario" value="Visionados y notas" />
-            <InfoChip label="Descubre" value="Peliculas y series" />
-            <InfoChip label="Comunidad" value="Resenas y listas" />
-          </View>
-        </View>
-
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Iniciar sesion</Text>
-          <Text style={styles.cardBody}>Accede a tu espacio y recupera lo que dejaste pendiente.</Text>
 
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -98,15 +81,6 @@ export default function LoginScreen() {
   );
 }
 
-function InfoChip({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoChip}>
-      <Text style={styles.infoChipLabel}>{label}</Text>
-      <Text style={styles.infoChipValue}>{value}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -117,61 +91,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: darkDesign.spacing.xl,
     paddingVertical: darkDesign.spacing.huge,
-    gap: darkDesign.spacing.xxl,
-  },
-  hero: {
     gap: darkDesign.spacing.lg,
-  },
-  kickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: darkDesign.spacing.sm,
-  },
-  kickerDot: {
-    width: 8,
-    height: 8,
-    borderRadius: darkDesign.radii.pill,
-    backgroundColor: darkDesign.colors.accent,
-  },
-  kicker: {
-    color: darkDesign.colors.accentSoft,
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: darkDesign.colors.text,
-    ...darkDesign.typography.hero,
-  },
-  subtitle: {
-    color: darkDesign.colors.textMuted,
-    ...darkDesign.typography.body,
-    maxWidth: 480,
-  },
-  highlights: {
-    gap: darkDesign.spacing.sm,
-  },
-  infoChip: {
-    borderWidth: 1,
-    borderColor: darkDesign.colors.border,
-    borderRadius: darkDesign.radii.lg,
-    backgroundColor: darkDesign.colors.canvasRaised,
-    paddingHorizontal: darkDesign.spacing.lg,
-    paddingVertical: darkDesign.spacing.md,
-    ...darkDesign.shadows.soft,
-  },
-  infoChipLabel: {
-    color: darkDesign.colors.textFaint,
-    ...darkDesign.typography.micro,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 2,
-  },
-  infoChipValue: {
-    color: darkDesign.colors.textSoft,
-    ...darkDesign.typography.body,
-    fontWeight: '600',
   },
   card: {
     borderWidth: 1,
@@ -185,11 +105,6 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: darkDesign.colors.text,
     ...darkDesign.typography.title,
-  },
-  cardBody: {
-    color: darkDesign.colors.textMuted,
-    ...darkDesign.typography.body,
-    marginBottom: darkDesign.spacing.sm,
   },
   label: {
     color: darkDesign.colors.textSoft,
