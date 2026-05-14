@@ -106,6 +106,8 @@ class ReviewActivityResponse(BaseModel):
     review_id: int
     tmdb_id: int
     media_type: Literal["movie", "tv"]
+    title: str
+    poster_path: str | None
     rating: int
     body_preview: str
     contains_spoilers: bool
@@ -119,6 +121,8 @@ class WatchLogActivityResponse(BaseModel):
     watch_log_id: int
     tmdb_id: int
     media_type: Literal["movie", "tv"]
+    title: str
+    poster_path: str | None
     watched_at: date
     rating: int | None
 

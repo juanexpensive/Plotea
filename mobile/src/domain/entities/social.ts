@@ -53,6 +53,8 @@ export interface ActivityActor {
 }
 
 export interface ReviewActivity {
+  title: string;
+  poster_path: string | null;
   id: number;
   activity_type: 'review';
   created_at: string;
@@ -66,6 +68,8 @@ export interface ReviewActivity {
 }
 
 export interface WatchLogActivity {
+  title: string;
+  poster_path: string | null;
   id: number;
   activity_type: 'watch_log';
   created_at: string;

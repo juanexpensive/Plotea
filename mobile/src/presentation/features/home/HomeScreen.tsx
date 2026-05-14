@@ -113,6 +113,7 @@ function SocialFeed({
   onOpenSearch,
   onOpenUser,
   onOpenList,
+  onOpenMedia,
   onLoadMore,
 }: {
   items: ActivityItem[];
@@ -124,6 +125,7 @@ function SocialFeed({
   onOpenSearch: () => void;
   onOpenUser: (username: string) => void;
   onOpenList: (listId: number) => void;
+  onOpenMedia: (mediaType: 'movie' | 'tv', tmdbId: number) => void;
   onLoadMore: () => void;
 }) {
   return (
@@ -168,7 +170,13 @@ function SocialFeed({
       {!loading && !error && items.length > 0 ? (
         <View style={styles.socialList}>
           {items.map((item) => (
-            <SocialActivityCard key={item.id} item={item} onOpenUser={onOpenUser} onOpenList={onOpenList} />
+            <SocialActivityCard
+              key={item.id}
+              item={item}
+              onOpenUser={onOpenUser}
+              onOpenList={onOpenList}
+              onOpenMedia={onOpenMedia}
+            />
           ))}
           <View style={styles.socialFooter}>
             {refreshing || loadingMore ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
@@ -188,12 +196,15 @@ function SocialActivityCard({
   item,
   onOpenUser,
   onOpenList,
+  onOpenMedia,
 }: {
   item: ActivityItem;
   onOpenUser: (username: string) => void;
   onOpenList: (listId: number) => void;
+  onOpenMedia: (mediaType: 'movie' | 'tv', tmdbId: number) => void;
 }) {
   const actorName = item.actor.display_name ?? item.actor.username;
+  const hasMedia = item.activity_type === 'review' || item.activity_type === 'watch_log';
 
   return (
     <View style={styles.socialCard}>
@@ -203,10 +214,26 @@ function SocialActivityCard({
         </Pressable>
         <Text style={styles.socialMeta}>@{item.actor.username}</Text>
       </View>
+      {hasMedia ? (
+        <Pressable
+          style={({ pressed }) => [styles.socialMediaRow, pressed ? styles.cardPressed : null]}
+          onPress={() => onOpenMedia(item.media_type, item.tmdb_id)}
+        >
+          {item.poster_path ? (
+            <Image source={{ uri: `${TMDB_IMAGE}${item.poster_path}` }} style={styles.socialMediaPoster} />
+          ) : (
+            <View style={[styles.socialMediaPoster, styles.posterFallback]} />
+          )}
+          <View style={styles.socialMediaCopy}>
+            <Text style={styles.socialMediaLabel}>{item.media_type === 'movie' ? 'Pelicula' : 'Serie'}</Text>
+            <Text style={styles.socialMediaTitle} numberOfLines={2}>{item.title}</Text>
+          </View>
+        </Pressable>
+      ) : null}
       {item.activity_type === 'review' ? (
         <>
           <Text style={styles.socialCardBody}>
-            ha publicado una resena sobre {item.media_type === 'movie' ? 'una pelicula' : 'una serie'} #{item.tmdb_id}.
+            ha publicado una resena sobre {item.media_type === 'movie' ? 'una pelicula' : 'una serie'} {item.title}.
           </Text>
           <Text style={styles.socialCardAccent}>Nota: {(item.rating / 2).toFixed(1)} / 5</Text>
           <Text style={styles.socialPreview} numberOfLines={4}>
@@ -217,7 +244,7 @@ function SocialActivityCard({
       {item.activity_type === 'watch_log' ? (
         <>
           <Text style={styles.socialCardBody}>
-            ha registrado un visionado de {item.media_type === 'movie' ? 'pelicula' : 'serie'} #{item.tmdb_id}.
+            ha registrado un visionado de {item.media_type === 'movie' ? 'pelicula' : 'serie'} {item.title}.
           </Text>
           <Text style={styles.socialCardAccent}>{`${item.watched_at} - ${formatRating(item.rating)}`}</Text>
         </>
@@ -615,6 +642,33 @@ const styles = StyleSheet.create({
     backgroundColor: darkDesign.colors.panel,
     padding: 14,
     gap: 8,
+  },
+  socialMediaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  socialMediaPoster: {
+    width: 52,
+    height: 78,
+    borderRadius: darkDesign.radii.md,
+    backgroundColor: darkDesign.colors.borderStrong,
+  },
+  socialMediaCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  socialMediaLabel: {
+    color: darkDesign.colors.textFaint,
+    ...darkDesign.typography.micro,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  socialMediaTitle: {
+    color: darkDesign.colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 21,
   },
   socialCardHeader: {
     flexDirection: 'row',

@@ -483,13 +483,42 @@ async def test_feed_contains_review_and_watch_log_activities(async_client: Async
         headers=_headers(actor),
     )
 
+    fake_tmdb = FakeTmdbClient(
+        payloads={
+            ("movie", 301): {
+                "id": 301,
+                "title": "Drive",
+                "poster_path": "/drive.jpg",
+                "vote_average": 7.8,
+                "release_date": "2011-09-16",
+                "runtime": 100,
+                "genres": [{"name": "Drama"}],
+            },
+            ("tv", 302): {
+                "id": 302,
+                "name": "The Studio",
+                "poster_path": "/studio.jpg",
+                "vote_average": 8.1,
+                "first_air_date": "2025-03-26",
+                "episode_run_time": [45],
+                "genres": [{"name": "Comedy"}],
+            },
+        }
+    )
+    app.dependency_overrides[get_tmdb_client] = lambda: fake_tmdb
+
     response = await async_client.get("/feed", headers=_headers(follower))
 
+    app.dependency_overrides.pop(get_tmdb_client, None)
     assert response.status_code == 200
     items = response.json()["items"]
     assert len(items) == 2
     assert items[0]["activity_type"] == "watch_log"
+    assert items[0]["title"] == "The Studio"
+    assert items[0]["poster_path"] == "/studio.jpg"
     assert items[1]["activity_type"] == "review"
+    assert items[1]["title"] == "Drive"
+    assert items[1]["poster_path"] == "/drive.jpg"
     assert items[1]["body_preview"].startswith("Una review")
     assert items[1]["contains_spoilers"] is True
 

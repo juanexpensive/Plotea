@@ -91,7 +91,13 @@ export default function SocialScreen() {
         {!feedLoading && !feedError && feedItems.length > 0 ? (
           <View style={styles.feedList}>
             {feedItems.map((item) => (
-              <SocialActivityCard key={item.id} item={item} onOpenUser={openUserProfile} onOpenList={openListDetail} />
+              <SocialActivityCard
+                key={item.id}
+                item={item}
+                onOpenUser={openUserProfile}
+                onOpenList={openListDetail}
+                onOpenMedia={openMediaDetail}
+              />
             ))}
             <View style={styles.feedFooter}>
               {feedRefreshing || feedLoadingMore ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
@@ -159,12 +165,15 @@ function SocialActivityCard({
   item,
   onOpenUser,
   onOpenList,
+  onOpenMedia,
 }: {
   item: ActivityItem;
   onOpenUser: (username: string) => void;
   onOpenList: (listId: number) => void;
+  onOpenMedia: (mediaType: 'movie' | 'tv', tmdbId: number) => void;
 }) {
   const actorName = item.actor.display_name ?? item.actor.username;
+  const hasMedia = item.activity_type === 'review' || item.activity_type === 'watch_log';
 
   return (
     <View style={styles.activityCard}>
@@ -174,10 +183,26 @@ function SocialActivityCard({
         </Pressable>
         <Text style={styles.activityMeta}>@{item.actor.username}</Text>
       </View>
+      {hasMedia ? (
+        <Pressable
+          style={({ pressed }) => [styles.mediaRow, pressed ? styles.pressed : null]}
+          onPress={() => onOpenMedia(item.media_type, item.tmdb_id)}
+        >
+          {item.poster_path ? (
+            <Image source={{ uri: `${TMDB_IMAGE}${item.poster_path}` }} style={styles.mediaPoster} />
+          ) : (
+            <View style={[styles.mediaPoster, styles.posterFallback]} />
+          )}
+          <View style={styles.mediaCopy}>
+            <Text style={styles.mediaLabel}>{item.media_type === 'movie' ? 'Pelicula' : 'Serie'}</Text>
+            <Text style={styles.mediaTitle} numberOfLines={2}>{item.title}</Text>
+          </View>
+        </Pressable>
+      ) : null}
       {item.activity_type === 'review' ? (
         <>
           <Text style={styles.activityBody}>
-            ha publicado una resena sobre {item.media_type === 'movie' ? 'una pelicula' : 'una serie'} #{item.tmdb_id}.
+            ha publicado una resena sobre {item.media_type === 'movie' ? 'una pelicula' : 'una serie'} {item.title}.
           </Text>
           <Text style={styles.activityAccent}>Nota: {(item.rating / 2).toFixed(1)} / 5</Text>
           <Text style={styles.activityPreview} numberOfLines={4}>
@@ -188,7 +213,7 @@ function SocialActivityCard({
       {item.activity_type === 'watch_log' ? (
         <>
           <Text style={styles.activityBody}>
-            ha registrado un visionado de {item.media_type === 'movie' ? 'pelicula' : 'serie'} #{item.tmdb_id}.
+            ha registrado un visionado de {item.media_type === 'movie' ? 'pelicula' : 'serie'} {item.title}.
           </Text>
           <Text style={styles.activityAccent}>{`${item.watched_at} - ${formatRating(item.rating)}`}</Text>
         </>
@@ -331,6 +356,32 @@ const styles = StyleSheet.create({
   },
   activityCard: {
     ...sharedStyles.panel,
+  },
+  mediaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkDesign.spacing.md,
+  },
+  mediaPoster: {
+    width: 52,
+    height: 78,
+    borderRadius: darkDesign.radii.md,
+    backgroundColor: darkDesign.colors.borderStrong,
+  },
+  mediaCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  mediaLabel: {
+    color: darkDesign.colors.textFaint,
+    ...darkDesign.typography.micro,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  mediaTitle: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.body,
+    fontWeight: '700',
   },
   activityHeader: {
     flexDirection: 'row',

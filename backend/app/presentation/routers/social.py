@@ -6,6 +6,7 @@ from app.data.repositories.follow_repository import FollowRepository
 from app.data.repositories.user_repository import UserRepository
 from app.data.repositories.user_favorite_media_repository import UserFavoriteMediaRepository
 from app.data.repositories.watch_log_repository import WatchLogRepository
+from app.domain.entities.media import MediaItem
 from app.domain.entities.social import (
     BaseActivity,
     FavoriteMediaSelection,
@@ -133,10 +134,45 @@ def _to_actor_response(activity: BaseActivity) -> ActivityActorResponse:
     )
 
 
-def _to_activity_response(activity: BaseActivity):
+def _fallback_media_item(media_type: str, tmdb_id: int) -> MediaItem:
+    label = "Pelicula" if media_type == "movie" else "Serie"
+    return MediaItem(
+        tmdb_id=tmdb_id,
+        media_type=media_type,
+        title=f"{label} #{tmdb_id}",
+        poster_path=None,
+        vote_average=0.0,
+        release_date=None,
+    )
+
+
+async def _load_feed_media_map(
+    activities: list[BaseActivity],
+    media_loader: MediaSummaryLoader,
+) -> dict[tuple[str, int], MediaItem]:
+    media_map: dict[tuple[str, int], MediaItem] = {}
+
+    for activity in activities:
+        if not isinstance(activity, ReviewActivity | WatchLogActivity):
+            continue
+
+        media_key = (activity.media_type, activity.tmdb_id)
+        if media_key in media_map:
+            continue
+
+        media_map[media_key] = await media_loader.load(activity.media_type, activity.tmdb_id)
+
+    return media_map
+
+
+def _to_activity_response(activity: BaseActivity, media_map: dict[tuple[str, int], MediaItem] | None = None):
     actor = _to_actor_response(activity)
 
     if isinstance(activity, ReviewActivity):
+        media = (media_map or {}).get(
+            (activity.media_type, activity.tmdb_id),
+            _fallback_media_item(activity.media_type, activity.tmdb_id),
+        )
         return ReviewActivityResponse(
             id=activity.id,
             activity_type="review",
@@ -145,12 +181,18 @@ def _to_activity_response(activity: BaseActivity):
             review_id=activity.review_id,
             tmdb_id=activity.tmdb_id,
             media_type=activity.media_type,
+            title=media.title,
+            poster_path=media.poster_path,
             rating=activity.rating,
             body_preview=activity.body_preview,
             contains_spoilers=activity.contains_spoilers,
         )
 
     if isinstance(activity, WatchLogActivity):
+        media = (media_map or {}).get(
+            (activity.media_type, activity.tmdb_id),
+            _fallback_media_item(activity.media_type, activity.tmdb_id),
+        )
         return WatchLogActivityResponse(
             id=activity.id,
             activity_type="watch_log",
@@ -159,6 +201,8 @@ def _to_activity_response(activity: BaseActivity):
             watch_log_id=activity.watch_log_id,
             tmdb_id=activity.tmdb_id,
             media_type=activity.media_type,
+            title=media.title,
+            poster_path=media.poster_path,
             watched_at=activity.watched_at,
             rating=activity.rating,
         )
@@ -337,6 +381,7 @@ async def list_feed(
     cursor: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
     current_user: User = Depends(get_current_user),
+    tmdb: ITmdbClient = Depends(get_tmdb_client),
     session: AsyncSession = Depends(get_db),
 ) -> FeedResponse:
     items, next_cursor = await ListFeedUseCase(ActivityRepository(session)).execute(
@@ -344,8 +389,12 @@ async def list_feed(
         limit,
         cursor,
     )
+    media_map = await _load_feed_media_map(
+        items,
+        MediaSummaryLoader(GetMediaDetailUseCase(tmdb)),
+    )
     return FeedResponse(
-        items=[_to_activity_response(item) for item in items],
+        items=[_to_activity_response(item, media_map) for item in items],
         next_cursor=next_cursor,
     )
 
