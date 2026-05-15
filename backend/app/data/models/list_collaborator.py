@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.database import Base
@@ -10,11 +10,10 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class ListItem(Base):
-    __tablename__ = "list_items"
+class ListCollaborator(Base):
+    __tablename__ = "list_collaborators"
     __table_args__ = (
-        CheckConstraint("media_type IN ('movie', 'tv')", name="ck_list_items_media_type"),
-        UniqueConstraint("list_id", "tmdb_id", "media_type", name="uq_list_items_media"),
+        UniqueConstraint("list_id", "user_id", name="uq_list_collaborators_pair"),
     )
 
     id: Mapped[int] = mapped_column(Integer().with_variant(BigInteger(), "postgresql"), primary_key=True, autoincrement=True)
@@ -24,13 +23,15 @@ class ListItem(Base):
         nullable=False,
         index=True,
     )
-    added_by_user_id: Mapped[int] = mapped_column(
+    user_id: Mapped[int] = mapped_column(
         Integer().with_variant(BigInteger(), "postgresql"),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    tmdb_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    media_type: Mapped[str] = mapped_column(String(16), nullable=False)
-    position: Mapped[int] = mapped_column(Integer, nullable=False)
-    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)
+    invited_by_user_id: Mapped[int] = mapped_column(
+        Integer().with_variant(BigInteger(), "postgresql"),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow)

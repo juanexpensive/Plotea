@@ -7,3 +7,6 @@ class IFollowRepository(ABC):
 
     @abstractmethod
     async def unfollow(self, follower_id: int, followed_id: int) -> None: ...
+
+    @abstractmethod
+    async def are_mutual_followers(self, first_user_id: int, second_user_id: int) -> bool: ...

@@ -1,6 +1,12 @@
 from abc import ABC, abstractmethod
 
-from app.domain.entities.lists import ListDetail, ListItemRef, ListSummary
+from app.domain.entities.lists import (
+    ListDetail,
+    ListInvitationSummary,
+    ListItemRef,
+    ListSummary,
+    MyListsOverview,
+)
 
 
 class IListRepository(ABC):
@@ -14,13 +20,10 @@ class IListRepository(ABC):
     ) -> ListSummary: ...
 
     @abstractmethod
-    async def list_owned_by_user(self, user_id: int) -> list[ListSummary]: ...
+    async def list_for_user(self, user_id: int) -> MyListsOverview: ...
 
     @abstractmethod
     async def list_public_by_username(self, username: str) -> list[ListSummary]: ...
-
-    @abstractmethod
-    async def get_owned_detail(self, list_id: int, user_id: int) -> ListDetail | None: ...
 
     @abstractmethod
     async def get_visible_detail(self, list_id: int, viewer_id: int) -> ListDetail | None: ...
@@ -65,4 +68,21 @@ class IListRepository(ABC):
     ) -> ListDetail | None: ...
 
     @abstractmethod
-    async def exists_owned_by_user(self, list_id: int, user_id: int) -> bool: ...
+    async def create_invitation(
+        self,
+        list_id: int,
+        owner_id: int,
+        invitee_user_id: int,
+    ) -> ListInvitationSummary | None: ...
+
+    @abstractmethod
+    async def list_pending_invitations_received(self, user_id: int) -> list[ListInvitationSummary]: ...
+
+    @abstractmethod
+    async def accept_invitation(self, invitation_id: int, invitee_user_id: int) -> bool: ...
+
+    @abstractmethod
+    async def deny_invitation(self, invitation_id: int, invitee_user_id: int) -> bool: ...
+
+    @abstractmethod
+    async def remove_collaborator(self, list_id: int, owner_id: int, collaborator_user_id: int) -> bool: ...

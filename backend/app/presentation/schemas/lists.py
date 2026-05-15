@@ -4,7 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-class ListOwnerResponse(BaseModel):
+class ListUserResponse(BaseModel):
     id: int
     username: str
     display_name: str | None
@@ -24,10 +24,17 @@ class ListSummaryResponse(BaseModel):
     name: str
     description: str | None
     is_public: bool
-    owner: ListOwnerResponse
+    owner: ListUserResponse
     items_count: int
+    relationship: Literal["owner", "collaborator", "viewer"]
     created_at: datetime
     updated_at: datetime
+
+
+class ListPermissionsResponse(BaseModel):
+    can_edit: bool
+    can_delete: bool
+    can_manage_collaborators: bool
 
 
 class ListItemResponse(BaseModel):
@@ -35,11 +42,31 @@ class ListItemResponse(BaseModel):
     media_type: Literal["movie", "tv"]
     position: int
     added_at: datetime
+    added_by: ListUserResponse
     media_summary: MediaSummaryResponse | None
 
 
 class ListDetailResponse(ListSummaryResponse):
+    collaborators: list[ListUserResponse]
+    permissions: ListPermissionsResponse
     items: list[ListItemResponse]
+
+
+class ListInvitationResponse(BaseModel):
+    id: int
+    list_id: int
+    list_name: str
+    list_description: str | None
+    list_is_public: bool
+    owner: ListUserResponse
+    invited_by: ListUserResponse
+    created_at: datetime
+
+
+class MyListsResponse(BaseModel):
+    owned_lists: list[ListSummaryResponse]
+    shared_lists: list[ListSummaryResponse]
+    pending_invitations_received: list[ListInvitationResponse]
 
 
 class CreateListRequest(BaseModel):
@@ -67,3 +94,7 @@ class ListItemRefRequest(BaseModel):
 class ReorderListItemsRequest(BaseModel):
     source: ListItemRefRequest
     target: ListItemRefRequest
+
+
+class CreateListInvitationRequest(BaseModel):
+    invitee_user_id: int

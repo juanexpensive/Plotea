@@ -2,18 +2,21 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   addListItem,
+  createListInvitation,
   deleteList,
   getListDetail,
+  removeListCollaborator,
   removeListItem,
   reorderListItems,
+  searchInvitableUsers,
   updateList,
 } from '../../../data/repositories/ListsRepository';
 import { searchMedia } from '../../../data/repositories/MediaRepository';
-import { ListDetail, ListItem, ListWriteRequest } from '../../../domain/entities/lists';
+import { ListDetail, ListItem, ListOwner, ListWriteRequest } from '../../../domain/entities/lists';
 import { MediaItem } from '../../../domain/entities/media';
 import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
 
-export function useListDetailViewModel(listId: number | null, editable: boolean) {
+export function useListDetailViewModel(listId: number | null) {
   const [detail, setDetail] = useState<ListDetail | null>(null);
   const [form, setForm] = useState<ListWriteRequest>({ name: '', description: null, is_public: true });
   const [loading, setLoading] = useState(true);
@@ -24,7 +27,17 @@ export function useListDetailViewModel(listId: number | null, editable: boolean)
   const [searchResults, setSearchResults] = useState<MediaItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [inviteQuery, setInviteQuery] = useState('');
+  const [inviteResults, setInviteResults] = useState<ListOwner[]>([]);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const searchRequestId = useRef(0);
+  const inviteRequestId = useRef(0);
+  const mutationLock = useRef(false);
+
+  const canEdit = detail?.permissions.can_edit ?? false;
+  const canDelete = detail?.permissions.can_delete ?? false;
+  const canManageCollaborators = detail?.permissions.can_manage_collaborators ?? false;
 
   const load = useCallback(() => {
     if (!listId) {
@@ -73,7 +86,7 @@ export function useListDetailViewModel(listId: number | null, editable: boolean)
   useFocusEffect(load);
 
   useEffect(() => {
-    if (!editable) {
+    if (!canEdit) {
       setSearchResults([]);
       setSearchLoading(false);
       setSearchError(null);
@@ -115,17 +128,63 @@ export function useListDetailViewModel(listId: number | null, editable: boolean)
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [editable, query]);
+  }, [canEdit, query]);
+
+  useEffect(() => {
+    if (!canManageCollaborators || !listId) {
+      setInviteResults([]);
+      setInviteLoading(false);
+      setInviteError(null);
+      return;
+    }
+
+    const trimmedQuery = inviteQuery.trim();
+    const requestId = inviteRequestId.current + 1;
+    inviteRequestId.current = requestId;
+
+    if (trimmedQuery.length < 2) {
+      setInviteResults([]);
+      setInviteLoading(false);
+      setInviteError(null);
+      return;
+    }
+
+    setInviteLoading(true);
+    setInviteError(null);
+
+    const timeoutId = setTimeout(() => {
+      searchInvitableUsers(listId, trimmedQuery)
+        .then((results) => {
+          if (inviteRequestId.current === requestId) {
+            setInviteResults(results);
+          }
+        })
+        .catch((error) => {
+          if (inviteRequestId.current === requestId) {
+            setInviteResults([]);
+            setInviteError(getApiErrorMessage(error, 'No se pudieron buscar usuarios invitables.'));
+          }
+        })
+        .finally(() => {
+          if (inviteRequestId.current === requestId) {
+            setInviteLoading(false);
+          }
+        });
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [canManageCollaborators, inviteQuery, listId]);
 
   function updateForm(patch: Partial<ListWriteRequest>) {
     setForm((current) => ({ ...current, ...patch }));
   }
 
   async function saveMetadata() {
-    if (!listId || !editable || saving) {
+    if (!listId || !canEdit || saving || mutationLock.current) {
       return;
     }
 
+    mutationLock.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -142,15 +201,17 @@ export function useListDetailViewModel(listId: number | null, editable: boolean)
       }
       setError(getApiErrorMessage(error, 'No se pudo guardar la lista.'));
     } finally {
+      mutationLock.current = false;
       setSaving(false);
     }
   }
 
   async function handleDeleteList() {
-    if (!listId || !editable || deleting) {
+    if (!listId || !canDelete || deleting || mutationLock.current) {
       return;
     }
 
+    mutationLock.current = true;
     setDeleting(true);
     setError(null);
     try {
@@ -163,15 +224,17 @@ export function useListDetailViewModel(listId: number | null, editable: boolean)
       }
       setError(getApiErrorMessage(error, 'No se pudo borrar la lista.'));
     } finally {
+      mutationLock.current = false;
       setDeleting(false);
     }
   }
 
   async function handleAddItem(item: MediaItem) {
-    if (!listId || !editable) {
+    if (!listId || !canEdit || mutationLock.current) {
       return;
     }
 
+    mutationLock.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -186,15 +249,17 @@ export function useListDetailViewModel(listId: number | null, editable: boolean)
       }
       setError(getApiErrorMessage(error, 'No se pudo anadir la obra.'));
     } finally {
+      mutationLock.current = false;
       setSaving(false);
     }
   }
 
   async function handleRemoveItem(item: ListItem) {
-    if (!listId || !editable) {
+    if (!listId || !canEdit || mutationLock.current) {
       return;
     }
 
+    mutationLock.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -207,15 +272,17 @@ export function useListDetailViewModel(listId: number | null, editable: boolean)
       }
       setError(getApiErrorMessage(error, 'No se pudo eliminar la obra.'));
     } finally {
+      mutationLock.current = false;
       setSaving(false);
     }
   }
 
   async function swapItems(source: ListItem, target: ListItem) {
-    if (!listId || !editable) {
+    if (!listId || !canEdit || mutationLock.current) {
       return false;
     }
 
+    mutationLock.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -233,6 +300,58 @@ export function useListDetailViewModel(listId: number | null, editable: boolean)
       setError(getApiErrorMessage(error, 'No se pudo intercambiar la posicion.'));
       return false;
     } finally {
+      mutationLock.current = false;
+      setSaving(false);
+    }
+  }
+
+  async function inviteCollaborator(user: ListOwner) {
+    if (!listId || !canManageCollaborators || saving || mutationLock.current) {
+      return;
+    }
+
+    mutationLock.current = true;
+    setSaving(true);
+    setError(null);
+    try {
+      await createListInvitation(listId, { invitee_user_id: user.id });
+      setInviteQuery('');
+      setInviteResults([]);
+    } catch (error) {
+      if (isUnauthorizedError(error)) {
+        router.replace('/login');
+        return;
+      }
+      setError(getApiErrorMessage(error, 'No se pudo enviar la invitacion.'));
+    } finally {
+      mutationLock.current = false;
+      setSaving(false);
+    }
+  }
+
+  async function removeCollaborator(user: ListOwner) {
+    if (!listId || !canManageCollaborators || saving || mutationLock.current) {
+      return;
+    }
+
+    mutationLock.current = true;
+    setSaving(true);
+    setError(null);
+    try {
+      await removeListCollaborator(listId, user.id);
+      setDetail((current) =>
+        current
+          ? { ...current, collaborators: current.collaborators.filter((item) => item.id !== user.id) }
+          : current,
+      );
+    } catch (error) {
+      if (isUnauthorizedError(error)) {
+        router.replace('/login');
+        return;
+      }
+      setError(getApiErrorMessage(error, 'No se pudo quitar el colaborador.'));
+    } finally {
+      mutationLock.current = false;
       setSaving(false);
     }
   }
@@ -242,6 +361,10 @@ export function useListDetailViewModel(listId: number | null, editable: boolean)
       return;
     }
     router.push({ pathname: '/user-profile', params: { username: detail.owner.username } });
+  }
+
+  function openCollaboratorProfile(username: string) {
+    router.push({ pathname: '/user-profile', params: { username } });
   }
 
   return {
@@ -255,13 +378,24 @@ export function useListDetailViewModel(listId: number | null, editable: boolean)
     searchResults,
     searchLoading,
     searchError,
+    inviteQuery,
+    inviteResults,
+    inviteLoading,
+    inviteError,
+    canEdit,
+    canDelete,
+    canManageCollaborators,
     setQuery,
+    setInviteQuery,
     updateForm,
     saveMetadata,
     handleDeleteList,
     handleAddItem,
     handleRemoveItem,
     swapItems,
+    inviteCollaborator,
+    removeCollaborator,
     openOwnerProfile,
+    openCollaboratorProfile,
   };
 }

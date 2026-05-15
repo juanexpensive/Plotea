@@ -5,6 +5,12 @@ export interface ListOwner {
   avatar_url: string | null;
 }
 
+export interface ListPermissions {
+  can_edit: boolean;
+  can_delete: boolean;
+  can_manage_collaborators: boolean;
+}
+
 export interface MediaSummary {
   tmdb_id: number;
   media_type: 'movie' | 'tv';
@@ -20,6 +26,7 @@ export interface ListSummary {
   is_public: boolean;
   owner: ListOwner;
   items_count: number;
+  relationship: 'owner' | 'collaborator' | 'viewer';
   created_at: string;
   updated_at: string;
 }
@@ -29,10 +36,30 @@ export interface ListItem {
   media_type: 'movie' | 'tv';
   position: number;
   added_at: string;
+  added_by: ListOwner;
   media_summary: MediaSummary | null;
 }
 
+export interface ListInvitation {
+  id: number;
+  list_id: number;
+  list_name: string;
+  list_description: string | null;
+  list_is_public: boolean;
+  owner: ListOwner;
+  invited_by: ListOwner;
+  created_at: string;
+}
+
+export interface MyListsOverview {
+  owned_lists: ListSummary[];
+  shared_lists: ListSummary[];
+  pending_invitations_received: ListInvitation[];
+}
+
 export interface ListDetail extends ListSummary {
+  collaborators: ListOwner[];
+  permissions: ListPermissions;
   items: ListItem[];
 }
 
@@ -55,4 +82,8 @@ export interface ListItemRef {
 export interface ReorderListItemsRequest {
   source: ListItemRef;
   target: ListItemRef;
+}
+
+export interface CreateListInvitationRequest {
+  invitee_user_id: number;
 }

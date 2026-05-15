@@ -1,9 +1,21 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.repositories.activity_repository import ActivityRepository
+from app.data.repositories.follow_repository import FollowRepository
 from app.data.repositories.list_repository import ListRepository
-from app.domain.entities.lists import ListDetail, ListEntry, ListItemRef, ListSummary, MediaSummary
+from app.data.repositories.user_repository import UserRepository
+from app.domain.entities.lists import (
+    ListDetail,
+    ListEntry,
+    ListInvitationSummary,
+    ListItemRef,
+    ListPermissions,
+    ListSummary,
+    ListUser,
+    MediaSummary,
+    MyListsOverview,
+)
 from app.domain.entities.user import User
 from app.domain.services.activity_publisher import ActivityPublisher
 from app.domain.services.i_tmdb_client import ITmdbClient
@@ -23,12 +35,16 @@ from app.presentation.routers.media import get_tmdb_client
 from app.presentation.schemas.auth import MessageResponse
 from app.presentation.schemas.lists import (
     AddListItemRequest,
+    CreateListInvitationRequest,
     CreateListRequest,
     ListDetailResponse,
+    ListInvitationResponse,
     ListItemResponse,
-    ListOwnerResponse,
+    ListPermissionsResponse,
     ListSummaryResponse,
+    ListUserResponse,
     MediaSummaryResponse,
+    MyListsResponse,
     ReorderListItemsRequest,
     UpdateListRequest,
 )
@@ -36,12 +52,12 @@ from app.presentation.schemas.lists import (
 router = APIRouter(tags=["lists"])
 
 
-def _to_owner_response(owner) -> ListOwnerResponse:
-    return ListOwnerResponse(
-        id=owner.id,
-        username=owner.username,
-        display_name=owner.display_name,
-        avatar_url=owner.avatar_url,
+def _to_user_response(user: ListUser) -> ListUserResponse:
+    return ListUserResponse(
+        id=user.id,
+        username=user.username,
+        display_name=user.display_name,
+        avatar_url=user.avatar_url,
     )
 
 
@@ -51,10 +67,19 @@ def _to_summary_response(list_summary: ListSummary) -> ListSummaryResponse:
         name=list_summary.name,
         description=list_summary.description,
         is_public=list_summary.is_public,
-        owner=_to_owner_response(list_summary.owner),
+        owner=_to_user_response(list_summary.owner),
         items_count=list_summary.items_count,
+        relationship=list_summary.relationship,
         created_at=list_summary.created_at,
         updated_at=list_summary.updated_at,
+    )
+
+
+def _to_permissions_response(permissions: ListPermissions) -> ListPermissionsResponse:
+    return ListPermissionsResponse(
+        can_edit=permissions.can_edit,
+        can_delete=permissions.can_delete,
+        can_manage_collaborators=permissions.can_manage_collaborators,
     )
 
 
@@ -77,14 +102,41 @@ def _to_item_response(item: ListEntry) -> ListItemResponse:
         media_type=item.media_type,  # type: ignore[arg-type]
         position=item.position,
         added_at=item.added_at,
+        added_by=_to_user_response(item.added_by),
         media_summary=_to_media_summary_response(item.media_summary),
     )
 
 
 def _to_detail_response(list_detail: ListDetail) -> ListDetailResponse:
+    if list_detail.permissions is None:
+        raise HTTPException(status_code=500, detail="Missing list permissions")
+
     return ListDetailResponse(
         **_to_summary_response(list_detail).model_dump(),
+        collaborators=[_to_user_response(user) for user in list_detail.collaborators],
+        permissions=_to_permissions_response(list_detail.permissions),
         items=[_to_item_response(item) for item in list_detail.items],
+    )
+
+
+def _to_invitation_response(invitation: ListInvitationSummary) -> ListInvitationResponse:
+    return ListInvitationResponse(
+        id=invitation.id,
+        list_id=invitation.list_id,
+        list_name=invitation.list_name,
+        list_description=invitation.list_description,
+        list_is_public=invitation.list_is_public,
+        owner=_to_user_response(invitation.owner),
+        invited_by=_to_user_response(invitation.invited_by),
+        created_at=invitation.created_at,
+    )
+
+
+def _to_my_lists_response(overview: MyListsOverview) -> MyListsResponse:
+    return MyListsResponse(
+        owned_lists=[_to_summary_response(item) for item in overview.owned_lists],
+        shared_lists=[_to_summary_response(item) for item in overview.shared_lists],
+        pending_invitations_received=[_to_invitation_response(item) for item in overview.pending_invitations_received],
     )
 
 
@@ -104,13 +156,22 @@ async def _enrich_with_media(list_detail: ListDetail, tmdb: ITmdbClient) -> List
     return list_detail
 
 
-@router.get("/lists/me", response_model=list[ListSummaryResponse])
+@router.get("/lists/me", response_model=MyListsResponse)
 async def list_my_lists(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> list[ListSummaryResponse]:
-    items = await ListMyListsUseCase(ListRepository(session)).execute(current_user.id)
-    return [_to_summary_response(item) for item in items]
+) -> MyListsResponse:
+    overview = await ListMyListsUseCase(ListRepository(session)).execute(current_user.id)
+    return _to_my_lists_response(overview)
+
+
+@router.get("/lists/invites/me", response_model=list[ListInvitationResponse])
+async def list_my_pending_invitations(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[ListInvitationResponse]:
+    invitations = await ListRepository(session).list_pending_invitations_received(current_user.id)
+    return [_to_invitation_response(item) for item in invitations]
 
 
 @router.post("/lists", response_model=ListSummaryResponse, status_code=status.HTTP_201_CREATED)
@@ -224,3 +285,103 @@ async def reorder_list_items(
         target=ListItemRef(**data.target.model_dump()),
     )
     return _to_detail_response(await _enrich_with_media(detail, tmdb))
+
+
+@router.post("/lists/{list_id}/invites", response_model=ListInvitationResponse, status_code=status.HTTP_201_CREATED)
+async def create_list_invitation(
+    list_id: int,
+    data: CreateListInvitationRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ListInvitationResponse:
+    user_repo = UserRepository(session)
+    follow_repo = FollowRepository(session)
+    list_repo = ListRepository(session)
+
+    if data.invitee_user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot invite yourself")
+
+    invitee = await user_repo.get_by_id(data.invitee_user_id)
+    if invitee is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not await list_repo.is_owner(list_id, current_user.id):
+        raise HTTPException(status_code=404, detail="List not found")
+    if await list_repo.is_collaborator(list_id, data.invitee_user_id):
+        raise HTTPException(status_code=409, detail="User is already a collaborator")
+    if await list_repo.has_pending_invitation(list_id, data.invitee_user_id):
+        raise HTTPException(status_code=409, detail="Pending invitation already exists")
+    if not await follow_repo.are_mutual_followers(current_user.id, data.invitee_user_id):
+        raise HTTPException(status_code=400, detail="Mutual follow is required to invite collaborators")
+
+    invitation = await list_repo.create_invitation(list_id, current_user.id, data.invitee_user_id)
+    if invitation is None:
+        raise HTTPException(status_code=400, detail="Could not create invitation")
+    return _to_invitation_response(invitation)
+
+
+@router.post("/lists/invites/{invitation_id}/accept", response_model=MessageResponse)
+async def accept_list_invitation(
+    invitation_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    accepted = await ListRepository(session).accept_invitation(invitation_id, current_user.id)
+    if not accepted:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+    return MessageResponse(message="Invitation accepted")
+
+
+@router.post("/lists/invites/{invitation_id}/deny", response_model=MessageResponse)
+async def deny_list_invitation(
+    invitation_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    denied = await ListRepository(session).deny_invitation(invitation_id, current_user.id)
+    if not denied:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+    return MessageResponse(message="Invitation denied")
+
+
+@router.delete("/lists/{list_id}/collaborators/{collaborator_user_id}", response_model=MessageResponse)
+async def remove_list_collaborator(
+    list_id: int,
+    collaborator_user_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    removed = await ListRepository(session).remove_collaborator(list_id, current_user.id, collaborator_user_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Collaborator not found")
+    return MessageResponse(message="Collaborator removed")
+
+
+@router.get("/lists/{list_id}/invitees/search", response_model=list[ListUserResponse])
+async def search_invitable_users(
+    list_id: int,
+    q: str = Query(min_length=1, max_length=50),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[ListUserResponse]:
+    list_repo = ListRepository(session)
+    if not await list_repo.is_owner(list_id, current_user.id):
+        raise HTTPException(status_code=404, detail="List not found")
+
+    users = await UserRepository(session).search_mutual_followers(q, current_user.id)
+    collaborators = {item.id for item in await list_repo._get_collaborators(list_id)}
+    results = []
+    for user in users:
+        if user.id in collaborators or user.id == current_user.id:
+            continue
+        if await list_repo.has_pending_invitation(list_id, user.id):
+            continue
+        results.append(user)
+    return [
+        ListUserResponse(
+            id=user.id,
+            username=user.username,
+            display_name=user.display_name,
+            avatar_url=user.avatar_url,
+        )
+        for user in results
+    ]

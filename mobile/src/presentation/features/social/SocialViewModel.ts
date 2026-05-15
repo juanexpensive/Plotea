@@ -117,7 +117,7 @@ export function useSocialViewModel() {
   }
 
   function openListDetail(listId: number) {
-    router.push({ pathname: '/list-detail', params: { list_id: listId, editable: '0' } });
+    router.push({ pathname: '/list-detail', params: { list_id: listId } });
   }
 
   function openMediaDetail(mediaType: 'movie' | 'tv', tmdbId: number) {

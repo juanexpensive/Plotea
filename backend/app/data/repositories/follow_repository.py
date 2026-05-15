@@ -31,3 +31,21 @@ class FollowRepository(IFollowRepository):
             )
         )
         await self._session.commit()
+
+    async def are_mutual_followers(self, first_user_id: int, second_user_id: int) -> bool:
+        first = await self._session.execute(
+            select(FollowModel).where(
+                FollowModel.follower_id == first_user_id,
+                FollowModel.followed_id == second_user_id,
+            )
+        )
+        if first.scalar_one_or_none() is None:
+            return False
+
+        second = await self._session.execute(
+            select(FollowModel).where(
+                FollowModel.follower_id == second_user_id,
+                FollowModel.followed_id == first_user_id,
+            )
+        )
+        return second.scalar_one_or_none() is not None

@@ -678,3 +678,204 @@
 - El `ViewModel` aún conserva estado de watchlog que esta pantalla ya no usa visualmente
 - Residual risks:
 - No se ha validado manualmente en Expo/dispositivo real en esta sesión
+
+# Fase 13 - Listas conjuntas con colaboradores y autoria por item Details
+
+## Repository Context
+
+- Relevant files:
+- `backend/app/data/models/list.py`
+- `backend/app/data/models/list_item.py`
+- `backend/app/data/repositories/list_repository.py`
+- `backend/app/domain/entities/lists.py`
+- `backend/app/domain/repositories/i_list_repository.py`
+- `backend/app/domain/usecases/lists/create_list.py`
+- `backend/app/domain/usecases/lists/get_list_detail.py`
+- `backend/app/domain/usecases/lists/add_list_item.py`
+- `backend/app/domain/usecases/lists/remove_list_item.py`
+- `backend/app/domain/usecases/lists/update_list.py`
+- `backend/app/domain/usecases/lists/delete_list.py`
+- `backend/app/domain/usecases/lists/swap_list_items.py`
+- `backend/app/presentation/schemas/lists.py`
+- `backend/app/presentation/routers/lists.py`
+- `mobile/src/domain/entities/lists.ts`
+- `mobile/src/data/repositories/ListsRepository.ts`
+- `mobile/src/presentation/features/lists/MyListsViewModel.ts`
+- `mobile/src/presentation/features/lists/MyListsScreen.tsx`
+- `mobile/src/presentation/features/lists/ListDetailViewModel.ts`
+- `mobile/src/presentation/features/lists/ListDetailScreen.tsx`
+- `tests/test_lists.py`
+- Existing patterns to follow:
+- Clean Architecture con entidades, repositorios y use cases por vertical slice
+- Repositorios mobile finos apoyados en contratos HTTP simples
+- `useFocusEffect` para refresco de pantallas al recuperar foco
+- Constraints:
+- La implementacion actual asume owner unico en `lists.user_id`
+- El mobile actual decide si una lista es editable por query param, no por permisos del backend
+- `list_items` no guarda quien anadio el item
+- Los tests actuales de listas fijan que solo el owner puede editar o borrar
+
+## Decisions Locked
+
+- V1 con dos roles: `owner` y `collaborator`
+- El `owner` sigue siendo unico y conserva gestion de metadata, colaboradores y borrado de la lista
+- Los colaboradores pueden anadir, quitar y reordenar items, pero no borrar la lista ni cambiar colaboradores
+- Cada item guarda `added_by_user_id` y el detalle devuelve al menos `id`, `username`, `display_name` y `avatar_url` del autor
+- `GET /lists/me` debe devolver tanto listas propias como listas compartidas conmigo
+- La UI no debe confiar en `editable=1`; el backend debe devolver permisos efectivos como parte del contrato
+- No se implementan invites ni estados pendientes en esta fase; el owner agrega o quita colaboradores directamente sobre usuarios existentes
+
+## Phase Notes
+
+### Phase 1
+
+- Detailed tasks:
+- Redefinir casos de uso de listas alrededor de `can_view`, `can_edit_metadata`, `can_manage_collaborators` y `can_edit_items`
+- Escribir tests para owner, colaborador y tercero ajeno
+- Fijar el comportamiento cuando una lista privada es compartida con otro usuario
+- Fijar el comportamiento de `GET /lists/me` para no ocultar listas compartidas
+- Findings:
+- El contrato actual mezcla ownership y permisos; conviene separar ambos conceptos antes de tocar persistencia
+- El punto mas sensible de regresion es `GET /lists/me`, porque hoy el mobile lo usa como "mis listas"
+- Tests:
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- Review notes:
+- Esta fase debe dejar cerrada la semantica exacta de permiso antes de escribir migraciones
+- Status:
+- planned
+
+### Phase 2
+
+- Detailed tasks:
+- Crear tabla de membresia de colaboradores, por ejemplo `list_collaborators`
+- Mantener `lists.user_id` como owner para compatibilidad y simplicidad de v1
+- Anadir `added_by_user_id` en `list_items`
+- Preparar migracion que no requiera backfill complejo para items historicos
+- Findings:
+- Mantener `user_id` como owner reduce amplitud del cambio respecto a mover todo a una tabla de miembros con roles
+- Para items existentes hara falta una politica explicita de backfill; la opcion recomendada es asignarlos al owner historico
+- Tests:
+- migracion forward en entorno local + `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- Review notes:
+- Conviene revisar indices unicos para evitar colaboradores duplicados por lista
+- Status:
+- planned
+
+### Phase 3
+
+- Detailed tasks:
+- Ampliar entidades de listas con colaboradores, autor por item y permisos efectivos
+- Sustituir `exists_owned_by_user` por verificaciones mas expresivas (`can_edit_items`, `can_manage_list`, etc.)
+- Ajustar consultas de detalle y listados para traer owner, colaboradores y autorias
+- Crear use cases dedicados para agregar y quitar colaboradores
+- Findings:
+- Hoy `ListRepository` concentra toda la logica y esta muy acoplado a owner unico; esta fase es la bisagra real del cambio
+- Conviene que el repositorio componga un DTO de permisos para evitar que el router reconstruya reglas
+- Tests:
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- Review notes:
+- Si la interfaz del repositorio crece demasiado, puede merecer separar membresias de items para mantener SRP
+- Status:
+- planned
+
+### Phase 4
+
+- Detailed tasks:
+- Anadir schemas para colaborador, autoria de item y permisos
+- Exponer endpoints para alta/baja de colaboradores
+- Ajustar `GET /lists/{id}` y `GET /lists/me`
+- Mantener errores coherentes: `404` para no visible, `403/404` segun politica final cerrada en fase 1
+- Findings:
+- El contrato de detalle es la fuente de verdad para que mobile deje de inferir permisos desde la ruta
+- `GET /users/{username}/lists` probablemente debe seguir mostrando solo listas publicas del owner, no listas donde colabora
+- Tests:
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- Review notes:
+- Merece revisar si el alta de colaboradores se hace por `user_id` o por `username`; para UX mobile, `username` encaja mejor con la busqueda social existente
+- Status:
+- planned
+
+### Phase 5
+
+- Detailed tasks:
+- Ampliar tipos TS de listas con `collaborators`, `permissions` y `added_by`
+- Rehacer `MyListsScreen` para separar al menos `propias` y `compartidas`, o marcar claramente el ownership
+- Rehacer `ListDetailViewModel` para usar permisos del backend en vez de `editable`
+- Mostrar en cada card de item quien lo anadio
+- Permitir al owner agregar y quitar colaboradores desde la propia pantalla
+- Findings:
+- El query param `editable` hoy es una heuristica fragil; con listas compartidas pasa de incomodo a incorrecto
+- La autoria por item tiene valor real solo si queda visible sin entrar en una vista secundaria
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- La UX minima viable puede resolver colaboradores con buscador + chips, sin inventar modales complejos
+- Status:
+- planned
+
+### Phase 6
+
+- Detailed tasks:
+- Ejecutar suite de listas y checks amplios backend/mobile
+- Revisar diff de migracion y contratos
+- Documentar riesgos de concurrencia y casos manuales pendientes
+- Findings:
+- El mayor riesgo residual no es de modelo sino de condiciones de carrera si dos colaboradores editan a la vez
+- La v1 puede aceptar last-write-wins mientras quede documentado
+- Tests:
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
+- `npx tsc --noEmit`
+- Review notes:
+- La QA manual debe cubrir owner y colaborador en dispositivos/sesiones separadas
+- Status:
+- planned
+
+## Review Findings
+
+- open: el contrato actual de listas no distingue ownership de permisos operativos
+- open: `GET /lists/me` y la navegacion mobile asumen que toda lista abierta desde ahi es editable por owner
+- open: falta persistencia de autoria por item, asi que hoy no es posible responder quien anadio una obra
+- open: la migracion necesita una decision explicita para backfill de items existentes
+
+## Deferred Work
+
+- Sistema de invitaciones aceptadas/rechazadas
+- Roles mas finos como `viewer` o `co-owner`
+- Auditoria historica de altas, bajas y cambios de orden
+- Resolucion avanzada de conflictos o refresco en tiempo real
+
+## Final Confidence Check
+
+- Confidence score:
+- 9.3/10
+- Likely code review callouts:
+- Puede cuestionarse si `owner + collaborator` es suficiente o si conviene modelar roles mas finos desde el principio
+- Tambien puede discutirse si el alta de colaboradores debe resolverse por `username` o por `user_id`
+- Residual risks:
+- Todavia no se ha fijado la politica exacta de respuesta entre `403` y `404` para usuarios sin permiso
+- La concurrencia entre colaboradores queda planteada como `last write wins` salvo que decidamos endurecerla mas adelante
+
+## Delivered Implementation Update
+
+- Se amplio el alcance respecto al borrador inicial para incluir invitaciones pendientes con aceptacion/denegacion explicita.
+- La regla finalmente implementada es: solo se puede invitar si existe follow mutuo en ese momento; tras aceptar, la colaboracion permanece aunque ese follow se rompa despues.
+- Los colaboradores aceptados pueden editar metadata e items, pero no borrar la lista ni gestionar colaboradores.
+- `GET /lists/me` se implemento como respuesta compuesta con `owned_lists`, `shared_lists` y `pending_invitations_received`.
+- Se anadieron `list_collaborators`, `list_invitations` y `added_by_user_id` en `list_items`; el backfill historico asigna los items existentes al owner de la lista.
+- El mobile elimino la dependencia del query param `editable` y ahora decide acciones desde `permissions`.
+- Para la UX de invitacion se implemento `GET /lists/{list_id}/invitees/search`, que devuelve solo usuarios con follow mutuo y excluye colaboradores actuales o invitaciones pendientes.
+
+## Delivered Validation
+
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
+- `npx tsc --noEmit`
+
+## Delivered Residual Risks
+
+- No se ha ejecutado validacion manual en Expo/dispositivo real para revisar jerarquia visual y tactilidad del nuevo flujo de listas.
+- La migracion de Alembic se anadio al repo, pero no se ha validado en esta sesion contra una base PostgreSQL real.
+- La concurrencia entre colaboradores mantiene semantica `last write wins`.
+- Durante la verificacion en este PC aparecio inestabilidad de Expo Go/AVD que no queda respaldada por los checks del proyecto (`expo-doctor`, export Android y `tsc` pasan); huele mas a problema de entorno local/emulador que a regression funcional del codigo de listas.

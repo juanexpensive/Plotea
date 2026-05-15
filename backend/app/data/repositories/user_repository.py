@@ -62,6 +62,57 @@ class UserRepository(IUserRepository):
             for model, is_following_value in result.all()
         ]
 
+    async def search_mutual_followers(
+        self,
+        query: str,
+        current_user_id: int,
+        limit: int = 10,
+    ) -> list[PublicUserSummary]:
+        normalized_query = query.strip().lower()
+        if normalized_query == "":
+            return []
+
+        current_follows = (
+            select(func.count())
+            .select_from(FollowModel)
+            .where(
+                FollowModel.follower_id == current_user_id,
+                FollowModel.followed_id == UserModel.id,
+            )
+            .scalar_subquery()
+            > 0
+        )
+        follows_current = (
+            select(func.count())
+            .select_from(FollowModel)
+            .where(
+                FollowModel.follower_id == UserModel.id,
+                FollowModel.followed_id == current_user_id,
+            )
+            .scalar_subquery()
+            > 0
+        )
+
+        result = await self._session.execute(
+            select(UserModel)
+            .where(UserModel.id != current_user_id)
+            .where(func.lower(UserModel.username).contains(normalized_query))
+            .where(current_follows)
+            .where(follows_current)
+            .order_by(UserModel.username.asc())
+            .limit(limit)
+        )
+        return [
+            PublicUserSummary(
+                id=model.id,
+                username=model.username,
+                display_name=model.display_name,
+                avatar_url=model.avatar_url,
+                is_following=True,
+            )
+            for model in result.scalars().all()
+        ]
+
     async def get_public_profile(
         self,
         username: str,

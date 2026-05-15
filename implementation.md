@@ -331,3 +331,89 @@
 - Validaciones ejecutadas:
 - `npx tsc --noEmit`
 - Riesgo residual aceptado: falta validar en móvil real el tacto del selector de medias estrellas y el tamaño final del modal con teclado abierto
+
+# Fase 13 - Listas conjuntas con colaboradores y autoria por item
+
+## Objetivo
+
+- Permitir listas colaborativas donde un numero indefinido de usuarios pueda participar en la misma lista, anadir o quitar obras segun permisos, y ver claramente quien anadio cada item.
+
+## Alcance
+
+- En alcance:
+- Backend para colaboradores de lista con permisos de edicion
+- Persistencia de autoria por item para mostrar `quien anadio esta obra`
+- Inclusion de listas propias y compartidas en `GET /lists/me`
+- Detalle de lista con owner, colaboradores y autoria por item
+- Alta y baja de colaboradores desde mobile
+- Mobile para distinguir listas propias vs compartidas y mostrar autoria en cada obra
+- Sustitucion del flag `editable` por permisos reales devueltos por backend
+- Tests backend de permisos, visibilidad y autoria
+- Fuera de alcance:
+- Invitaciones asincronas, notificaciones push o email
+- Roles avanzados mas alla de owner + colaborador editor
+- Historial completo de auditoria
+- Edicion en tiempo real con sockets
+
+## Fases
+
+### Fase 1: Contratos y reglas de negocio
+
+- Goal: cerrar el contrato funcional de colaboracion antes de tocar esquema o UI
+- Expected files or systems: `implementation.md`, `implementation_details.md`, `tests/test_lists.py`
+- Validation: tests definidos para owner, colaborador, tercero sin acceso, autoria por item y listas compartidas en `GET /lists/me`
+- Review gate: queda decidida la semantica exacta de `owner`, `collaborator`, visibilidad y permisos de borrado/edicion
+- Estado: completada
+
+### Fase 2: Modelo de datos y migracion
+
+- Goal: modelar colaboradores y autoria por item sin romper listas existentes
+- Expected files or systems: nueva migracion Alembic, `backend/app/data/models/list.py`, `backend/app/data/models/list_item.py`, nuevo modelo de membresia de lista
+- Validation: migracion forward sobre base actual y tests backend verdes
+- Review gate: la migracion conserva al owner actual, permite colaboradores ilimitados y registra `added_by_user_id` en cada item
+- Estado: completada
+
+### Fase 3: Dominio, repositorios y casos de uso
+
+- Goal: mover permisos y colaboracion al dominio con contratos claros y reutilizables
+- Expected files or systems: `backend/app/domain/entities/lists.py`, `backend/app/domain/repositories/i_list_repository.py`, `backend/app/data/repositories/list_repository.py`, nuevos use cases de colaboradores
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- Review gate: la app deja de asumir `list.user_id == editor actual` y los permisos viven en repositorio/use cases, no en routers
+- Estado: completada
+
+### Fase 4: Endpoints y schemas backend
+
+- Goal: exponer colaboracion y autoria con un contrato consistente para mobile
+- Expected files or systems: `backend/app/presentation/schemas/lists.py`, `backend/app/presentation/routers/lists.py`
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- Review gate: `GET /lists/me` devuelve listas propias y compartidas, el detalle incluye colaboradores y cada item indica su autor
+- Estado: completada
+
+### Fase 5: Mobile listas compartidas
+
+- Goal: adaptar la experiencia actual de listas para ownership compartido sin perder simplicidad
+- Expected files or systems: `mobile/src/domain/entities/lists.ts`, `mobile/src/data/repositories/ListsRepository.ts`, `mobile/src/presentation/features/lists/MyListsViewModel.ts`, `mobile/src/presentation/features/lists/MyListsScreen.tsx`, `mobile/src/presentation/features/lists/ListDetailViewModel.ts`, `mobile/src/presentation/features/lists/ListDetailScreen.tsx`
+- Validation: `npx tsc --noEmit`
+- Review gate: la UI decide si se puede editar a partir del backend, muestra quien anadio cada obra y permite gestionar colaboradores desde el owner
+- Estado: completada
+
+### Fase 6: QA, self-review y riesgos
+
+- Goal: validar permisos, migracion y UX base antes de cerrar la funcionalidad
+- Expected files or systems: docs de implementacion, backend y mobile
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`, `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`, `npx tsc --noEmit`
+- Review gate: quedan documentados los limites de concurrencia, la ausencia de invites y los escenarios manuales pendientes
+- Estado: completada
+
+## Cierre
+
+- Backend con invitaciones pendientes, follow mutuo obligatorio para invitar, colaboradores activos y autoria por item
+- `GET /lists/me` ahora devuelve listas propias, compartidas e invitaciones pendientes en una sola respuesta
+- Mobile de listas rehecho con secciones para invitaciones, listas propias y compartidas, y detalle guiado por permisos reales del backend
+- El detalle de lista permite invitar colaboradores desde busqueda filtrada por follow mutuo, quitar colaboradores y ver quien anadio cada obra
+- Validaciones ejecutadas:
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
+- `npx tsc --noEmit`
+- Riesgo residual aceptado: la concurrencia entre colaboradores sigue siendo `last write wins` y falta validacion manual en Expo/dispositivo real

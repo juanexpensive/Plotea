@@ -20,6 +20,8 @@ import app.data.models.follow  # noqa: F401, E402
 import app.data.models.activity  # noqa: F401, E402
 import app.data.models.list  # noqa: F401, E402
 import app.data.models.list_item  # noqa: F401, E402
+import app.data.models.list_collaborator  # noqa: F401, E402
+import app.data.models.list_invitation  # noqa: F401, E402
 import app.data.models.user_media_status  # noqa: F401, E402
 import app.data.models.review_vote  # noqa: F401, E402
 import app.data.models.watch_log  # noqa: F401, E402

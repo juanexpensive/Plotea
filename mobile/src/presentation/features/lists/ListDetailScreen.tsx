@@ -15,21 +15,31 @@ import {
   UIManager,
   View,
 } from 'react-native';
-import { ListItem } from '../../../domain/entities/lists';
-import { darkDesign } from '../../theme/darkDesign';
-import { sharedStyles } from '../../theme/sharedStyles';
+import { ListItem, ListOwner } from '../../../domain/entities/lists';
 import { useListDetailViewModel } from './ListDetailViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
+
+const design = {
+  emerald: '#3ecf8e',
+  emeraldDeep: '#24b47e',
+  ink: '#171717',
+  inkMute: '#707070',
+  canvas: '#ffffff',
+  canvasSoft: '#fafafa',
+  hairline: '#dfdfdf',
+  hairlineStrong: '#c7c7c7',
+  danger: '#ff2201',
+  shadow: 'rgba(0,0,0,0.08)',
+};
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 export default function ListDetailScreen() {
-  const { list_id, editable } = useLocalSearchParams<{ list_id?: string; editable?: string }>();
+  const { list_id } = useLocalSearchParams<{ list_id?: string }>();
   const listId = list_id ? Number(list_id) : null;
-  const canEdit = editable === '1';
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const {
     detail,
@@ -42,20 +52,31 @@ export default function ListDetailScreen() {
     searchResults,
     searchLoading,
     searchError,
+    inviteQuery,
+    inviteResults,
+    inviteLoading,
+    inviteError,
+    canEdit,
+    canDelete,
+    canManageCollaborators,
     setQuery,
+    setInviteQuery,
     updateForm,
     saveMetadata,
     handleDeleteList,
     handleAddItem,
     handleRemoveItem,
     swapItems,
+    inviteCollaborator,
+    removeCollaborator,
     openOwnerProfile,
-  } = useListDetailViewModel(listId, canEdit);
+    openCollaboratorProfile,
+  } = useListDetailViewModel(listId);
 
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+        <ActivityIndicator size="large" color={design.emerald} />
       </View>
     );
   }
@@ -100,82 +121,142 @@ export default function ListDetailScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       {detail ? (
         <>
-          <Text style={styles.title}>{detail.name}</Text>
-          <Pressable onPress={openOwnerProfile}>
-            <Text style={styles.ownerMeta}>por @{detail.owner.username}</Text>
-          </Pressable>
-          {detail.description ? <Text style={styles.description}>{detail.description}</Text> : null}
+          <View style={styles.heroCard}>
+            <Text style={styles.eyebrow}>LISTA</Text>
+            <Text style={styles.title}>{detail.name}</Text>
+            <Pressable onPress={openOwnerProfile}>
+              <Text style={styles.ownerMeta}>Creada por @{detail.owner.username}</Text>
+            </Pressable>
+            {detail.description ? <Text style={styles.description}>{detail.description}</Text> : null}
+            <View style={styles.badgesRow}>
+              <StatusPill label={detail.relationship === 'owner' ? 'Owner' : detail.relationship === 'collaborator' ? 'Colaborador' : 'Viewer'} tone={detail.relationship === 'viewer' ? 'soft' : 'green'} />
+              <StatusPill label={detail.is_public ? 'Publica' : 'Privada'} tone="soft" />
+            </View>
+          </View>
+
+          <View style={styles.metaCard}>
+            <Text style={styles.sectionTitle}>Equipo</Text>
+            <Pressable onPress={openOwnerProfile}>
+              <Text style={styles.metaLine}>Owner: @{detail.owner.username}</Text>
+            </Pressable>
+            {detail.collaborators.length > 0 ? (
+              <View style={styles.collaboratorsList}>
+                {detail.collaborators.map((user) => (
+                  <View key={user.id} style={styles.collaboratorRow}>
+                    <Pressable style={styles.collaboratorBody} onPress={() => openCollaboratorProfile(user.username)}>
+                      <Text style={styles.collaboratorName}>@{user.username}</Text>
+                      <Text style={styles.collaboratorMeta}>{user.display_name ?? 'Colaborador activo'}</Text>
+                    </Pressable>
+                    {canManageCollaborators ? (
+                      <Pressable style={({ pressed }) => [styles.removeChip, pressed ? styles.pressed : null]} onPress={() => void removeCollaborator(user)}>
+                        <Text style={styles.removeChipText}>Quitar</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.metaMuted}>Todavia no hay colaboradores activos.</Text>
+            )}
+          </View>
+
+          {canManageCollaborators ? (
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>Invitar colaborador</Text>
+              <Text style={styles.panelCopy}>Solo apareceran usuarios con follow mutuo y sin invitacion pendiente.</Text>
+              <TextInput
+                style={styles.input}
+                value={inviteQuery}
+                onChangeText={setInviteQuery}
+                placeholder="Busca por username"
+                placeholderTextColor="#9a9a9a"
+                selectionColor={design.emerald}
+              />
+              {inviteLoading ? <ActivityIndicator size="small" color={design.emerald} /> : null}
+              {inviteError ? <Text style={styles.errorText}>{inviteError}</Text> : null}
+              <View style={styles.resultsList}>
+                {inviteResults.map((user) => (
+                  <View key={user.id} style={styles.searchRow}>
+                    <View style={styles.searchRowBody}>
+                      <Text style={styles.searchRowTitle}>@{user.username}</Text>
+                      <Text style={styles.searchRowMeta}>{user.display_name ?? 'Follow mutuo'}</Text>
+                    </View>
+                    <Pressable style={({ pressed }) => [styles.primaryInlineButton, pressed ? styles.primaryPressed : null, saving ? styles.disabled : null]} onPress={() => void inviteCollaborator(user)} disabled={saving}>
+                      <Text style={styles.primaryInlineButtonText}>Invitar</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
 
           {canEdit ? (
-            <View style={styles.editorCard}>
-              <Text style={styles.cardTitle}>Editar lista</Text>
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>Editar lista</Text>
               <TextInput
                 style={styles.input}
                 value={form.name}
                 onChangeText={(value) => updateForm({ name: value })}
                 placeholder="Nombre"
-                placeholderTextColor={darkDesign.colors.textFaint}
-                selectionColor={darkDesign.colors.accent}
+                placeholderTextColor="#9a9a9a"
+                selectionColor={design.emerald}
               />
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={form.description ?? ''}
                 onChangeText={(value) => updateForm({ description: value })}
                 placeholder="Descripcion"
-                placeholderTextColor={darkDesign.colors.textFaint}
+                placeholderTextColor="#9a9a9a"
                 multiline
-                selectionColor={darkDesign.colors.accent}
+                selectionColor={design.emerald}
               />
               <View style={styles.toggleRow}>
                 <Text style={styles.toggleLabel}>Lista publica</Text>
                 <Switch
                   value={form.is_public}
                   onValueChange={(value) => updateForm({ is_public: value })}
-                  trackColor={{ false: darkDesign.colors.borderStrong, true: darkDesign.colors.accentDeep }}
-                  thumbColor="#fff"
+                  trackColor={{ false: '#d4d4d4', true: '#4ade80' }}
+                  thumbColor={form.is_public ? design.ink : '#fff'}
                 />
               </View>
               <View style={styles.actionsRow}>
-                <Pressable
-                  style={({ pressed }) => [styles.primaryButton, pressed ? styles.pressed : null, saving ? styles.disabled : null]}
-                  onPress={saveMetadata}
-                  disabled={saving}
-                >
+                <Pressable style={({ pressed }) => [styles.primaryButton, pressed ? styles.primaryPressed : null, saving ? styles.disabled : null]} onPress={saveMetadata} disabled={saving}>
                   <Text style={styles.primaryButtonText}>{saving ? 'Guardando...' : 'Guardar'}</Text>
                 </Pressable>
-                <Pressable
-                  style={({ pressed }) => [styles.dangerButton, pressed ? styles.pressed : null, deleting ? styles.disabled : null]}
-                  onPress={handleDeleteList}
-                  disabled={deleting}
-                >
-                  <Text style={styles.dangerButtonText}>{deleting ? 'Borrando...' : 'Borrar'}</Text>
-                </Pressable>
+                {canDelete ? (
+                  <Pressable style={({ pressed }) => [styles.secondaryDangerButton, pressed ? styles.pressed : null, deleting ? styles.disabled : null]} onPress={handleDeleteList} disabled={deleting}>
+                    <Text style={styles.secondaryDangerText}>{deleting ? 'Borrando...' : 'Borrar'}</Text>
+                  </Pressable>
+                ) : null}
               </View>
             </View>
           ) : null}
 
           {canEdit ? (
-            <View style={styles.editorCard}>
-              <Text style={styles.cardTitle}>Anadir obra</Text>
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>Anadir obra</Text>
               <TextInput
                 style={styles.input}
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Busca una pelicula o serie"
-                placeholderTextColor={darkDesign.colors.textFaint}
-                selectionColor={darkDesign.colors.accent}
+                placeholderTextColor="#9a9a9a"
+                selectionColor={design.emerald}
               />
-              {searchLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
+              {searchLoading ? <ActivityIndicator size="small" color={design.emerald} /> : null}
               {searchError ? <Text style={styles.errorText}>{searchError}</Text> : null}
-              <View style={styles.searchResults}>
+              <View style={styles.resultsList}>
                 {searchResults.slice(0, 6).map((item) => (
                   <Pressable
                     key={`${item.media_type}-${item.tmdb_id}`}
                     style={({ pressed }) => [styles.searchRow, pressed ? styles.pressed : null]}
-                    onPress={() => handleAddItem(item)}
+                    onPress={() => void handleAddItem(item)}
                   >
-                    <Text style={styles.searchRowTitle}>{item.title}</Text>
-                    <Text style={styles.searchRowMeta}>{`${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`}</Text>
+                    <View style={styles.searchRowBody}>
+                      <Text style={styles.searchRowTitle}>{item.title}</Text>
+                      <Text style={styles.searchRowMeta}>{`${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`}</Text>
+                    </View>
+                    <Text style={styles.rowAction}>Anadir</Text>
                   </Pressable>
                 ))}
               </View>
@@ -217,25 +298,19 @@ function AnimatedListCard({
   onRemove?: () => void;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(0.96)).current;
+  const opacity = useRef(new Animated.Value(0.98)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(scale, { toValue: selected ? 1.02 : 1, duration: 140, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: selected ? 1 : 0.96, duration: 140, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: selected ? 1.015 : 1, duration: 140, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: selected ? 1 : 0.98, duration: 140, useNativeDriver: true }),
     ]).start();
   }, [opacity, scale, selected]);
 
   const title = item.media_summary?.title ?? `${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`;
 
   return (
-    <Animated.View
-      style={[
-        styles.itemCard,
-        selected ? styles.itemCardSelected : null,
-        { transform: [{ scale }], opacity },
-      ]}
-    >
+    <Animated.View style={[styles.itemCard, selected ? styles.itemCardSelected : null, { transform: [{ scale }], opacity }]}>
       <Pressable style={styles.itemMain} onPress={onPress}>
         {item.media_summary?.poster_path ? (
           <Image source={{ uri: `${TMDB_IMAGE}${item.media_summary.poster_path}` }} style={styles.poster} />
@@ -245,16 +320,25 @@ function AnimatedListCard({
         <View style={styles.itemBody}>
           <Text style={styles.itemTitle}>{title}</Text>
           <Text style={styles.itemMeta}>
-            {`Posicion ${item.position + 1} - ${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`}
+            {`Posicion ${item.position + 1} · ${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`}
           </Text>
+          <Text style={styles.itemAuthor}>Anadida por @{item.added_by.username}</Text>
         </View>
       </Pressable>
       {editable && onRemove ? (
-        <Pressable style={({ pressed }) => [styles.removeButton, pressed ? styles.pressed : null]} onPress={onRemove}>
-          <Text style={styles.removeButtonText}>Quitar</Text>
+        <Pressable style={({ pressed }) => [styles.removeChip, pressed ? styles.pressed : null]} onPress={onRemove}>
+          <Text style={styles.removeChipText}>Quitar</Text>
         </Pressable>
       ) : null}
     </Animated.View>
+  );
+}
+
+function StatusPill({ label, tone }: { label: string; tone: 'green' | 'soft' }) {
+  return (
+    <View style={tone === 'green' ? styles.greenPill : styles.softPill}>
+      <Text style={styles.pillText}>{label}</Text>
+    </View>
   );
 }
 
@@ -263,90 +347,244 @@ function toItemKey(item: ListItem) {
 }
 
 const styles = StyleSheet.create({
-  screen: sharedStyles.screen,
-  content: {
-    ...sharedStyles.scrollContent,
-    paddingTop: 20,
+  screen: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
   },
-  centered: sharedStyles.centered,
+  content: {
+    padding: 20,
+    gap: 16,
+    paddingBottom: 36,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f3f4f6',
+    padding: 24,
+  },
+  heroCard: {
+    backgroundColor: design.canvas,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: design.hairline,
+    padding: 20,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+  eyebrow: {
+    color: design.inkMute,
+    fontSize: 12,
+    letterSpacing: 1.2,
+    fontWeight: '600',
+  },
   title: {
-    ...sharedStyles.title,
-    marginTop: 8,
+    color: design.ink,
+    fontSize: 30,
+    lineHeight: 34,
+    fontWeight: '500',
+    letterSpacing: -0.4,
   },
   ownerMeta: {
-    color: darkDesign.colors.accentSoft,
-    ...darkDesign.typography.caption,
-    fontWeight: '700',
+    color: design.ink,
+    fontSize: 14,
+    fontWeight: '500',
   },
-  description: sharedStyles.body,
-  editorCard: sharedStyles.panel,
-  cardTitle: {
-    color: darkDesign.colors.text,
-    ...darkDesign.typography.section,
+  description: {
+    color: design.inkMute,
+    fontSize: 15,
+    lineHeight: 22,
   },
-  input: sharedStyles.input,
+  badgesRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  metaCard: {
+    backgroundColor: design.canvas,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: design.hairline,
+    padding: 16,
+    gap: 10,
+  },
+  sectionTitle: {
+    color: design.ink,
+    fontSize: 18,
+    fontWeight: '500',
+  },
+  metaLine: {
+    color: design.ink,
+    fontSize: 14,
+  },
+  metaMuted: {
+    color: design.inkMute,
+    fontSize: 14,
+  },
+  collaboratorsList: {
+    gap: 10,
+  },
+  collaboratorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  collaboratorBody: {
+    flex: 1,
+    gap: 3,
+  },
+  collaboratorName: {
+    color: design.ink,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  collaboratorMeta: {
+    color: design.inkMute,
+    fontSize: 13,
+  },
+  panel: {
+    backgroundColor: design.canvas,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: design.hairline,
+    padding: 16,
+    gap: 12,
+  },
+  panelCopy: {
+    color: design.inkMute,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  input: {
+    minHeight: 42,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: design.hairlineStrong,
+    backgroundColor: design.canvas,
+    paddingHorizontal: 12,
+    color: design.ink,
+    fontSize: 15,
+  },
   textArea: {
-    ...sharedStyles.textArea,
     minHeight: 92,
+    paddingTop: 12,
+    textAlignVertical: 'top',
   },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  toggleLabel: sharedStyles.body,
+  toggleLabel: {
+    color: design.ink,
+    fontSize: 15,
+  },
   actionsRow: {
     flexDirection: 'row',
     gap: 10,
   },
   primaryButton: {
-    ...sharedStyles.primaryButton,
-    flex: 1,
     minHeight: 42,
-  },
-  primaryButtonText: sharedStyles.primaryButtonText,
-  dangerButton: {
-    ...sharedStyles.dangerButton,
+    borderRadius: 6,
+    backgroundColor: design.emerald,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
     flex: 1,
-    minHeight: 42,
   },
-  dangerButtonText: sharedStyles.dangerButtonText,
-  searchResults: {
+  primaryPressed: {
+    backgroundColor: design.emeraldDeep,
+  },
+  primaryButtonText: {
+    color: design.ink,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  secondaryDangerButton: {
+    minHeight: 42,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#f0b4ab',
+    backgroundColor: design.canvas,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    flex: 1,
+  },
+  secondaryDangerText: {
+    color: design.danger,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  resultsList: {
     gap: 10,
   },
   searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     borderTopWidth: 1,
-    borderTopColor: darkDesign.colors.border,
+    borderTopColor: design.hairline,
     paddingTop: 10,
   },
+  searchRowBody: {
+    flex: 1,
+    gap: 4,
+  },
   searchRowTitle: {
-    color: darkDesign.colors.text,
+    color: design.ink,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   searchRowMeta: {
-    ...sharedStyles.captionMuted,
-    marginTop: 4,
+    color: design.inkMute,
+    fontSize: 13,
+  },
+  primaryInlineButton: {
+    minHeight: 34,
+    borderRadius: 6,
+    backgroundColor: design.emerald,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  primaryInlineButtonText: {
+    color: design.ink,
+    fontSize: 13,
+    fontWeight: '600',
   },
   helper: {
-    color: darkDesign.colors.accentSoft,
-    ...darkDesign.typography.caption,
+    color: design.inkMute,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  errorText: sharedStyles.errorText,
+  errorText: {
+    color: design.danger,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   itemsList: {
     gap: 12,
   },
   itemCard: {
     borderWidth: 1,
-    borderColor: darkDesign.colors.border,
-    borderRadius: 14,
-    backgroundColor: darkDesign.colors.panel,
+    borderColor: design.hairline,
+    borderRadius: 12,
+    backgroundColor: design.canvas,
     padding: 12,
     gap: 10,
   },
   itemCardSelected: {
-    borderColor: darkDesign.colors.accent,
-    backgroundColor: darkDesign.colors.panelStrong,
+    borderColor: design.emerald,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   itemMain: {
     flexDirection: 'row',
@@ -357,35 +595,73 @@ const styles = StyleSheet.create({
     width: 54,
     height: 81,
     borderRadius: 8,
-    backgroundColor: darkDesign.colors.borderStrong,
+    backgroundColor: '#e5e7eb',
   },
   posterFallback: {
-    backgroundColor: darkDesign.colors.borderStrong,
+    backgroundColor: '#e5e7eb',
   },
   itemBody: {
     flex: 1,
     gap: 6,
   },
   itemTitle: {
-    color: darkDesign.colors.text,
+    color: design.ink,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   itemMeta: {
-    ...sharedStyles.captionMuted,
+    color: design.inkMute,
+    fontSize: 13,
     lineHeight: 18,
   },
-  removeButton: {
-    alignSelf: 'flex-start',
-    minHeight: 34,
-    borderRadius: darkDesign.radii.sm,
-    borderWidth: 1,
-    borderColor: '#7a3030',
-    backgroundColor: '#2a1515',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
+  itemAuthor: {
+    color: design.ink,
+    fontSize: 12,
+    lineHeight: 17,
   },
-  removeButtonText: sharedStyles.dangerButtonText,
-  pressed: sharedStyles.pressed,
-  disabled: sharedStyles.disabled,
+  removeChip: {
+    alignSelf: 'flex-start',
+    minHeight: 32,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#f0b4ab',
+    backgroundColor: design.canvas,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  removeChipText: {
+    color: design.danger,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  greenPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: design.emerald,
+  },
+  softPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: design.canvasSoft,
+    borderWidth: 1,
+    borderColor: design.hairline,
+  },
+  pillText: {
+    color: design.ink,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  rowAction: {
+    color: design.ink,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.8,
+  },
+  disabled: {
+    opacity: 0.5,
+  },
 });

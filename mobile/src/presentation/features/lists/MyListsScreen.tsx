@@ -1,14 +1,40 @@
+import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import { darkDesign } from '../../theme/darkDesign';
-import { sharedStyles } from '../../theme/sharedStyles';
 import { useMyListsViewModel } from './MyListsViewModel';
 
+const design = {
+  emerald: '#3ecf8e',
+  emeraldDeep: '#24b47e',
+  ink: '#171717',
+  inkMute: '#707070',
+  canvas: '#ffffff',
+  canvasSoft: '#fafafa',
+  hairline: '#dfdfdf',
+  hairlineStrong: '#c7c7c7',
+  danger: '#ff2201',
+};
+
 export default function MyListsScreen() {
-  const { lists, loading, saving, error, form, updateForm, submit, openList } = useMyListsViewModel();
+  const {
+    ownedLists,
+    sharedLists,
+    pendingInvitations,
+    loading,
+    saving,
+    processingInvitationId,
+    error,
+    form,
+    updateForm,
+    submit,
+    openList,
+    respondToInvitation,
+  } = useMyListsViewModel();
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Mis listas</Text>
+      <Text style={styles.eyebrow}>LISTAS</Text>
+      <Text style={styles.title}>Colecciones propias y conjuntas</Text>
+      <Text style={styles.subtitle}>Crea una lista, comparte cine con gente de confianza y responde invitaciones desde aqui.</Text>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Nueva lista</Text>
@@ -17,33 +43,29 @@ export default function MyListsScreen() {
           value={form.name}
           onChangeText={(value) => updateForm({ name: value })}
           placeholder="Nombre de la lista"
-          placeholderTextColor={darkDesign.colors.textFaint}
-          selectionColor={darkDesign.colors.accent}
+          placeholderTextColor="#9a9a9a"
+          selectionColor={design.emerald}
         />
         <TextInput
           style={[styles.input, styles.textArea]}
           value={form.description ?? ''}
           onChangeText={(value) => updateForm({ description: value })}
           placeholder="Descripcion breve"
-          placeholderTextColor={darkDesign.colors.textFaint}
+          placeholderTextColor="#9a9a9a"
           multiline
-          selectionColor={darkDesign.colors.accent}
+          selectionColor={design.emerald}
         />
         <View style={styles.toggleRow}>
           <Text style={styles.toggleLabel}>Lista publica</Text>
           <Switch
             value={form.is_public}
             onValueChange={(value) => updateForm({ is_public: value })}
-            trackColor={{ false: darkDesign.colors.borderStrong, true: darkDesign.colors.accentDeep }}
-            thumbColor="#fff"
+            trackColor={{ false: '#d4d4d4', true: '#4ade80' }}
+            thumbColor={form.is_public ? design.ink : '#fff'}
           />
         </View>
         <Pressable
-          style={({ pressed }) => [
-            styles.primaryButton,
-            pressed ? styles.pressed : null,
-            saving ? styles.disabled : null,
-          ]}
+          style={({ pressed }) => [styles.primaryButton, pressed ? styles.primaryButtonPressed : null, saving ? styles.disabled : null]}
           onPress={submit}
           disabled={saving}
         >
@@ -52,78 +74,319 @@ export default function MyListsScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="small" color={design.emerald} />
         </View>
       ) : null}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <View style={styles.list}>
-        {lists.map((list) => (
-          <Pressable key={list.id} style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]} onPress={() => openList(list.id)}>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>{list.name}</Text>
-              <Text style={styles.rowMeta}>
-                {`${list.items_count} ${list.items_count === 1 ? 'obra' : 'obras'} - ${list.is_public ? 'Publica' : 'Privada'}`}
-              </Text>
+      <Section title="Invitaciones" emptyText="No tienes invitaciones pendientes.">
+        {pendingInvitations.map((invitation) => (
+          <View key={invitation.id} style={styles.invitationCard}>
+            <View style={styles.rowTop}>
+              <Text style={styles.rowTitle}>{invitation.list_name}</Text>
+              <StatusPill label="Pendiente" tone="green" />
             </View>
-            <Text style={styles.rowAction}>Abrir</Text>
-          </Pressable>
+            <Text style={styles.rowMeta}>de @{invitation.owner.username}</Text>
+            {invitation.list_description ? <Text style={styles.rowDescription}>{invitation.list_description}</Text> : null}
+            <View style={styles.actionsRow}>
+              <Pressable
+                style={({ pressed }) => [styles.primaryButtonSmall, pressed ? styles.primaryButtonPressed : null, processingInvitationId === invitation.id ? styles.disabled : null]}
+                onPress={() => void respondToInvitation(invitation.id, 'accept')}
+                disabled={processingInvitationId === invitation.id}
+              >
+                <Text style={styles.primaryButtonText}>{processingInvitationId === invitation.id ? 'Procesando...' : 'Aceptar'}</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.secondaryButtonSmall, pressed ? styles.pressed : null, processingInvitationId === invitation.id ? styles.disabled : null]}
+                onPress={() => void respondToInvitation(invitation.id, 'deny')}
+                disabled={processingInvitationId === invitation.id}
+              >
+                <Text style={styles.secondaryButtonText}>Denegar</Text>
+              </Pressable>
+            </View>
+          </View>
         ))}
-      </View>
+      </Section>
+
+      <Section title="Mis listas" emptyText="Aun no has creado ninguna lista.">
+        {ownedLists.map((list) => (
+          <ListRow key={list.id} title={list.name} meta={`${list.items_count} ${list.items_count === 1 ? 'obra' : 'obras'} · ${list.is_public ? 'Publica' : 'Privada'}`} pillLabel="Owner" onPress={() => openList(list.id)} />
+        ))}
+      </Section>
+
+      <Section title="Compartidas conmigo" emptyText="Cuando aceptes una invitacion, aparecera aqui.">
+        {sharedLists.map((list) => (
+          <ListRow key={list.id} title={list.name} meta={`${list.items_count} ${list.items_count === 1 ? 'obra' : 'obras'} · por @${list.owner.username}`} pillLabel="Compartida" onPress={() => openList(list.id)} />
+        ))}
+      </Section>
     </ScrollView>
   );
 }
 
+function Section({
+  title,
+  emptyText,
+  children,
+}: {
+  title: string;
+  emptyText: string;
+  children: ReactNode;
+}) {
+  const content = Array.isArray(children) ? children.filter(Boolean) : children;
+  const hasContent = Array.isArray(content) ? content.length > 0 : Boolean(content);
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {hasContent ? content : <Text style={styles.emptyText}>{emptyText}</Text>}
+    </View>
+  );
+}
+
+function ListRow({
+  title,
+  meta,
+  pillLabel,
+  onPress,
+}: {
+  title: string;
+  meta: string;
+  pillLabel: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={({ pressed }) => [styles.listRow, pressed ? styles.pressed : null]} onPress={onPress}>
+      <View style={styles.rowBody}>
+        <View style={styles.rowTop}>
+          <Text style={styles.rowTitle}>{title}</Text>
+          <StatusPill label={pillLabel} tone="soft" />
+        </View>
+        <Text style={styles.rowMeta}>{meta}</Text>
+      </View>
+      <Text style={styles.rowAction}>Abrir</Text>
+    </Pressable>
+  );
+}
+
+function StatusPill({ label, tone }: { label: string; tone: 'green' | 'soft' }) {
+  return (
+    <View style={tone === 'green' ? styles.greenPill : styles.softPill}>
+      <Text style={styles.pillText}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: sharedStyles.screen,
-  content: sharedStyles.scrollContent,
-  title: sharedStyles.title,
-  card: sharedStyles.panel,
-  cardTitle: {
-    color: darkDesign.colors.text,
-    ...darkDesign.typography.section,
+  screen: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
   },
-  input: sharedStyles.input,
-  textArea: sharedStyles.textArea,
+  content: {
+    padding: 20,
+    gap: 18,
+    paddingBottom: 36,
+  },
+  eyebrow: {
+    color: design.inkMute,
+    fontSize: 12,
+    letterSpacing: 1.2,
+    fontWeight: '600',
+  },
+  title: {
+    color: design.ink,
+    fontSize: 30,
+    lineHeight: 34,
+    fontWeight: '500',
+    letterSpacing: -0.4,
+  },
+  subtitle: {
+    color: design.inkMute,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  card: {
+    backgroundColor: design.canvas,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: design.hairline,
+    padding: 18,
+    gap: 12,
+  },
+  cardTitle: {
+    color: design.ink,
+    fontSize: 18,
+    fontWeight: '500',
+  },
+  input: {
+    minHeight: 42,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: design.hairlineStrong,
+    backgroundColor: design.canvas,
+    paddingHorizontal: 12,
+    color: design.ink,
+    fontSize: 15,
+  },
+  textArea: {
+    minHeight: 92,
+    paddingTop: 12,
+    textAlignVertical: 'top',
+  },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  toggleLabel: sharedStyles.body,
-  primaryButton: sharedStyles.primaryButton,
-  primaryButtonText: sharedStyles.primaryButtonText,
-  centered: {
-    paddingVertical: darkDesign.spacing.lg,
+  toggleLabel: {
+    color: design.ink,
+    fontSize: 15,
+  },
+  primaryButton: {
+    minHeight: 42,
+    borderRadius: 6,
+    backgroundColor: design.emerald,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  primaryButtonSmall: {
+    minHeight: 38,
+    borderRadius: 6,
+    backgroundColor: design.emerald,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    flex: 1,
+  },
+  primaryButtonPressed: {
+    backgroundColor: design.emeraldDeep,
+  },
+  primaryButtonText: {
+    color: design.ink,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  secondaryButtonSmall: {
+    minHeight: 38,
+    borderRadius: 6,
+    backgroundColor: design.canvas,
+    borderWidth: 1,
+    borderColor: design.hairlineStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    flex: 1,
+  },
+  secondaryButtonText: {
+    color: design.ink,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  loadingBox: {
+    paddingVertical: 10,
     alignItems: 'center',
   },
-  errorText: sharedStyles.errorText,
-  list: {
-    gap: darkDesign.spacing.md,
-    paddingBottom: darkDesign.spacing.lg,
+  errorText: {
+    color: design.danger,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  row: {
-    ...sharedStyles.panel,
+  section: {
+    gap: 10,
+  },
+  sectionTitle: {
+    color: design.ink,
+    fontSize: 20,
+    fontWeight: '500',
+    letterSpacing: -0.2,
+  },
+  emptyText: {
+    color: design.inkMute,
+    fontSize: 14,
+    lineHeight: 20,
+    backgroundColor: design.canvasSoft,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: design.hairline,
+    padding: 16,
+  },
+  invitationCard: {
+    backgroundColor: design.canvas,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: design.hairline,
+    padding: 16,
+    gap: 10,
+  },
+  listRow: {
+    backgroundColor: design.canvas,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: design.hairline,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: darkDesign.spacing.md,
+    gap: 12,
   },
   rowBody: {
     flex: 1,
-    gap: 4,
+    gap: 6,
+  },
+  rowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
   rowTitle: {
-    color: darkDesign.colors.text,
-    fontSize: 15,
-    fontWeight: '700',
+    color: design.ink,
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
   },
-  rowMeta: sharedStyles.captionMuted,
+  rowMeta: {
+    color: design.inkMute,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  rowDescription: {
+    color: design.ink,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   rowAction: {
-    color: darkDesign.colors.accentSoft,
-    ...darkDesign.typography.micro,
-    fontWeight: '700',
+    color: design.ink,
+    fontSize: 12,
+    fontWeight: '600',
   },
-  pressed: sharedStyles.pressed,
-  disabled: sharedStyles.disabled,
+  greenPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: design.emerald,
+  },
+  softPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: design.canvasSoft,
+    borderWidth: 1,
+    borderColor: design.hairline,
+  },
+  pillText: {
+    color: design.ink,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  pressed: {
+    opacity: 0.8,
+  },
+  disabled: {
+    opacity: 0.5,
+  },
 });

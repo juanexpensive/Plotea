@@ -72,7 +72,7 @@ export default function PublicProfileScreen() {
           <PublicListCard
             key={list.id}
             list={list}
-            onPress={() => router.push({ pathname: '/list-detail', params: { list_id: list.id, editable: '0' } })}
+            onPress={() => router.push({ pathname: '/list-detail', params: { list_id: list.id } })}
           />
         ))}
       </View>
