@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { ComponentProps, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -12,6 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Comment, Review, ReviewRating } from '../../../domain/entities/media';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
@@ -19,8 +21,13 @@ import { useDetailViewModel } from './DetailViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w500';
 const REVIEW_RATINGS: ReviewRating[] = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+const ACTION_ICON_SIZE = 22;
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export default function DetailScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { tmdb_id, media_type } = useLocalSearchParams<{ tmdb_id: string; media_type: string }>();
   const {
     detail,
@@ -73,7 +80,7 @@ export default function DetailScreen() {
     );
   }
 
-  if (error || !detail) {
+  if (!detail) {
     return (
       <View style={styles.centered}>
         <StatusBar style="light" />
@@ -82,92 +89,300 @@ export default function DetailScreen() {
     );
   }
 
+  const posterUri = detail.poster_path ? `${TMDB_IMAGE}${detail.poster_path}` : null;
+  const overviewLead = getOverviewLead(detail.overview);
+  const overviewBody = getOverviewBody(detail.overview, overviewLead);
+  const metaLine = buildMetaLine(detail.release_date, detail.runtime, detail.vote_average);
+  const eyebrow = buildEyebrow(media_type, detail.genres);
+  const showFormsRail = showWatchLogForm || showReviewForm;
+
   return (
-    <ScrollView style={styles.screen}>
-      <StatusBar style="light" />
-      {detail.poster_path ? (
-        <Image source={{ uri: `${TMDB_IMAGE}${detail.poster_path}` }} style={styles.poster} />
-      ) : (
-        <View style={styles.posterFallback} />
-      )}
-      <View style={styles.content}>
-        <Text style={styles.title}>{detail.title}</Text>
-        <Text style={styles.meta}>
-          * {detail.vote_average.toFixed(1)}
-          {detail.release_date ? `  -  ${detail.release_date.slice(0, 4)}` : ''}
-          {detail.runtime ? `  -  ${detail.runtime} min` : ''}
-        </Text>
-        {detail.genres.length > 0 ? (
-          <Text style={styles.genres}>{detail.genres.join(', ')}</Text>
-        ) : null}
-        <View style={styles.statusActions}>
-          <StatusButton
-            label="Vista"
-            active={status === 'watched'}
-            disabled={savingStatus}
-            onPress={() => handleStatusPress('watched')}
+    <View style={styles.screen}>
+      <StatusBar style="light" translucent />
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.scrollContent}
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.hero}>
+          {posterUri ? (
+            <Image source={{ uri: posterUri }} style={styles.heroBackdrop} blurRadius={18} />
+          ) : (
+            <View style={styles.heroFallback} />
+          )}
+          <View style={styles.heroOverlay} />
+          <View style={[styles.heroControls, { paddingTop: insets.top + darkDesign.spacing.sm }]}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.overlayButton,
+                pressed ? styles.buttonPressed : null,
+              ]}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={22} color={darkDesign.colors.text} />
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.sheet}>
+          <View style={styles.summaryRow}>
+            {posterUri ? (
+              <Image source={{ uri: posterUri }} style={styles.posterCard} />
+            ) : (
+              <View style={styles.posterCardFallback} />
+            )}
+            <View style={styles.summaryContent}>
+              <Text style={styles.title}>{detail.title}</Text>
+              <Text style={styles.metaLine}>{metaLine}</Text>
+              <View style={styles.pillRow}>
+                {status ? (
+                  <View style={[styles.infoPill, styles.infoPillActive]}>
+                    <Text style={[styles.infoPillText, styles.infoPillTextActive]}>
+                      {status === 'watched' ? 'Vista' : 'Watchlist'}
+                    </Text>
+                  </View>
+                ) : null}
+                <View style={styles.infoPill}>
+                  <Text style={styles.infoPillText}>
+                    {detail.vote_average.toFixed(1)} TMDB
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.storySection}>
+            <Text style={styles.eyebrow}>{eyebrow}</Text>
+            {overviewLead ? <Text style={styles.storyLead}>{overviewLead}</Text> : null}
+            {overviewBody ? <Text style={styles.overview}>{overviewBody}</Text> : null}
+          </View>
+
+          <ActionRail
+            status={status}
+            hasReview={Boolean(myReview)}
+            showWatchLogForm={showWatchLogForm}
+            showReviewForm={showReviewForm}
+            savingStatus={savingStatus}
+            savingWatchLog={savingWatchLog}
+            savingReview={savingReview}
+            onToggleWatched={() => handleStatusPress('watched')}
+            onToggleWatchlist={() => handleStatusPress('watchlist')}
+            onToggleWatchLog={toggleWatchLogForm}
+            onToggleReview={toggleReviewForm}
           />
-          <StatusButton
-            label="Quiero verla"
-            active={status === 'watchlist'}
-            disabled={savingStatus}
-            onPress={() => handleStatusPress('watchlist')}
+
+          {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
+          {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+
+          {showFormsRail ? (
+            <View style={styles.formsStack}>
+              {showWatchLogForm ? (
+                <WatchLogForm
+                  watchedAt={watchedAt}
+                  rating={rating}
+                  saving={savingWatchLog}
+                  onWatchedAtChange={setWatchedAt}
+                  onRatingChange={setRating}
+                  onSave={handleSaveWatchLog}
+                />
+              ) : null}
+
+              {showReviewForm ? (
+                <ReviewForm
+                  reviewRating={reviewRating}
+                  reviewBody={reviewBody}
+                  reviewContainsSpoilers={reviewContainsSpoilers}
+                  savingReview={savingReview}
+                  deletingReview={deletingReview}
+                  hasExistingReview={myReview !== null}
+                  onRatingChange={setReviewRating}
+                  onBodyChange={setReviewBody}
+                  onSpoilersChange={setReviewContainsSpoilers}
+                  onSaveReview={handleSaveReview}
+                  onDeleteReview={handleDeleteReview}
+                />
+              ) : null}
+            </View>
+          ) : null}
+
+          <ReviewSection
+            myReview={myReview}
+            reviews={reviews}
+            currentUserId={currentUserId}
+            votingReviewIds={votingReviewIds}
+            getThreadState={getThreadState}
+            showReviewForm={showReviewForm}
+            savingReview={savingReview}
+            deletingReview={deletingReview}
+            reviewRating={reviewRating}
+            reviewBody={reviewBody}
+            reviewContainsSpoilers={reviewContainsSpoilers}
+            onToggleReviewForm={toggleReviewForm}
+            onSaveReview={handleSaveReview}
+            onDeleteReview={handleDeleteReview}
+            onRatingChange={setReviewRating}
+            onBodyChange={setReviewBody}
+            onSpoilersChange={setReviewContainsSpoilers}
+            onToggleComments={toggleComments}
+            onOpenCommentComposer={openCommentComposer}
+            onCloseCommentComposer={closeCommentComposer}
+            onCommentDraftChange={setCommentDraft}
+            onSaveComment={handleSaveComment}
+            onDeleteComment={handleDeleteComment}
+            onToggleVote={handleToggleReviewVote}
           />
         </View>
-        <Pressable
-          style={({ pressed }) => [
-            styles.primaryButton,
-            pressed ? styles.buttonPressed : null,
-            savingWatchLog ? styles.buttonDisabled : null,
-          ]}
-          onPress={toggleWatchLogForm}
-          disabled={savingWatchLog}
-        >
-          <Text style={styles.primaryButtonText}>
-            {showWatchLogForm ? 'Cancelar registro' : 'Registrar visionado'}
-          </Text>
-        </Pressable>
-        {showWatchLogForm ? (
-          <WatchLogForm
-            watchedAt={watchedAt}
-            rating={rating}
-            saving={savingWatchLog}
-            onWatchedAtChange={setWatchedAt}
-            onRatingChange={setRating}
-            onSave={handleSaveWatchLog}
-          />
-        ) : null}
-        <ReviewSection
-          myReview={myReview}
-          reviews={reviews}
-          currentUserId={currentUserId}
-          votingReviewIds={votingReviewIds}
-          getThreadState={getThreadState}
-          showReviewForm={showReviewForm}
-          savingReview={savingReview}
-          deletingReview={deletingReview}
-          reviewRating={reviewRating}
-          reviewBody={reviewBody}
-          reviewContainsSpoilers={reviewContainsSpoilers}
-          onToggleReviewForm={toggleReviewForm}
-          onSaveReview={handleSaveReview}
-          onDeleteReview={handleDeleteReview}
-          onRatingChange={setReviewRating}
-          onBodyChange={setReviewBody}
-          onSpoilersChange={setReviewContainsSpoilers}
-          onToggleComments={toggleComments}
-          onOpenCommentComposer={openCommentComposer}
-          onCloseCommentComposer={closeCommentComposer}
-          onCommentDraftChange={setCommentDraft}
-          onSaveComment={handleSaveComment}
-          onDeleteComment={handleDeleteComment}
-          onToggleVote={handleToggleReviewVote}
-        />
-        {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
-        {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-        {detail.overview ? <Text style={styles.overview}>{detail.overview}</Text> : null}
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
+  );
+}
+
+function buildMetaLine(releaseDate: string | null, runtime: number | null, average: number) {
+  const parts = [releaseDate ? releaseDate.slice(0, 4) : null, runtime ? `${runtime} min` : null, `${average.toFixed(1)} ★`]
+    .filter(Boolean)
+    .join(' · ');
+  return parts;
+}
+
+function buildEyebrow(mediaType: string, genres: string[]) {
+  const mediaLabel = mediaType === 'tv' ? 'SERIE' : 'PELÍCULA';
+  if (genres.length === 0) {
+    return mediaLabel;
+  }
+
+  return `${mediaLabel} · ${genres.slice(0, 3).join(' · ').toUpperCase()}`;
+}
+
+function getOverviewLead(overview: string) {
+  const trimmed = overview.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const sentences = trimmed.split(/(?<=[.!?])\s+/);
+  if (sentences.length < 2) {
+    return null;
+  }
+
+  const firstSentence = sentences[0].trim();
+  if (firstSentence.length > 84) {
+    return null;
+  }
+
+  return firstSentence.toUpperCase();
+}
+
+function getOverviewBody(overview: string, lead: string | null) {
+  const trimmed = overview.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (!lead) {
+    return trimmed;
+  }
+
+  const remaining = trimmed.slice(lead.length).trim();
+  if (!remaining) {
+    return trimmed;
+  }
+
+  return remaining;
+}
+
+function ActionRail({
+  status,
+  hasReview,
+  showWatchLogForm,
+  showReviewForm,
+  savingStatus,
+  savingWatchLog,
+  savingReview,
+  onToggleWatched,
+  onToggleWatchlist,
+  onToggleWatchLog,
+  onToggleReview,
+}: {
+  status: 'watched' | 'watchlist' | null;
+  hasReview: boolean;
+  showWatchLogForm: boolean;
+  showReviewForm: boolean;
+  savingStatus: boolean;
+  savingWatchLog: boolean;
+  savingReview: boolean;
+  onToggleWatched: () => void;
+  onToggleWatchlist: () => void;
+  onToggleWatchLog: () => void;
+  onToggleReview: () => void;
+}) {
+  return (
+    <View style={styles.actionRail}>
+      <ActionIconButton
+        icon={status === 'watched' ? 'eye' : 'eye-outline'}
+        label="Vista"
+        active={status === 'watched'}
+        disabled={savingStatus}
+        onPress={onToggleWatched}
+      />
+      <ActionIconButton
+        icon={status === 'watchlist' ? 'bookmark' : 'bookmark-outline'}
+        label="Lista"
+        active={status === 'watchlist'}
+        disabled={savingStatus}
+        onPress={onToggleWatchlist}
+      />
+      <ActionIconButton
+        icon={showWatchLogForm ? 'checkmark-circle' : 'add-circle-outline'}
+        label="Diario"
+        active={showWatchLogForm}
+        disabled={savingWatchLog}
+        onPress={onToggleWatchLog}
+      />
+      <ActionIconButton
+        icon={showReviewForm ? 'create' : hasReview ? 'document-text' : 'create-outline'}
+        label="Reseña"
+        active={showReviewForm || hasReview}
+        disabled={savingReview}
+        onPress={onToggleReview}
+      />
+    </View>
+  );
+}
+
+function ActionIconButton({
+  icon,
+  label,
+  active,
+  disabled,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  active: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [
+        styles.actionButton,
+        active ? styles.actionButtonActive : null,
+        pressed ? styles.buttonPressed : null,
+        disabled ? styles.buttonDisabled : null,
+      ]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <Ionicons
+        name={icon}
+        size={ACTION_ICON_SIZE}
+        color={active ? darkDesign.colors.onAccent : darkDesign.colors.textSoft}
+      />
+      <Text style={[styles.actionLabel, active ? styles.actionLabelActive : null]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -236,7 +451,7 @@ function ReviewSection({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Tu resena</Text>
+        <Text style={styles.sectionTitle}>Tu reseña</Text>
         <Pressable onPress={onToggleReviewForm}>
           <Text style={styles.secondaryActionText}>
             {showReviewForm ? 'Cancelar' : myReview ? 'Editar' : 'Escribir'}
@@ -274,15 +489,15 @@ function ReviewSection({
           onToggleVote={onToggleVote}
         />
       ) : (
-        <Text style={styles.emptyText}>Todavia no has publicado una resena.</Text>
+        <Text style={styles.emptyText}>Todavía no has publicado una reseña.</Text>
       )}
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Resenas</Text>
-        <Text style={styles.sectionCount}>{reviews.length}</Text>
+      <View style={styles.communitySectionHeader}>
+        <Text style={styles.sectionTitle}>Comunidad</Text>
+        <Text style={styles.sectionCount}>{reviews.length} reseñas</Text>
       </View>
       {reviews.length === 0 ? (
-        <Text style={styles.emptyText}>Todavia no hay resenas para esta obra.</Text>
+        <Text style={styles.emptyText}>Todavía no hay reseñas para esta obra.</Text>
       ) : (
         reviews.map((review) => (
           <ReviewCard
@@ -334,7 +549,7 @@ function ReviewForm({
 }) {
   return (
     <View style={styles.reviewForm}>
-      <Text style={styles.formLabel}>Puntuacion</Text>
+      <Text style={styles.formLabel}>Puntuación</Text>
       <View style={styles.ratingGrid}>
         {REVIEW_RATINGS.map((value) => (
           <Pressable
@@ -356,12 +571,12 @@ function ReviewForm({
           </Pressable>
         ))}
       </View>
-      <Text style={styles.formLabel}>Resena</Text>
+      <Text style={styles.formLabel}>Reseña</Text>
       <TextInput
         style={[styles.textInput, styles.bodyInput]}
         value={reviewBody}
         onChangeText={onBodyChange}
-        placeholder="Comparte tu opinion"
+        placeholder="Comparte tu opinión"
         placeholderTextColor={darkDesign.colors.textFaint}
         multiline
         textAlignVertical="top"
@@ -386,7 +601,7 @@ function ReviewForm({
         disabled={savingReview}
       >
         <Text style={styles.saveReviewButtonText}>
-          {savingReview ? 'Guardando...' : hasExistingReview ? 'Actualizar resena' : 'Publicar resena'}
+          {savingReview ? 'Guardando...' : hasExistingReview ? 'Actualizar reseña' : 'Publicar reseña'}
         </Text>
       </Pressable>
       {hasExistingReview ? (
@@ -400,7 +615,7 @@ function ReviewForm({
           disabled={deletingReview}
         >
           <Text style={styles.deleteReviewButtonText}>
-            {deletingReview ? 'Borrando...' : 'Eliminar resena'}
+            {deletingReview ? 'Borrando...' : 'Eliminar reseña'}
           </Text>
         </Pressable>
       ) : null}
@@ -456,12 +671,15 @@ function ReviewCard({
   return (
     <View style={styles.reviewCard}>
       <View style={styles.reviewHeader}>
-        <Text style={styles.reviewAuthor}>{authorName}</Text>
-        <Text style={styles.reviewRating}>* {review.rating.toFixed(1)}</Text>
+        <View style={styles.reviewAuthorBlock}>
+          <Text style={styles.reviewAuthor}>{authorName}</Text>
+          <Text style={styles.reviewTimestamp}>{review.created_at.slice(0, 10)}</Text>
+        </View>
+        <Text style={styles.reviewRating}>{review.rating.toFixed(1)} ★</Text>
       </View>
       {shouldHideBody ? (
         <View style={styles.spoilerBox}>
-          <Text style={styles.spoilerText}>Esta resena contiene spoilers.</Text>
+          <Text style={styles.spoilerText}>Esta reseña contiene spoilers.</Text>
           <Pressable onPress={() => setRevealed(true)}>
             <Text style={styles.secondaryActionText}>Mostrar</Text>
           </Pressable>
@@ -474,29 +692,49 @@ function ReviewCard({
           {!isOwnReview ? (
             <Pressable
               style={({ pressed }) => [
-                styles.socialButton,
-                review.has_voted ? styles.socialButtonActive : null,
+                styles.socialIconButton,
+                review.has_voted ? styles.socialIconButtonActive : null,
                 pressed ? styles.buttonPressed : null,
                 voting ? styles.buttonDisabled : null,
               ]}
               onPress={() => onToggleVote(review)}
               disabled={voting}
             >
-              <Text style={[styles.socialButtonText, review.has_voted ? styles.socialButtonTextActive : null]}>
-                {voting ? '...' : `${review.has_voted ? '♥' : '♡'} ${review.helpful_votes}`}
+              <Ionicons
+                name={review.has_voted ? 'heart' : 'heart-outline'}
+                size={16}
+                color={review.has_voted ? darkDesign.colors.onAccent : darkDesign.colors.textSoft}
+              />
+              <Text
+                style={[
+                  styles.socialIconButtonText,
+                  review.has_voted ? styles.socialIconButtonTextActive : null,
+                ]}
+              >
+                {voting ? '...' : review.helpful_votes}
               </Text>
             </Pressable>
           ) : null}
           <Pressable
             style={({ pressed }) => [
-              styles.socialButton,
-              threadState.isOpen ? styles.socialButtonActive : null,
+              styles.socialIconButton,
+              threadState.isOpen ? styles.socialIconButtonActive : null,
               pressed ? styles.buttonPressed : null,
             ]}
             onPress={() => onToggleComments(review.id)}
           >
-            <Text style={[styles.socialButtonText, threadState.isOpen ? styles.socialButtonTextActive : null]}>
-              {threadState.isOpen ? 'Ocultar' : `Comentarios (${review.comment_count})`}
+            <Ionicons
+              name={threadState.isOpen ? 'chatbubble' : 'chatbubble-outline'}
+              size={16}
+              color={threadState.isOpen ? darkDesign.colors.onAccent : darkDesign.colors.textSoft}
+            />
+            <Text
+              style={[
+                styles.socialIconButtonText,
+                threadState.isOpen ? styles.socialIconButtonTextActive : null,
+              ]}
+            >
+              {review.comment_count}
             </Text>
           </Pressable>
         </View>
@@ -550,7 +788,7 @@ function ReviewComments({
   return (
     <View style={styles.commentsSection}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.commentsTitle}>Conversacion</Text>
+        <Text style={styles.commentsTitle}>Conversación</Text>
         <Pressable onPress={() => onOpenCommentComposer(review.id, null)}>
           <Text style={styles.secondaryActionText}>Comentar</Text>
         </Pressable>
@@ -570,7 +808,7 @@ function ReviewComments({
       ) : null}
       {threadState.error ? <Text style={styles.inlineError}>{threadState.error}</Text> : null}
       {!threadState.isLoading && threadState.comments.length === 0 ? (
-        <Text style={styles.emptyText}>Todavia no hay comentarios.</Text>
+        <Text style={styles.emptyText}>Todavía no hay comentarios.</Text>
       ) : null}
       {threadState.comments.map((comment) => (
         <CommentCard
@@ -723,7 +961,7 @@ function WatchLogForm({
         autoCapitalize="none"
         selectionColor={darkDesign.colors.accent}
       />
-      <Text style={styles.formLabel}>Puntuacion</Text>
+      <Text style={styles.formLabel}>Puntuación</Text>
       <View style={styles.ratingGrid}>
         {ratings.map((value) => (
           <Pressable
@@ -757,159 +995,237 @@ function WatchLogForm({
   );
 }
 
-function StatusButton({
-  label,
-  active,
-  disabled,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.statusButton,
-        active ? styles.statusButtonActive : null,
-        pressed ? styles.buttonPressed : null,
-        disabled ? styles.buttonDisabled : null,
-      ]}
-      onPress={onPress}
-      disabled={disabled}
-    >
-      <Text style={[styles.statusButtonText, active ? styles.statusButtonTextActive : null]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: sharedStyles.screen,
+  scrollContent: {
+    paddingBottom: darkDesign.spacing.huge,
+  },
   centered: {
     ...sharedStyles.centered,
   },
-  poster: {
-    width: '100%',
-    height: 300,
-    backgroundColor: darkDesign.colors.borderStrong,
+  hero: {
+    height: 360,
+    backgroundColor: darkDesign.colors.canvasInset,
+    overflow: 'hidden',
   },
-  posterFallback: {
+  heroBackdrop: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
-    height: 300,
-    backgroundColor: darkDesign.colors.borderStrong,
+    height: '100%',
   },
-  content: {
-    padding: darkDesign.spacing.lg,
-    gap: 12,
+  heroFallback: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: darkDesign.colors.panelStrong,
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(8, 11, 14, 0.46)',
+  },
+  heroControls: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: darkDesign.spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  overlayButton: {
+    width: 44,
+    height: 44,
+    borderRadius: darkDesign.radii.pill,
+    backgroundColor: 'rgba(10, 12, 15, 0.42)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheet: {
+    marginTop: -80,
+    paddingHorizontal: darkDesign.spacing.lg,
+    gap: darkDesign.spacing.xl,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    gap: darkDesign.spacing.lg,
+    alignItems: 'flex-end',
+  },
+  posterCard: {
+    width: 126,
+    height: 188,
+    borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.borderStrong,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  posterCardFallback: {
+    width: 126,
+    height: 188,
+    borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.panelStrong,
+    borderWidth: 1,
+    borderColor: darkDesign.colors.border,
+  },
+  summaryContent: {
+    flex: 1,
+    gap: darkDesign.spacing.md,
+    paddingBottom: darkDesign.spacing.sm,
   },
   title: {
     color: darkDesign.colors.text,
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 34,
+    lineHeight: 38,
+    fontWeight: '600',
+    letterSpacing: -0.9,
   },
-  meta: {
+  metaLine: {
     color: darkDesign.colors.textMuted,
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: 0.2,
   },
-  genres: {
-    color: darkDesign.colors.textFaint,
-    fontSize: 13,
-  },
-  statusActions: {
+  pillRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
-    marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: darkDesign.spacing.sm,
   },
-  statusButton: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: darkDesign.radii.sm,
+  infoPill: {
+    borderRadius: darkDesign.radii.pill,
     borderWidth: 1,
-    borderColor: darkDesign.colors.borderStrong,
+    borderColor: darkDesign.colors.border,
     backgroundColor: darkDesign.colors.canvasRaised,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: darkDesign.spacing.md,
+    paddingVertical: 6,
   },
-  statusButtonActive: {
+  infoPillActive: {
     backgroundColor: darkDesign.colors.accent,
     borderColor: darkDesign.colors.accent,
   },
-  statusButtonText: {
+  infoPillText: {
+    color: darkDesign.colors.textSoft,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  infoPillTextActive: {
+    color: darkDesign.colors.onAccent,
+  },
+  storySection: {
+    gap: darkDesign.spacing.md,
+  },
+  eyebrow: {
+    color: darkDesign.colors.textFaint,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    letterSpacing: 1.6,
+  },
+  storyLead: {
     color: darkDesign.colors.textSoft,
     fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
+    lineHeight: 20,
+    letterSpacing: 1.1,
   },
-  statusButtonTextActive: {
-    color: darkDesign.colors.onAccent,
+  overview: {
+    color: darkDesign.colors.textMuted,
+    fontSize: 15,
+    lineHeight: 24,
   },
-  primaryButton: {
-    minHeight: 44,
-    borderRadius: darkDesign.radii.sm,
-    backgroundColor: darkDesign.colors.accent,
+  actionRail: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: darkDesign.spacing.sm,
+    paddingVertical: darkDesign.spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
+    minHeight: 74,
+    borderRadius: darkDesign.radii.lg,
+    borderWidth: 1,
+    borderColor: darkDesign.colors.border,
+    backgroundColor: darkDesign.colors.panel,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    gap: 6,
   },
-  primaryButtonText: {
+  actionButtonActive: {
+    backgroundColor: darkDesign.colors.accent,
+    borderColor: darkDesign.colors.accent,
+  },
+  actionLabel: {
+    color: darkDesign.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
+  actionLabelActive: {
     color: darkDesign.colors.onAccent,
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
+  },
+  formsStack: {
+    gap: darkDesign.spacing.md,
   },
   section: {
-    gap: 12,
+    gap: darkDesign.spacing.md,
     borderTopWidth: 1,
     borderTopColor: darkDesign.colors.border,
-    paddingTop: 16,
+    paddingTop: darkDesign.spacing.xl,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12,
+    gap: darkDesign.spacing.md,
+  },
+  communitySectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: darkDesign.spacing.md,
+    marginTop: darkDesign.spacing.sm,
   },
   sectionTitle: {
     color: darkDesign.colors.text,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '600',
+    letterSpacing: -0.3,
   },
   sectionCount: {
     color: darkDesign.colors.textFaint,
     fontSize: 13,
+    lineHeight: 18,
   },
   secondaryActionText: {
     color: darkDesign.colors.accentSoft,
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '600',
   },
   watchLogForm: {
     ...sharedStyles.panel,
-    padding: 12,
+    padding: darkDesign.spacing.lg,
   },
   reviewForm: {
     ...sharedStyles.panel,
-    padding: 12,
+    padding: darkDesign.spacing.lg,
   },
   commentsSection: {
-    gap: 10,
+    gap: darkDesign.spacing.md,
     borderTopWidth: 1,
     borderTopColor: darkDesign.colors.border,
-    paddingTop: 12,
+    paddingTop: darkDesign.spacing.md,
   },
   commentsTitle: {
     color: darkDesign.colors.textSoft,
     fontSize: 15,
+    lineHeight: 20,
     fontWeight: '700',
   },
   commentComposer: {
     ...sharedStyles.panel,
-    padding: 10,
+    padding: darkDesign.spacing.md,
   },
   commentComposerActions: {
     flexDirection: 'row',
@@ -922,6 +1238,7 @@ const styles = StyleSheet.create({
   formLabel: {
     color: darkDesign.colors.textSoft,
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
   },
   textInput: {
@@ -934,7 +1251,7 @@ const styles = StyleSheet.create({
   ratingGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: darkDesign.spacing.sm,
   },
   ratingButton: {
     width: 48,
@@ -953,6 +1270,7 @@ const styles = StyleSheet.create({
   ratingText: {
     color: darkDesign.colors.textSoft,
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '600',
   },
   ratingTextActive: {
@@ -962,11 +1280,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: darkDesign.spacing.md,
   },
   switchLabel: {
     color: darkDesign.colors.textSoft,
     fontSize: 14,
+    lineHeight: 20,
     flex: 1,
   },
   saveReviewButton: {
@@ -984,56 +1303,69 @@ const styles = StyleSheet.create({
     borderColor: darkDesign.colors.border,
     borderRadius: darkDesign.radii.lg,
     backgroundColor: darkDesign.colors.panel,
-    padding: 12,
-    gap: 10,
+    padding: darkDesign.spacing.lg,
+    gap: darkDesign.spacing.md,
   },
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
+    alignItems: 'flex-start',
+    gap: darkDesign.spacing.md,
+  },
+  reviewAuthorBlock: {
+    flex: 1,
+    gap: 2,
   },
   reviewAuthor: {
     color: darkDesign.colors.text,
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: '700',
-    flex: 1,
+  },
+  reviewTimestamp: {
+    color: darkDesign.colors.textFaint,
+    fontSize: 12,
+    lineHeight: 16,
   },
   reviewRating: {
     color: darkDesign.colors.warning,
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
   },
   reviewBody: {
     color: darkDesign.colors.textSoft,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 24,
   },
   reviewActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: darkDesign.spacing.sm,
     flexWrap: 'wrap',
   },
-  socialButton: {
+  socialIconButton: {
     minHeight: 36,
-    borderRadius: darkDesign.radii.sm,
+    borderRadius: darkDesign.radii.pill,
     borderWidth: 1,
     borderColor: darkDesign.colors.borderStrong,
     backgroundColor: darkDesign.colors.canvasRaised,
-    paddingHorizontal: 12,
+    paddingHorizontal: darkDesign.spacing.md,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
   },
-  socialButtonActive: {
+  socialIconButtonActive: {
     backgroundColor: darkDesign.colors.accent,
     borderColor: darkDesign.colors.accent,
   },
-  socialButtonText: {
+  socialIconButtonText: {
     color: darkDesign.colors.textSoft,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: '700',
   },
-  socialButtonTextActive: {
+  socialIconButtonTextActive: {
     color: darkDesign.colors.onAccent,
   },
   commentCard: {
@@ -1041,24 +1373,25 @@ const styles = StyleSheet.create({
     borderColor: darkDesign.colors.border,
     borderRadius: darkDesign.radii.lg,
     backgroundColor: darkDesign.colors.canvasRaised,
-    padding: 10,
-    gap: 8,
+    padding: darkDesign.spacing.md,
+    gap: darkDesign.spacing.sm,
   },
   commentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 10,
+    gap: darkDesign.spacing.md,
   },
   commentAuthor: {
     color: darkDesign.colors.text,
     fontSize: 13,
+    lineHeight: 18,
     fontWeight: '700',
     flex: 1,
   },
   commentActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: darkDesign.spacing.md,
     alignItems: 'center',
   },
   commentBody: {
@@ -1074,29 +1407,31 @@ const styles = StyleSheet.create({
   },
   deleteInlineText: sharedStyles.dangerButtonText,
   replyContainer: {
-    marginLeft: 16,
+    marginLeft: darkDesign.spacing.lg,
   },
   spoilerBox: {
     borderRadius: darkDesign.radii.lg,
     backgroundColor: darkDesign.colors.canvasRaised,
-    padding: 12,
+    padding: darkDesign.spacing.md,
     gap: 6,
   },
   spoilerText: {
     color: darkDesign.colors.textSoft,
     fontSize: 14,
+    lineHeight: 20,
   },
   smallPrimaryButton: {
     minHeight: 34,
     borderRadius: darkDesign.radii.sm,
     backgroundColor: darkDesign.colors.accent,
-    paddingHorizontal: 12,
+    paddingHorizontal: darkDesign.spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   smallPrimaryButtonText: {
     color: darkDesign.colors.onAccent,
     fontSize: 12,
+    lineHeight: 16,
     fontWeight: '700',
   },
   buttonPressed: {
@@ -1108,11 +1443,5 @@ const styles = StyleSheet.create({
   successText: sharedStyles.successText,
   inlineError: sharedStyles.errorText,
   emptyText: sharedStyles.captionMuted,
-  overview: {
-    color: darkDesign.colors.textMuted,
-    fontSize: 14,
-    lineHeight: 22,
-    marginTop: 4,
-  },
   errorText: sharedStyles.errorText,
 });
