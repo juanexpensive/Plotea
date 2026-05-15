@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,6 +21,10 @@ import { useHomeViewModel } from './HomeViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
 
+function formatTmdbRating(value: number) {
+  return `${(value / 2).toFixed(1)}`;
+}
+
 function MediaCard({ item }: { item: MediaItem }) {
   return (
     <TouchableOpacity
@@ -33,7 +39,7 @@ function MediaCard({ item }: { item: MediaItem }) {
       )}
       <View style={styles.mediaMetaRow}>
         <Text style={styles.mediaBadge}>{item.media_type === 'movie' ? 'Pelicula' : 'Serie'}</Text>
-        <Text style={styles.mediaScore}>{item.vote_average.toFixed(1)}</Text>
+        <Text style={styles.mediaScore}>{formatTmdbRating(item.vote_average)}</Text>
       </View>
       <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
       <Text style={styles.cardMeta}>{item.release_date ? item.release_date.slice(0, 4) : 'Proximamente'}</Text>
@@ -57,14 +63,42 @@ function MediaRow({ title, data }: { title: string; data: MediaItem[] }) {
   );
 }
 
+function SearchResultRow({
+  item,
+  onPress,
+}: {
+  item: MediaItem;
+  onPress: () => void;
+}) {
+  const releaseYear = item.release_date ? item.release_date.slice(0, 4) : 'Proximamente';
+
+  return (
+    <Pressable style={({ pressed }) => [styles.searchResultRow, pressed ? styles.cardPressed : null]} onPress={onPress}>
+      {item.poster_path ? (
+        <Image source={{ uri: `${TMDB_IMAGE}${item.poster_path}` }} style={styles.searchResultPoster} />
+      ) : (
+        <View style={[styles.searchResultPoster, styles.posterFallback, styles.searchResultPosterFallback]} />
+      )}
+      <View style={styles.searchResultBody}>
+        <Text style={styles.searchResultTitle} numberOfLines={2}>{item.title}</Text>
+        <Text style={styles.searchResultMeta}>
+          {releaseYear} · {item.media_type === 'movie' ? 'Pelicula' : 'Serie'} · {formatTmdbRating(item.vote_average)} / 5
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 function SearchResults({
   results,
   loading,
   error,
+  onOpenItem,
 }: {
   results: MediaItem[];
   loading: boolean;
   error: string | null;
+  onOpenItem: (item: MediaItem) => void;
 }) {
   if (loading) {
     return (
@@ -91,9 +125,13 @@ function SearchResults({
   }
 
   return (
-    <View style={styles.resultsGrid}>
+    <View style={styles.searchResultsList}>
       {results.map((item) => (
-        <MediaCard key={`${item.media_type}-${item.tmdb_id}`} item={item} />
+        <SearchResultRow
+          key={`${item.media_type}-${item.tmdb_id}`}
+          item={item}
+          onPress={() => onOpenItem(item)}
+        />
       ))}
     </View>
   );
@@ -292,7 +330,7 @@ function FeaturedCard({ item }: { item: MediaItem }) {
         <Text style={styles.featuredKicker}>Seleccion destacada</Text>
         <Text style={styles.featuredTitle} numberOfLines={2}>{item.title}</Text>
         <Text style={styles.featuredDescription}>
-          {item.media_type === 'movie' ? 'Pelicula' : 'Serie'} con nota {item.vote_average.toFixed(1)}
+          {item.media_type === 'movie' ? 'Pelicula' : 'Serie'} con nota {formatTmdbRating(item.vote_average)}
           {item.release_date ? ` - ${item.release_date.slice(0, 4)}` : ''}
         </Text>
         <View style={styles.featuredFooter}>
@@ -302,6 +340,85 @@ function FeaturedCard({ item }: { item: MediaItem }) {
         </View>
       </View>
     </Pressable>
+  );
+}
+
+function SearchModal({
+  visible,
+  query,
+  results,
+  loading,
+  error,
+  onChangeQuery,
+  onClose,
+  onClear,
+  onOpenItem,
+}: {
+  visible: boolean;
+  query: string;
+  results: MediaItem[];
+  loading: boolean;
+  error: string | null;
+  onChangeQuery: (value: string) => void;
+  onClose: () => void;
+  onClear: () => void;
+  onOpenItem: (item: MediaItem) => void;
+}) {
+  const hasSearchTerm = query.trim().length > 0;
+  const isSearching = query.trim().length >= 2;
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+      <View style={styles.searchModalScreen}>
+        <StatusBar style="light" />
+        <View style={styles.searchModalHeader}>
+          <Pressable style={styles.searchModalIconButton} onPress={onClose}>
+            <Text style={styles.searchModalIcon}>←</Text>
+          </Pressable>
+          <View style={styles.searchModalInputShell}>
+            <TextInput
+              style={styles.searchModalInput}
+              value={query}
+              onChangeText={onChangeQuery}
+              placeholder="Buscar peliculas o series"
+              placeholderTextColor={darkDesign.colors.textFaint}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+              selectionColor={darkDesign.colors.accent}
+              autoFocus
+            />
+          </View>
+          <Pressable style={styles.searchModalIconButton} onPress={hasSearchTerm ? onClear : onClose}>
+            <Text style={styles.searchModalIcon}>{hasSearchTerm ? '×' : '✕'}</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.searchTabs}>
+          <View style={styles.searchTabActive}>
+            <Text style={styles.searchTabActiveText}>Films</Text>
+          </View>
+        </View>
+
+        {!isSearching ? (
+          <View style={styles.searchModalEmptyState}>
+            <Text style={styles.searchModalEmptyTitle}>Empieza a escribir</Text>
+            <Text style={styles.searchModalEmptyBody}>
+              Usa al menos 2 caracteres para buscar peliculas o series en toda la base.
+            </Text>
+          </View>
+        ) : (
+          <ScrollView style={styles.searchModalResults} contentContainerStyle={styles.searchModalResultsContent}>
+            <SearchResults
+              results={results}
+              loading={loading}
+              error={error}
+              onOpenItem={onOpenItem}
+            />
+          </ScrollView>
+        )}
+      </View>
+    </Modal>
   );
 }
 
@@ -318,8 +435,23 @@ export default function HomeScreen() {
     setQuery,
     clearSearch,
   } = useHomeViewModel();
+  const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
 
   const featured = feed?.trending[0] ?? null;
+
+  function openSearchModal() {
+    setIsSearchModalVisible(true);
+  }
+
+  function closeSearchModal() {
+    setIsSearchModalVisible(false);
+    clearSearch();
+  }
+
+  function openMediaDetail(item: MediaItem) {
+    setIsSearchModalVisible(false);
+    router.push({ pathname: '/detail', params: { tmdb_id: item.tmdb_id, media_type: item.media_type } });
+  }
 
   if (loading) {
     return (
@@ -342,6 +474,17 @@ export default function HomeScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.screenContent}>
       <StatusBar style="light" />
+      <SearchModal
+        visible={isSearchModalVisible}
+        query={query}
+        results={searchResults}
+        loading={searchLoading}
+        error={searchError}
+        onChangeQuery={setQuery}
+        onClose={closeSearchModal}
+        onClear={clearSearch}
+        onOpenItem={openMediaDetail}
+      />
       <View style={styles.heroShell}>
         <View style={styles.topRow}>
           <Text style={styles.appTitle}>Inicio</Text>
@@ -350,43 +493,22 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.searchShell}>
-          <Text style={styles.searchLabel}>Buscar peliculas o series</Text>
+        <Pressable style={({ pressed }) => [styles.searchShell, pressed ? styles.cardPressed : null]} onPress={openSearchModal}>
           <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.searchInput}
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Ej. Severance, Dune, The Bear"
-              placeholderTextColor={darkDesign.colors.textFaint}
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="search"
-              selectionColor={darkDesign.colors.accent}
-            />
-            {query.length > 0 ? (
-              <Pressable style={styles.clearButton} onPress={clearSearch}>
-                <Text style={styles.clearButtonText}>Limpiar</Text>
-              </Pressable>
-            ) : null}
+            <Text style={styles.searchPlaceholder}>Ej. Severance, Dune, The Bear</Text>
+            <View style={styles.searchTriggerPill}>
+              <Text style={styles.searchTriggerPillText}>Buscar</Text>
+            </View>
           </View>
-        </View>
+        </Pressable>
 
         {featured ? <FeaturedCard item={featured} /> : null}
       </View>
-      {isSearching ? (
-        <SearchResults
-          results={searchResults}
-          loading={searchLoading}
-          error={searchError}
-        />
-      ) : (
-        <>
-          <MediaRow title="Trending esta semana" data={feed.trending} />
-          <MediaRow title="Peliculas populares" data={feed.popular_movies} />
-          <MediaRow title="Series populares" data={feed.popular_tv} />
-        </>
-      )}
+      <>
+        <MediaRow title="Trending esta semana" data={feed.trending} />
+        <MediaRow title="Peliculas populares" data={feed.popular_movies} />
+        <MediaRow title="Series populares" data={feed.popular_tv} />
+      </>
     </ScrollView>
   );
 }
@@ -439,12 +561,10 @@ const styles = StyleSheet.create({
   },
   searchShell: {
     borderWidth: 1,
-    borderColor: darkDesign.colors.border,
     borderRadius: darkDesign.radii.xl,
-    backgroundColor: darkDesign.colors.panel,
     padding: 16,
     gap: 10,
-    ...darkDesign.shadows.card,
+
   },
   searchLabel: {
     color: darkDesign.colors.textSoft,
@@ -453,16 +573,24 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     minHeight: 46,
-    borderRadius: darkDesign.radii.sm,
+    borderRadius: darkDesign.radii.pill,
     backgroundColor: darkDesign.colors.canvasInset,
     borderWidth: 1,
     borderColor: darkDesign.colors.borderStrong,
     flexDirection: 'row',
     alignItems: 'center',
+
   },
   searchInput: {
     flex: 1,
     color: darkDesign.colors.text,
+    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  searchPlaceholder: {
+    flex: 1,
+    color: darkDesign.colors.textFaint,
     fontSize: 15,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -518,7 +646,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   mediaScore: {
-    color: darkDesign.colors.warning,
+    color: darkDesign.colors.accent,
     ...darkDesign.typography.micro,
     fontWeight: '700',
   },
@@ -554,6 +682,129 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingHorizontal: 16,
     paddingBottom: 28,
+  },
+  searchTriggerPill: {
+    minWidth: 82,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderLeftWidth: 1,
+    borderLeftColor: darkDesign.colors.borderStrong,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchTriggerPillText: {
+    color: darkDesign.colors.accentSoft,
+    ...darkDesign.typography.micro,
+    fontWeight: '700',
+  },
+  searchModalScreen: {
+    flex: 1,
+    backgroundColor: '#080909',
+    paddingTop: 56,
+  },
+  searchModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 18,
+  },
+  searchModalIconButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchModalIcon: {
+    color: darkDesign.colors.text,
+    fontSize: 26,
+    fontWeight: '300',
+  },
+  searchModalInputShell: {
+    flex: 1,
+  },
+  searchModalInput: {
+    color: darkDesign.colors.text,
+    fontSize: 22,
+    fontWeight: '600',
+    letterSpacing: -0.4,
+    paddingVertical: 0,
+    borderBottomLeftRadius: 10,
+    borderTopLeftRadius: 10,
+  },
+  searchTabs: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: darkDesign.colors.border,
+  },
+  searchTabActive: {
+    paddingBottom: 14,
+    borderBottomWidth: 4,
+    borderBottomColor: darkDesign.colors.accent,
+  },
+  searchTabActiveText: {
+    color: darkDesign.colors.text,
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  searchModalEmptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 10,
+  },
+  searchModalEmptyTitle: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.section,
+  },
+  searchModalEmptyBody: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.body,
+    textAlign: 'center',
+  },
+  searchModalResults: {
+    flex: 1,
+  },
+  searchModalResultsContent: {
+    paddingBottom: 28,
+  },
+  searchResultsList: {
+    paddingHorizontal: 16,
+  },
+  searchResultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: darkDesign.colors.border,
+  },
+  searchResultPoster: {
+    width: 72,
+    height: 108,
+    borderRadius: darkDesign.radii.md,
+    backgroundColor: darkDesign.colors.borderStrong,
+  },
+  searchResultPosterFallback: {
+    borderWidth: 1,
+    borderColor: darkDesign.colors.borderStrong,
+  },
+  searchResultBody: {
+    flex: 1,
+    gap: 6,
+  },
+  searchResultTitle: {
+    color: darkDesign.colors.text,
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '700',
+  },
+  searchResultMeta: {
+    color: darkDesign.colors.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
   },
   socialHeader: {
     paddingHorizontal: 16,
@@ -691,7 +942,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   socialCardAccent: {
-    color: darkDesign.colors.warning,
+    color: darkDesign.colors.accent,
     fontSize: 13,
     fontWeight: '700',
   },
