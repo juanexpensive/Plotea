@@ -456,3 +456,225 @@
 - Residual risks:
 - No se ha ejecutado `pytest ..\tests -q` en esta sesion hasta este punto de documentacion
 - Las stats dependen de disponibilidad parcial de TMDB para horas y generos
+
+# Fase 11 - DetailScreen editorial tipo Letterboxd Details
+
+## Repository Context
+
+- Relevant files:
+- `DESIGN.md`
+- `mobile/src/presentation/features/detail/DetailScreen.tsx`
+- `mobile/src/presentation/features/detail/DetailViewModel.ts`
+- `mobile/src/presentation/theme/darkDesign.ts`
+- `mobile/src/presentation/theme/sharedStyles.ts`
+- `mobile/src/domain/entities/media.ts`
+- Existing patterns to follow:
+- pantalla mobile autocontenida con logica en `DetailViewModel` y render en `DetailScreen`
+- sistema visual dark ya implantado en mobile, con verde esmeralda como accent principal
+- `DESIGN.md` marca disciplina tipografica, contraste controlado y uso escaso del accent
+- Constraints:
+- `MediaDetail` no trae director, trailer ni tagline reales
+- la pantalla actual mezcla acciones, formularios y resenas demasiado arriba
+- no existe suite automatizada de UI para esta pantalla
+
+## Decisions Locked
+
+- La referencia de Letterboxd se toma como inspiracion de composicion, no como clon de paleta
+- `DESIGN.md` se aplicara en jerarquia, espaciado, tipografia compacta y uso escaso del verde
+- Se mantiene el canvas dark actual de mobile para no romper coherencia con el resto de la app
+- Las acciones principales deben tender a icono + etiqueta corta o icono solo cuando siga siendo claro
+- El bloque de resenas pierde protagonismo inicial y baja en la pagina
+- No se inventaran datos no disponibles como director real o CTA de trailer funcional
+
+## Phase Notes
+
+### Phase 1
+
+- Detailed tasks:
+- Revisar `DESIGN.md` para extraer reglas aplicables a una pantalla dark existente
+- Inspeccionar `DetailScreen` y `DetailViewModel` para entender datos y restricciones reales
+- Definir fases de trabajo y validacion
+- Findings:
+- La mejor traduccion es “estructura tipo Letterboxd + disciplina tipografica y de accent de PlotSkip”
+- La ausencia de director/trailer/tagline obliga a componer con year, runtime, rating, genres y overview
+- `@expo/vector-icons` ya esta disponible via Expo, asi que no hace falta introducir dependencia nueva para acciones iconicas
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- La mayor incertidumbre es de UX visual/manual, no de tipos o contratos
+- Status:
+- completed
+
+### Phase 2
+
+- Detailed tasks:
+- Rehacer la cabecera con hero visual, poster flotante y metadata compacta
+- Introducir una lectura editorial para title, eyebrow, lead y overview
+- Mantener compatibilidad con los datos reales disponibles en `MediaDetail`
+- Findings:
+- Usar el poster existente como base del hero, con blur y overlay, da una presencia cinematografica sin exigir contrato nuevo de backdrop
+- La combinacion de `DESIGN.md` y el tema dark actual funciona mejor como “disciplina de jerarquia” que como cambio de paleta total
+- El render temprano se hizo mas robusto corrigiendo el guard clause para que errores posteriores no borren la pantalla si `detail` ya existe
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- La cabecera gana identidad sin introducir dependencias nuevas ni tocar el `ViewModel`
+- Status:
+- completed
+
+### Phase 3
+
+- Detailed tasks:
+- Sustituir CTAs pesadas por una rail de acciones iconificada
+- Reposicionar formularios de diario y reseña debajo de la sinopsis
+- Compactar acciones sociales en reseñas con iconos de voto y comentarios
+- Findings:
+- Iconos con etiqueta micro ofrecen mejor equilibrio entre limpieza y descubribilidad que icon-only puro para esta v1
+- Bajar las reseñas por debajo de la historia hace que la pantalla venda primero la obra y no la mecánica social
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- Se mantuvo toda la funcionalidad actual de estados, diario, reseñas y comentarios
+- Status:
+- completed
+
+### Phase 4
+
+- Detailed tasks:
+- Ejecutar TypeScript
+- Revisar diff para detectar regresiones de flujo y coherencia visual
+- Actualizar docs de implementacion
+- Findings:
+- `npx tsc --noEmit` pasa
+- Sigue pendiente comprobacion manual del equilibrio del hero y del rail de acciones en movil real
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- El riesgo principal ya no es de tipos sino de tuning visual y tactilidad
+- Status:
+- completed
+
+## Review Findings
+
+- fixed: la pantalla deja de entrar con una jerarquia plana y ahora prioriza claramente imagen, titulo y sinopsis
+- fixed: las acciones principales pasan a un rail iconico mucho mas ligero que los botones previos
+- fixed: las reseñas comunitarias pierden protagonismo inicial sin perder funcionalidad
+- fixed: errores posteriores a la carga inicial ya no tumban toda la vista si `detail` sigue disponible
+- accepted risk: el hero usa `poster_path` ampliado y difuminado porque el contrato actual no expone backdrop real
+- accepted risk: la rail de acciones aun puede necesitar ajuste fino de labeling tras prueba manual
+
+## Deferred Work
+
+- Soporte real para backdrop, tagline, director y trailer si el contrato backend/TMDB se amplía
+- Validacion visual en Expo/dispositivo real y posible ajuste de alturas/espaciados
+- Iteracion posterior para sustituir o reducir aun mas el bloque de reseñas si se decide priorizar acciones propias sobre señal social
+
+## Final Confidence Check
+
+- Confidence score:
+- 8.6/10
+- Likely code review callouts:
+- Puede discutirse si las etiquetas micro bajo icono deberian quedarse o pasar a icon-only con tooltips/hints contextuales
+- El hero basado en poster blur funciona bien como fallback visual, pero no sustituye a un backdrop real cuando llegue ese dato
+- Residual risks:
+- No se ha validado manualmente en Expo/dispositivo real en esta sesion
+
+# Fase 12 - DetailScreen con 3 acciones y modal de reseña Details
+
+## Repository Context
+
+- Relevant files:
+- `mobile/src/presentation/features/detail/DetailScreen.tsx`
+- `mobile/src/presentation/features/detail/DetailViewModel.ts`
+- `implementation.md`
+- `implementation_details.md`
+- Existing patterns to follow:
+- estado y mutaciones ya centralizados en `DetailViewModel`
+- `Ionicons` disponible en mobile
+- tema dark actual + disciplina de `DESIGN.md`
+- Constraints:
+- el hook sigue exponiendo estado de watchlog aunque esta pantalla ya no deba priorizarlo visualmente
+- no hay suite visual automatizada
+
+## Decisions Locked
+
+- La pantalla debe exponer solo 3 acciones visibles: `vista`, `watchlist` y `reseña`
+- `vista` sirve para quien quiere marcar que ha visto la obra sin escribir reseña
+- No se expone desde aquí ninguna acción para otras listas
+- La reseña se edita en un modal centrado, no en un formulario dentro del scroll
+- La puntuación usa 5 estrellas con soporte de medias estrellas
+
+## Phase Notes
+
+### Phase 1
+
+- Detailed tasks:
+- Reducir la rail de acciones a 3 botones
+- Eliminar el bloque visible de formularios inline asociado al diario
+- Mantener el comportamiento de `watched` y `watchlist`
+- Findings:
+- El affordance de diario confundía el foco principal de la pantalla respecto a la intención actual
+- La lógica de watchlog puede seguir existiendo en el `ViewModel` aunque ya no se renderice en esta iteración
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- El cambio busca claridad de producto más que ampliar capacidad
+- Status:
+- completed
+
+### Phase 2
+
+- Detailed tasks:
+- Mover la reseña a un modal centrado
+- Sustituir la rejilla numérica por selector de 5 estrellas con soporte de media estrella
+- Mantener guardar, editar y borrar reseña dentro del modal
+- Findings:
+- El modal hace que la reseña se sienta como una acción principal, no como un bloque secundario dentro del scroll
+- El selector por mitades se resolvió sin dependencias nuevas usando dos hit areas por estrella sobre `Ionicons`
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- La interacción queda mucho más alineada con la intención del usuario que el formulario inline previo
+- Status:
+- completed
+
+### Phase 3
+
+- Detailed tasks:
+- Ejecutar TypeScript
+- Revisar el diff para detectar restos del flujo de diario inline
+- Actualizar documentación
+- Findings:
+- `npx tsc --noEmit` pasa
+- La lógica de watchlog sigue existiendo en el `ViewModel`, pero ya no se expone visualmente desde esta pantalla
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- El principal punto pendiente es de ergonomía táctil, no de tipos ni flujo base
+- Status:
+- completed
+
+## Review Findings
+
+- fixed: la pantalla queda reducida a las 3 acciones pedidas y elimina el cuarto botón de diario
+- fixed: la reseña se escribe y edita en un modal centrado en vez de dentro del scroll
+- fixed: la puntuación pasa a 5 estrellas con soporte de medias estrellas
+- fixed: no se expone desde esta vista ningún affordance para otras listas
+- accepted risk: el selector de medias estrellas necesita validación manual en dispositivo real para confirmar que las hit areas se sienten precisas
+- accepted risk: con teclado abierto puede hacer falta ajustar altura o scroll interno del modal según el dispositivo
+
+## Deferred Work
+
+- Revisar si la reseña propia debe seguir mostrándose en el body o resumirse de forma más compacta
+- Ajuste fino del modal con teclado y pantallas pequeñas
+- Si se quiere, limpiar después el estado de watchlog no usado en `DetailViewModel`
+
+## Final Confidence Check
+
+- Confidence score:
+- 9.0/10
+- Likely code review callouts:
+- Podrían pedir convertir el modal en `KeyboardAvoidingView` si en móviles pequeños el teclado tapa parte del textarea
+- El `ViewModel` aún conserva estado de watchlog que esta pantalla ya no usa visualmente
+- Residual risks:
+- No se ha validado manualmente en Expo/dispositivo real en esta sesión

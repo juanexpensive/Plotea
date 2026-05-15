@@ -217,3 +217,117 @@
 - `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_watch_log.py -q`
 - `npx tsc --noEmit`
 - Riesgo residual aceptado: la composicion sigue usando el sistema visual dark actual aunque la estructura y la jerarquia se alinean con `DESIGN.md`
+
+# Fase 11 - DetailScreen editorial tipo Letterboxd
+
+## Objetivo
+
+- Replantear la pantalla de detalle de media para que se sienta mas editorial, limpia y cinematografica, tomando la composicion de Letterboxd como referencia y usando `DESIGN.md` para jerarquia, tipografia y uso disciplinado del verde.
+
+## Alcance
+
+- En alcance:
+- Rehacer la composicion principal de `DetailScreen`
+- Hero visual con backdrop/poster y metadata mas compacta
+- Jerarquia editorial para titulo, meta, tagline y overview
+- Acciones primarias mas compactas y guiadas por iconos
+- Reducir protagonismo inicial del bloque de resenas manteniendo su funcionalidad
+- Fuera de alcance:
+- Cambios de contrato backend para directores, trailers o tagline real
+- Rediseño global del resto de pantallas
+- Nueva infraestructura de tests visuales/E2E
+
+## Fases
+
+### Fase 1: Plan visual y restricciones
+
+- Goal: fijar la composicion objetivo y como se traduce la referencia de Letterboxd al sistema actual de PlotSkip
+- Expected files or systems: `DESIGN.md`, `mobile/src/presentation/features/detail/DetailScreen.tsx`, docs de implementacion
+- Validation: decisiones visuales y limitaciones de datos documentadas antes de editar
+- Review gate: quedan claras la jerarquia de bloques y las concesiones por falta de datos como director/trailer/tagline real
+- Estado: completada
+
+### Fase 2: Hero y metadata editorial
+
+- Goal: convertir el arranque de la pantalla en una cabecera mas limpia con imagen dominante, poster flotante y meta compacta
+- Expected files or systems: `mobile/src/presentation/features/detail/DetailScreen.tsx`
+- Validation: `npx tsc --noEmit`
+- Review gate: la pantalla gana identidad visual sin perder legibilidad ni estados de carga/error
+- Estado: completada
+
+### Fase 3: Acciones compactas con iconos y reseñas reposicionadas
+
+- Goal: sustituir CTA pesadas por acciones compactas y dejar las reseñas como bloque secundario
+- Expected files or systems: `mobile/src/presentation/features/detail/DetailScreen.tsx`
+- Validation: `npx tsc --noEmit`
+- Review gate: registrar visionado, estado y escritura de reseña siguen funcionando con menos ruido visual
+- Estado: completada
+
+### Fase 4: QA, self-review y riesgos
+
+- Goal: revisar diff, validar TypeScript y documentar riesgos visuales/funcionales residuales
+- Expected files or systems: docs de implementacion y mobile
+- Validation: `npx tsc --noEmit`
+- Review gate: quedan explicitados los puntos que todavia requieren validacion manual en Expo/dispositivo real
+- Estado: completada
+
+## Cierre
+
+- `DetailScreen` ahora abre con una composicion mas editorial: hero visual, poster flotante y metadata compacta
+- Las acciones principales pasan a una rail iconica con menos peso textual y las reseñas bajan en la jerarquia inicial
+- La pantalla mantiene el sistema dark actual, pero aplica mejor la disciplina de `DESIGN.md` en espaciado, jerarquia y uso contenido del verde
+- Validaciones ejecutadas:
+- `npx tsc --noEmit`
+- Riesgo residual aceptado: falta validacion manual en Expo/dispositivo real para afinar feeling, scroll y equilibrio visual del hero
+
+# Fase 12 - DetailScreen con 3 acciones y modal de reseña
+
+## Objetivo
+
+- Simplificar la interacción principal de detalle a `vista`, `watchlist` y `reseña`, y mover la escritura de reseña a un modal centrado con rating por estrellas de media unidad.
+
+## Alcance
+
+- En alcance:
+- Reducir la rail a 3 botones
+- Eliminar la entrada visible de diario/visionado inline de esta pantalla
+- Modal centrado para crear/editar reseña
+- Selector de 5 estrellas con soporte de media estrella
+- Fuera de alcance:
+- Cambios backend de contrato
+- Replantear comentarios o reseñas de comunidad fuera de su posición actual
+
+## Fases
+
+### Fase 1: Simplificación de acciones
+
+- Goal: dejar solo las 3 acciones que definen el flujo principal de detalle
+- Expected files or systems: `mobile/src/presentation/features/detail/DetailScreen.tsx`
+- Validation: `npx tsc --noEmit`
+- Review gate: no queda affordance visible para diario u otras listas
+- Estado: completada
+
+### Fase 2: Modal de reseña y rating por estrellas
+
+- Goal: reemplazar el formulario inline por un modal centrado más natural para escribir y puntuar
+- Expected files or systems: `mobile/src/presentation/features/detail/DetailScreen.tsx`
+- Validation: `npx tsc --noEmit`
+- Review gate: editar/publicar reseña sigue funcionando y la puntuación admite medias estrellas
+- Estado: completada
+
+### Fase 3: QA y documentación
+
+- Goal: revisar el diff, validar TypeScript y dejar los riesgos residuales anotados
+- Expected files or systems: docs de implementacion y mobile
+- Validation: `npx tsc --noEmit`
+- Review gate: quedan explicitados los puntos a validar manualmente en móvil real
+- Estado: completada
+
+## Cierre
+
+- `DetailScreen` queda con 3 acciones visibles: `vista`, `watchlist` y `reseña`
+- La reseña ya no se escribe en el scroll: se abre en un modal centrado con puntuación por 5 estrellas y medias estrellas
+- La pantalla deja fuera el affordance visible de diario desde esta vista para que el detalle sea más claro y directo
+- Validaciones ejecutadas:
+- `npx tsc --noEmit`
+- Riesgo residual aceptado: falta validar en móvil real el tacto del selector de medias estrellas y el tamaño final del modal con teclado abierto

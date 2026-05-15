@@ -246,9 +246,12 @@ async def test_get_user_stats_aggregates_watch_log_and_tmdb(async_client: AsyncC
         "average_rating": 7.0,
     }
     assert fake_tmdb.calls == [
-        {"path": "/movie/551", "params": None},
-        {"path": "/tv/1399", "params": None},
-        {"path": "/movie/550", "params": None},
+        {"path": "/movie/551", "params": {"language": "es-ES"}},
+        {"path": "/movie/551", "params": {"language": "en-US"}},
+        {"path": "/tv/1399", "params": {"language": "es-ES"}},
+        {"path": "/tv/1399", "params": {"language": "en-US"}},
+        {"path": "/movie/550", "params": {"language": "es-ES"}},
+        {"path": "/movie/550", "params": {"language": "en-US"}},
     ]
 
 

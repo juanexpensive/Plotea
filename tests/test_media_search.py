@@ -83,7 +83,7 @@ async def test_search_media_returns_normalized_movies_and_tv(
     assert fake_tmdb.calls == [
         {
             "path": "/search/multi",
-            "params": {"query": "matrix", "include_adult": "false"},
+            "params": {"query": "matrix", "include_adult": "false", "language": "es-ES"},
         }
     ]
 

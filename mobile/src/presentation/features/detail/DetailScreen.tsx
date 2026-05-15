@@ -5,6 +5,7 @@ import { ComponentProps, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -38,20 +39,15 @@ export default function DetailScreen() {
     votingReviewIds,
     loading,
     savingStatus,
-    savingWatchLog,
     savingReview,
     deletingReview,
-    showWatchLogForm,
     showReviewForm,
-    watchedAt,
-    rating,
     reviewRating,
     reviewBody,
     reviewContainsSpoilers,
     successMessage,
     error,
     handleStatusPress,
-    handleSaveWatchLog,
     handleSaveReview,
     handleDeleteReview,
     toggleComments,
@@ -62,12 +58,9 @@ export default function DetailScreen() {
     handleDeleteComment,
     handleToggleReviewVote,
     getThreadState,
-    setWatchedAt,
-    setRating,
     setReviewRating,
     setReviewBody,
     setReviewContainsSpoilers,
-    toggleWatchLogForm,
     toggleReviewForm,
   } = useDetailViewModel(media_type, Number(tmdb_id));
 
@@ -94,7 +87,6 @@ export default function DetailScreen() {
   const overviewBody = getOverviewBody(detail.overview, overviewLead);
   const metaLine = buildMetaLine(detail.release_date, detail.runtime, detail.vote_average);
   const eyebrow = buildEyebrow(media_type, detail.genres);
-  const showFormsRail = showWatchLogForm || showReviewForm;
 
   return (
     <View style={styles.screen}>
@@ -161,50 +153,16 @@ export default function DetailScreen() {
           <ActionRail
             status={status}
             hasReview={Boolean(myReview)}
-            showWatchLogForm={showWatchLogForm}
             showReviewForm={showReviewForm}
             savingStatus={savingStatus}
-            savingWatchLog={savingWatchLog}
             savingReview={savingReview}
             onToggleWatched={() => handleStatusPress('watched')}
             onToggleWatchlist={() => handleStatusPress('watchlist')}
-            onToggleWatchLog={toggleWatchLogForm}
             onToggleReview={toggleReviewForm}
           />
 
           {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-
-          {showFormsRail ? (
-            <View style={styles.formsStack}>
-              {showWatchLogForm ? (
-                <WatchLogForm
-                  watchedAt={watchedAt}
-                  rating={rating}
-                  saving={savingWatchLog}
-                  onWatchedAtChange={setWatchedAt}
-                  onRatingChange={setRating}
-                  onSave={handleSaveWatchLog}
-                />
-              ) : null}
-
-              {showReviewForm ? (
-                <ReviewForm
-                  reviewRating={reviewRating}
-                  reviewBody={reviewBody}
-                  reviewContainsSpoilers={reviewContainsSpoilers}
-                  savingReview={savingReview}
-                  deletingReview={deletingReview}
-                  hasExistingReview={myReview !== null}
-                  onRatingChange={setReviewRating}
-                  onBodyChange={setReviewBody}
-                  onSpoilersChange={setReviewContainsSpoilers}
-                  onSaveReview={handleSaveReview}
-                  onDeleteReview={handleDeleteReview}
-                />
-              ) : null}
-            </View>
-          ) : null}
 
           <ReviewSection
             myReview={myReview}
@@ -212,18 +170,7 @@ export default function DetailScreen() {
             currentUserId={currentUserId}
             votingReviewIds={votingReviewIds}
             getThreadState={getThreadState}
-            showReviewForm={showReviewForm}
-            savingReview={savingReview}
-            deletingReview={deletingReview}
-            reviewRating={reviewRating}
-            reviewBody={reviewBody}
-            reviewContainsSpoilers={reviewContainsSpoilers}
             onToggleReviewForm={toggleReviewForm}
-            onSaveReview={handleSaveReview}
-            onDeleteReview={handleDeleteReview}
-            onRatingChange={setReviewRating}
-            onBodyChange={setReviewBody}
-            onSpoilersChange={setReviewContainsSpoilers}
             onToggleComments={toggleComments}
             onOpenCommentComposer={openCommentComposer}
             onCloseCommentComposer={closeCommentComposer}
@@ -234,6 +181,21 @@ export default function DetailScreen() {
           />
         </View>
       </ScrollView>
+      <ReviewModal
+        visible={showReviewForm}
+        savingReview={savingReview}
+        deletingReview={deletingReview}
+        reviewRating={reviewRating}
+        reviewBody={reviewBody}
+        reviewContainsSpoilers={reviewContainsSpoilers}
+        hasExistingReview={myReview !== null}
+        onClose={toggleReviewForm}
+        onRatingChange={setReviewRating}
+        onBodyChange={setReviewBody}
+        onSpoilersChange={setReviewContainsSpoilers}
+        onSaveReview={handleSaveReview}
+        onDeleteReview={handleDeleteReview}
+      />
     </View>
   );
 }
@@ -294,26 +256,20 @@ function getOverviewBody(overview: string, lead: string | null) {
 function ActionRail({
   status,
   hasReview,
-  showWatchLogForm,
   showReviewForm,
   savingStatus,
-  savingWatchLog,
   savingReview,
   onToggleWatched,
   onToggleWatchlist,
-  onToggleWatchLog,
   onToggleReview,
 }: {
   status: 'watched' | 'watchlist' | null;
   hasReview: boolean;
-  showWatchLogForm: boolean;
   showReviewForm: boolean;
   savingStatus: boolean;
-  savingWatchLog: boolean;
   savingReview: boolean;
   onToggleWatched: () => void;
   onToggleWatchlist: () => void;
-  onToggleWatchLog: () => void;
   onToggleReview: () => void;
 }) {
   return (
@@ -331,13 +287,6 @@ function ActionRail({
         active={status === 'watchlist'}
         disabled={savingStatus}
         onPress={onToggleWatchlist}
-      />
-      <ActionIconButton
-        icon={showWatchLogForm ? 'checkmark-circle' : 'add-circle-outline'}
-        label="Diario"
-        active={showWatchLogForm}
-        disabled={savingWatchLog}
-        onPress={onToggleWatchLog}
       />
       <ActionIconButton
         icon={showReviewForm ? 'create' : hasReview ? 'document-text' : 'create-outline'}
@@ -369,7 +318,6 @@ function ActionIconButton({
       accessibilityLabel={label}
       style={({ pressed }) => [
         styles.actionButton,
-        active ? styles.actionButtonActive : null,
         pressed ? styles.buttonPressed : null,
         disabled ? styles.buttonDisabled : null,
       ]}
@@ -379,9 +327,9 @@ function ActionIconButton({
       <Ionicons
         name={icon}
         size={ACTION_ICON_SIZE}
-        color={active ? darkDesign.colors.onAccent : darkDesign.colors.textSoft}
+        color={active ? darkDesign.colors.accent : darkDesign.colors.textSoft}
       />
-      <Text style={[styles.actionLabel, active ? styles.actionLabelActive : null]}>{label}</Text>
+      <Text style={styles.actionLabel}>{label}</Text>
     </Pressable>
   );
 }
@@ -392,18 +340,7 @@ function ReviewSection({
   currentUserId,
   votingReviewIds,
   getThreadState,
-  showReviewForm,
-  savingReview,
-  deletingReview,
-  reviewRating,
-  reviewBody,
-  reviewContainsSpoilers,
   onToggleReviewForm,
-  onSaveReview,
-  onDeleteReview,
-  onRatingChange,
-  onBodyChange,
-  onSpoilersChange,
   onToggleComments,
   onOpenCommentComposer,
   onCloseCommentComposer,
@@ -428,18 +365,7 @@ function ReviewSection({
     isSubmitting: boolean;
     deletingCommentId: number | null;
   };
-  showReviewForm: boolean;
-  savingReview: boolean;
-  deletingReview: boolean;
-  reviewRating: ReviewRating;
-  reviewBody: string;
-  reviewContainsSpoilers: boolean;
   onToggleReviewForm: () => void;
-  onSaveReview: () => void;
-  onDeleteReview: () => void;
-  onRatingChange: (value: ReviewRating) => void;
-  onBodyChange: (value: string) => void;
-  onSpoilersChange: (value: boolean) => void;
   onToggleComments: (reviewId: number) => void;
   onOpenCommentComposer: (reviewId: number, parentCommentId: number | null) => void;
   onCloseCommentComposer: (reviewId: number) => void;
@@ -453,26 +379,10 @@ function ReviewSection({
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Tu reseña</Text>
         <Pressable onPress={onToggleReviewForm}>
-          <Text style={styles.secondaryActionText}>
-            {showReviewForm ? 'Cancelar' : myReview ? 'Editar' : 'Escribir'}
-          </Text>
+          <Text style={styles.secondaryActionText}>{myReview ? 'Editar' : 'Escribir'}</Text>
         </Pressable>
       </View>
-      {showReviewForm ? (
-        <ReviewForm
-          reviewRating={reviewRating}
-          reviewBody={reviewBody}
-          reviewContainsSpoilers={reviewContainsSpoilers}
-          savingReview={savingReview}
-          deletingReview={deletingReview}
-          hasExistingReview={myReview !== null}
-          onRatingChange={onRatingChange}
-          onBodyChange={onBodyChange}
-          onSpoilersChange={onSpoilersChange}
-          onSaveReview={onSaveReview}
-          onDeleteReview={onDeleteReview}
-        />
-      ) : myReview ? (
+      {myReview ? (
         <ReviewCard
           review={myReview}
           currentUserId={currentUserId}
@@ -522,6 +432,65 @@ function ReviewSection({
   );
 }
 
+function ReviewModal({
+  visible,
+  savingReview,
+  deletingReview,
+  reviewRating,
+  reviewBody,
+  reviewContainsSpoilers,
+  hasExistingReview,
+  onClose,
+  onRatingChange,
+  onBodyChange,
+  onSpoilersChange,
+  onSaveReview,
+  onDeleteReview,
+}: {
+  visible: boolean;
+  savingReview: boolean;
+  deletingReview: boolean;
+  reviewRating: ReviewRating;
+  reviewBody: string;
+  reviewContainsSpoilers: boolean;
+  hasExistingReview: boolean;
+  onClose: () => void;
+  onRatingChange: (value: ReviewRating) => void;
+  onBodyChange: (value: string) => void;
+  onSpoilersChange: (value: boolean) => void;
+  onSaveReview: () => void;
+  onDeleteReview: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={styles.modalCard}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{hasExistingReview ? 'Editar reseña' : 'Escribir reseña'}</Text>
+            <Pressable onPress={onClose} hitSlop={8}>
+              <Ionicons name="close" size={22} color={darkDesign.colors.textSoft} />
+            </Pressable>
+          </View>
+          <ReviewForm
+            reviewRating={reviewRating}
+            reviewBody={reviewBody}
+            reviewContainsSpoilers={reviewContainsSpoilers}
+            savingReview={savingReview}
+            deletingReview={deletingReview}
+            hasExistingReview={hasExistingReview}
+            onRatingChange={onRatingChange}
+            onBodyChange={onBodyChange}
+            onSpoilersChange={onSpoilersChange}
+            onSaveReview={onSaveReview}
+            onDeleteReview={onDeleteReview}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function ReviewForm({
   reviewRating,
   reviewBody,
@@ -550,26 +519,9 @@ function ReviewForm({
   return (
     <View style={styles.reviewForm}>
       <Text style={styles.formLabel}>Puntuación</Text>
-      <View style={styles.ratingGrid}>
-        {REVIEW_RATINGS.map((value) => (
-          <Pressable
-            key={value}
-            style={[
-              styles.ratingButton,
-              reviewRating === value ? styles.ratingButtonActive : null,
-            ]}
-            onPress={() => onRatingChange(value)}
-          >
-            <Text
-              style={[
-                styles.ratingText,
-                reviewRating === value ? styles.ratingTextActive : null,
-              ]}
-            >
-              {value.toFixed(1)}
-            </Text>
-          </Pressable>
-        ))}
+      <View style={styles.ratingHeader}>
+        <StarRatingInput value={reviewRating} onChange={onRatingChange} />
+        <Text style={styles.ratingValue}>{reviewRating.toFixed(1)}</Text>
       </View>
       <Text style={styles.formLabel}>Reseña</Text>
       <TextInput
@@ -619,6 +571,74 @@ function ReviewForm({
           </Text>
         </Pressable>
       ) : null}
+    </View>
+  );
+}
+
+function StarRatingInput({
+  value,
+  onChange,
+}: {
+  value: ReviewRating;
+  onChange: (value: ReviewRating) => void;
+}) {
+  return (
+    <View style={styles.starRow}>
+      {Array.from({ length: 5 }, (_, index) => {
+        const starIndex = index + 1;
+        const filledValue = starIndex;
+        const halfValue = (starIndex - 0.5) as ReviewRating;
+        const iconName =
+          value >= filledValue
+            ? 'star'
+            : value >= halfValue
+              ? 'star-half'
+              : 'star-outline';
+
+        return (
+          <View key={starIndex} style={styles.starHitArea}>
+            <Ionicons name={iconName} size={34} color={darkDesign.colors.accent} />
+            <Pressable
+              style={styles.starHalfLeft}
+              onPress={() => onChange(halfValue)}
+              accessibilityRole="button"
+              accessibilityLabel={`${halfValue} estrellas`}
+            />
+            <Pressable
+              style={styles.starHalfRight}
+              onPress={() => onChange(filledValue as ReviewRating)}
+              accessibilityRole="button"
+              accessibilityLabel={`${filledValue} estrellas`}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function StarRatingDisplay({
+  value,
+  size = 16,
+}: {
+  value: ReviewRating;
+  size?: number;
+}) {
+  return (
+    <View style={styles.starRow}>
+      {Array.from({ length: 5 }, (_, index) => {
+        const starIndex = index + 1;
+        const filledValue = starIndex;
+        const halfValue = (starIndex - 0.5) as ReviewRating;
+        const iconName =
+          value >= filledValue
+            ? 'star'
+            : value >= halfValue
+              ? 'star-half'
+              : 'star-outline';
+
+        return <Ionicons key={starIndex} name={iconName} size={size} color={darkDesign.colors.accent} />;
+      })}
     </View>
   );
 }
@@ -675,7 +695,7 @@ function ReviewCard({
           <Text style={styles.reviewAuthor}>{authorName}</Text>
           <Text style={styles.reviewTimestamp}>{review.created_at.slice(0, 10)}</Text>
         </View>
-        <Text style={styles.reviewRating}>{review.rating.toFixed(1)} ★</Text>
+        <StarRatingDisplay value={review.rating} size={15} />
       </View>
       {shouldHideBody ? (
         <View style={styles.spoilerBox}>
@@ -932,69 +952,6 @@ function CommentCard({
   );
 }
 
-function WatchLogForm({
-  watchedAt,
-  rating,
-  saving,
-  onWatchedAtChange,
-  onRatingChange,
-  onSave,
-}: {
-  watchedAt: string;
-  rating: number | null;
-  saving: boolean;
-  onWatchedAtChange: (value: string) => void;
-  onRatingChange: (value: number | null) => void;
-  onSave: () => void;
-}) {
-  const ratings = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-
-  return (
-    <View style={styles.watchLogForm}>
-      <Text style={styles.formLabel}>Fecha</Text>
-      <TextInput
-        style={styles.textInput}
-        value={watchedAt}
-        onChangeText={onWatchedAtChange}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor={darkDesign.colors.textFaint}
-        autoCapitalize="none"
-        selectionColor={darkDesign.colors.accent}
-      />
-      <Text style={styles.formLabel}>Puntuación</Text>
-      <View style={styles.ratingGrid}>
-        {ratings.map((value) => (
-          <Pressable
-            key={value}
-            style={[
-              styles.ratingButton,
-              rating === value ? styles.ratingButtonActive : null,
-            ]}
-            onPress={() => onRatingChange(rating === value ? null : value)}
-          >
-            <Text style={[styles.ratingText, rating === value ? styles.ratingTextActive : null]}>
-              {(value / 2).toFixed(1)}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <Pressable
-        style={({ pressed }) => [
-          styles.saveReviewButton,
-          pressed ? styles.buttonPressed : null,
-          saving ? styles.buttonDisabled : null,
-        ]}
-        onPress={onSave}
-        disabled={saving}
-      >
-        <Text style={styles.saveReviewButtonText}>
-          {saving ? 'Guardando...' : 'Guardar visionado'}
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: sharedStyles.screen,
   scrollContent: {
@@ -1150,21 +1107,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
-  actionButtonActive: {
-    backgroundColor: darkDesign.colors.accent,
-    borderColor: darkDesign.colors.accent,
-  },
   actionLabel: {
     color: darkDesign.colors.textMuted,
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '600',
-  },
-  actionLabelActive: {
-    color: darkDesign.colors.onAccent,
-  },
-  formsStack: {
-    gap: darkDesign.spacing.md,
   },
   section: {
     gap: darkDesign.spacing.md,
@@ -1203,13 +1150,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '600',
   },
-  watchLogForm: {
-    ...sharedStyles.panel,
-    padding: darkDesign.spacing.lg,
-  },
   reviewForm: {
-    ...sharedStyles.panel,
-    padding: darkDesign.spacing.lg,
+    gap: darkDesign.spacing.md,
   },
   commentsSection: {
     gap: darkDesign.spacing.md,
@@ -1248,33 +1190,43 @@ const styles = StyleSheet.create({
   bodyInput: {
     minHeight: 120,
   },
-  ratingGrid: {
+  ratingHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: darkDesign.spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: darkDesign.spacing.md,
   },
-  ratingButton: {
-    width: 48,
-    minHeight: 36,
-    borderRadius: darkDesign.radii.sm,
-    borderWidth: 1,
-    borderColor: darkDesign.colors.borderStrong,
-    backgroundColor: darkDesign.colors.canvasRaised,
+  starRow: {
+    flexDirection: 'row',
+    gap: darkDesign.spacing.xs,
+    alignItems: 'center',
+  },
+  starHitArea: {
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
-  ratingButtonActive: {
-    backgroundColor: darkDesign.colors.accent,
-    borderColor: darkDesign.colors.accent,
+  starHalfLeft: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: '50%',
   },
-  ratingText: {
+  starHalfRight: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: '50%',
+  },
+  ratingValue: {
     color: darkDesign.colors.textSoft,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 18,
+    lineHeight: 22,
     fontWeight: '600',
-  },
-  ratingTextActive: {
-    color: darkDesign.colors.onAccent,
   },
   switchRow: {
     flexDirection: 'row',
@@ -1326,12 +1278,6 @@ const styles = StyleSheet.create({
     color: darkDesign.colors.textFaint,
     fontSize: 12,
     lineHeight: 16,
-  },
-  reviewRating: {
-    color: darkDesign.colors.warning,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '700',
   },
   reviewBody: {
     color: darkDesign.colors.textSoft,
@@ -1444,4 +1390,35 @@ const styles = StyleSheet.create({
   inlineError: sharedStyles.errorText,
   emptyText: sharedStyles.captionMuted,
   errorText: sharedStyles.errorText,
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(5, 7, 10, 0.68)',
+    paddingHorizontal: darkDesign.spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: darkDesign.radii.xl,
+    borderWidth: 1,
+    borderColor: darkDesign.colors.borderStrong,
+    backgroundColor: darkDesign.colors.panelStrong,
+    padding: darkDesign.spacing.lg,
+    gap: darkDesign.spacing.lg,
+    ...darkDesign.shadows.card,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: darkDesign.spacing.md,
+  },
+  modalTitle: {
+    color: darkDesign.colors.text,
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+  },
 });
