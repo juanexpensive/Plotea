@@ -1030,3 +1030,226 @@
 - Tambien puede pedirse validacion manual del layout de `profile-network` en distintos tamanos de pantalla
 - Residual risks:
 - No se ha hecho prueba manual en Expo/dispositivo real en esta sesion
+
+# Fase 15 - Tabs internas de Perfil con Watchlist y Diario Details
+
+## Repository Context
+
+- Relevant files:
+- `mobile/app/(tabs)/_layout.tsx`
+- `mobile/app/(tabs)/diary.tsx`
+- nueva ruta placeholder `mobile/app/(tabs)/wip.tsx`
+- `mobile/src/presentation/features/profile/ProfileScreen.tsx`
+- `mobile/src/presentation/features/profile/ProfileViewModel.ts`
+- `mobile/src/presentation/features/profile/MediaStatusListViewModel.ts`
+- `mobile/src/presentation/features/profile/WatchLogListViewModel.ts`
+- nuevo componente compartido de diario
+- nuevo componente/presentacion de watchlist embebida
+- Existing patterns to follow:
+- tabs principales con `expo-router`
+- view models finos con fetch en cliente y navegacion mediante `router.push`
+- `ListDetailScreen` como referencia visual para grid denso de posters
+- `WatchLogListScreen` como referencia funcional para el diario completo
+- Constraints:
+- no hay cambios backend previstos
+- la estrella central debe ser visible pero no interactiva
+- `Diario` deja de ser una tab visible principal y pasa a vivir dentro de `ProfileScreen`
+- la watchlist personal no debe heredar affordances de colaboracion
+
+## Decisions Locked
+
+- La estrella central se implementa como placeholder visual dentro de la tab bar con ruta dedicada pero sin accion de navegacion desde el boton
+- `ProfileScreen` controla sus tabs internas con estado local, no con subrutas
+- La tab `Watchlist` usa el username sin `@` en el titulo y una grid de 4 columnas sin metadatos inferiores
+- La tab `Diario` reutiliza un componente compartido para evitar drift con `WatchLogListScreen`
+- La CTA de actividad reciente dentro de `Perfil` cambia de navegar a `/(tabs)/diary` a seleccionar la tab interna `Diario`
+
+## Phase Notes
+
+### Phase 1
+
+- Detailed tasks:
+- actualizar `implementation.md` y `implementation_details.md`
+- quitar `Diario` de la tab bar visible
+- anadir placeholder `WIP` central y su ruta vacia
+- Findings:
+- mantener la ruta `diary` oculta evita una refactorizacion innecesaria de archivos bajo `(tabs)` mientras se retira del shell visible
+- una ruta placeholder `wip` permite colocar la estrella en el centro sin introducir comportamiento funcional
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- comprobar que Expo Router no vuelva a mostrar `diary` por auto-registro del archivo
+- Status:
+- completed
+
+### Phase 2
+
+- Detailed tasks:
+- montar tabs internas dentro de `ProfileScreen`
+- consumir `useMediaStatusListViewModel('watchlist')` de forma embebida
+- crear layout de watchlist tipo coleccion personal con 4 columnas y apertura a detalle
+- Findings:
+- la watchlist personal funciona mejor como presentational component dedicado que como reuse literal de `MediaStatusListScreen`, porque necesita otra jerarquia visual y ningun metadato inferior
+- mantener los hooks de watchlist y diario montados en `ProfileScreen` evita recargas al cambiar de tab interna
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- evitar que los controles de edicion del perfil interfieran visualmente cuando la tab activa no sea `Perfil`
+- Status:
+- completed
+
+### Phase 3
+
+- Detailed tasks:
+- extraer un componente compartido del diario
+- reutilizarlo en `WatchLogListScreen` y en la tab interna de perfil
+- eliminar la dependencia de `openDiary` hacia `/(tabs)/diary`
+- Findings:
+- `WatchLogDiaryContent` permite conservar el mismo comportamiento de secciones, detalle y borrado tanto en la ruta standalone como en la tab de perfil
+- la CTA de `Recent activity` pasa a seleccionar la tab interna `Diario`, evitando una navegacion que ya no existe en la tab bar
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- mantener borrado y apertura de detalle exactamente igual que antes
+- Status:
+- completed
+
+### Phase 4
+
+- Detailed tasks:
+- revisar espaciados, estados vacios y affordances de tab
+- ejecutar TypeScript
+- actualizar hallazgos finales y riesgos residuales
+- Findings:
+- `npx tsc --noEmit` pasa
+- no fue necesario tocar contratos backend ni repositorios HTTP
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- documentar si queda pendiente validacion manual en Expo
+- Status:
+- completed
+
+## Review Findings
+
+- fixed: `Diario` deja de aparecer en la tab bar principal y la estrella `WIP` ocupa el slot central sin navegacion
+- fixed: `ProfileScreen` ya contiene tabs superiores `Perfil`, `Watchlist` y `Diario`
+- fixed: la watchlist personal se presenta sin `@username`, sin colaboradores y con grid de 4 columnas
+- fixed: el diario interno reutiliza la misma UI y comportamiento que la pantalla standalone existente
+- accepted risk: la ruta `mobile/app/(tabs)/diary.tsx` sigue existiendo pero queda oculta del shell visible para minimizar el cambio estructural
+- accepted risk: falta validacion manual en Expo/dispositivo real para confirmar el tacto del top-tab switcher y el balance visual de la estrella `WIP`
+
+## Deferred Work
+
+- decidir si la ruta oculta `diary` debe eliminarse del todo en una limpieza posterior
+- dar funcionalidad real a la estrella central cuando exista producto para ello
+- tests automatizados de UI mobile para tabs internas del perfil
+
+## Final Confidence Check
+
+- Confidence score:
+- 9.2/10
+- Likely code review callouts:
+- puede discutirse si conviene eliminar por completo la ruta `(tabs)/diary` en vez de dejarla oculta
+- puede pedirse una validacion visual manual del balance entre hero de perfil y top tabs en distintos tamanos de pantalla
+- Residual risks:
+- no se ha hecho prueba manual en Expo/dispositivo real en esta sesion
+
+# Fase 16 - Sugerencia random desde la estrella de tab bar Details
+
+## Repository Context
+
+- Relevant files:
+- `mobile/app/(tabs)/_layout.tsx`
+- `mobile/app/(tabs)/wip.tsx`
+- `mobile/src/data/repositories/MediaRepository.ts`
+- nuevo view model/componente para random pick de watchlist
+- Existing patterns to follow:
+- `expo-router` tabs con botones custom
+- view models mobile con manejo de `loading`, `error` y redirects por `unauthorized`
+- `darkDesign` y modales similares a los usados en detail/profile
+- Constraints:
+- la estrella no debe navegar de tab
+- no hay endpoint dedicado para "random watchlist", asi que hay que componer `getMyMediaStatuses` + `getMediaDetail`
+- el flujo debe soportar watchlist vacia sin romper la tab bar
+
+## Decisions Locked
+
+- La sugerencia random se resuelve en cliente usando `watchlist[Math.floor(Math.random() * n)]`
+- El shell de tabs solo dispara la apertura; la logica de carga vive en un view model/componente dedicado
+- El modal muestra poster, titulo, overview y `vote_average` como nota media
+- Se anade una accion de "Otra random" para reroll dentro del modal
+
+## Phase Notes
+
+### Phase 1
+
+- Detailed tasks:
+- documentar la nueva fase
+- crear view model/componente dedicado para random pick
+- reutilizar `getMyMediaStatuses` y `getMediaDetail`
+- Findings:
+- encapsular el flujo en un componente/view model dedicado mantiene `TabsLayout` limpio y deja el comportamiento listo para futuras iteraciones
+- no hizo falta tocar backend: componer `getMyMediaStatuses` con `getMediaDetail` cubre el caso
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- asegurar que los errores y el estado vacio no queden mezclados en `TabsLayout`
+- Status:
+- completed
+
+### Phase 2
+
+- Detailed tasks:
+- sustituir el placeholder `WIP` por un boton activo
+- abrir modal centrado desde la estrella
+- renderizar loading, empty, error e item sugerido
+- Findings:
+- la estrella ya no navega y funciona como trigger puro del modal
+- se priorizan peliculas de la watchlist y solo se usan series como fallback cuando no hay peliculas disponibles
+- anadir `Otra random` dentro del modal evita tener que cerrarlo y volver a pulsar la estrella
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- comprobar que el boton no navega ni altera la tab activa
+- Status:
+- completed
+
+### Phase 3
+
+- Detailed tasks:
+- ejecutar TypeScript
+- actualizar hallazgos y riesgos reales
+- Findings:
+- `npx tsc --noEmit` pasa
+- no aparecieron cambios de contrato ni conflictos con la navegacion de tabs existente
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- dejar explicitado si sigue pendiente validacion manual
+- Status:
+- completed
+
+## Review Findings
+
+- fixed: la estrella central ya no es placeholder y abre un modal de sugerencia random
+- fixed: el modal muestra poster, titulo, descripcion y nota media del titulo elegido
+- fixed: el flujo maneja watchlist vacia, error de carga y reroll sin navegar
+- accepted risk: el pick se calcula enteramente en cliente y puede repetir titulos entre intentos consecutivos
+- accepted risk: falta validacion manual en Expo/dispositivo real para afinar scroll y altura del modal con descripciones largas
+
+## Deferred Work
+
+- evitar repeticiones inmediatas entre rerolls consecutivos si producto lo pide
+- abrir una experiencia mas rica desde `Ver ficha completa` o permitir marcar como vista directamente desde el modal
+- tests automatizados de UI para el flujo de la estrella random
+
+## Final Confidence Check
+
+- Confidence score:
+- 9.4/10
+- Likely code review callouts:
+- puede salir la conversacion de si la sugerencia random deberia excluir repeticiones recientes
+- tambien pueden pedir una decision mas explicita sobre si el feature debe ser solo peliculas o peliculas+series
+- Residual risks:
+- no se ha hecho prueba manual en Expo/dispositivo real en esta sesion

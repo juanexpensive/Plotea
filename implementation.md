@@ -491,3 +491,121 @@
 - `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
 - `npx tsc --noEmit`
 - Riesgo residual aceptado: falta validacion manual en Expo/dispositivo real para afinar tactilidad, espaciado y percepcion visual del nuevo screen de red
+
+# Fase 15 - Tabs internas de Perfil con Watchlist y Diario
+
+## Objetivo
+
+- Reubicar `Watchlist` y `Diario` dentro de `ProfileScreen`, dejando la tab bar principal con una estrella central `WIP` y sin acceso directo a `Diario`.
+
+## Alcance
+
+- En alcance:
+- Quitar `Diario` de la tab bar visible
+- Anadir una entrada central `WIP` con icono de estrella y sin navegacion
+- Crear tabs superiores `Perfil`, `Watchlist` y `Diario` dentro de `ProfileScreen`
+- Embutir `Watchlist` del usuario autenticado con grid de 4 columnas y lenguaje visual cercano a `ListDetailScreen`
+- Reutilizar la logica y presentacion del diario para la tab interna y la pantalla standalone existente
+- Fuera de alcance:
+- Nueva funcionalidad para la estrella central
+- Cambios backend o nuevos contratos HTTP
+- Rehacer la ruta standalone `watchlog-list`
+- Edicion colaborativa de la watchlist personal
+
+## Fases
+
+### Fase 1: Shell de navegacion y documentacion
+
+- Goal: actualizar tabs principales y fijar la nueva estructura interna del perfil antes de tocar vistas de datos
+- Expected files or systems: `implementation.md`, `implementation_details.md`, `mobile/app/(tabs)/_layout.tsx`, ruta placeholder `wip`
+- Validation: `npx tsc --noEmit`
+- Review gate: la tab bar ya no expone `Diario`, la estrella ocupa el centro y no navega
+- Estado: completada
+
+### Fase 2: Watchlist embebida en perfil
+
+- Goal: mostrar la watchlist como una coleccion personal densa dentro de `ProfileScreen`
+- Expected files or systems: `MediaStatusListViewModel`, nuevo componente/presentacion de watchlist, `ProfileScreen`
+- Validation: `npx tsc --noEmit`
+- Review gate: la watchlist carga, abre detalle, mantiene 4 columnas y no muestra affordances sociales de listas colaborativas
+- Estado: completada
+
+### Fase 3: Diario embebido y reutilizacion de UI
+
+- Goal: reutilizar la UI del diario para la tab interna de perfil y la pantalla standalone
+- Expected files or systems: `WatchLogListScreen`, nuevo componente compartido de diario, `ProfileScreen`, `ProfileViewModel`
+- Validation: `npx tsc --noEmit`
+- Review gate: la tab `Diario` conserva secciones por mes, apertura de detalle y borrado de entradas
+- Estado: completada
+
+### Fase 4: QA, self-review y pulido
+
+- Goal: cerrar el cambio con chequeo de tipado, diff y riesgos residuales
+- Expected files or systems: mobile y docs de implementacion
+- Validation: `npx tsc --noEmit`
+- Review gate: quedan documentadas las decisiones sobre la estrella `WIP`, el diario interno y la watchlist personal
+- Estado: completada
+
+## Cierre
+
+- `ProfileScreen` ahora organiza la experiencia en tabs internas `Perfil`, `Watchlist` y `Diario`
+- La tab bar principal deja `Diario` oculto y muestra una estrella central `WIP` sin accion
+- `Watchlist` se renderiza como coleccion personal densa de 4 columnas con apertura a detalle
+- El diario se reutiliza desde un componente compartido para evitar drift entre la tab interna y la pantalla standalone `watchlog-list`
+- Validaciones ejecutadas:
+- `npx tsc --noEmit`
+- Riesgo residual aceptado: sigue pendiente validacion manual en Expo/dispositivo real para ajustar tactilidad de tabs y percepcion final de la tab bar `WIP`
+
+# Fase 16 - Sugerencia random desde la estrella de tab bar
+
+## Objetivo
+
+- Convertir la estrella central de la tab bar en una entrada util que sugiera una pelicula o serie aleatoria ya guardada en la `watchlist` del usuario.
+
+## Alcance
+
+- En alcance:
+- Reemplazar el placeholder `WIP` por una interaccion real
+- Al pulsar la estrella, abrir un modal centrado
+- Cargar un item aleatorio de la `watchlist` del usuario autenticado
+- Mostrar poster, titulo, descripcion y nota media
+- Permitir volver a tirar otra sugerencia desde el propio modal
+- Fuera de alcance:
+- Nuevos endpoints backend
+- Persistencia de historial de picks
+- Algoritmos de recomendacion mas alla de random simple
+
+## Fases
+
+### Fase 1: View model y contrato local
+
+- Goal: encapsular la logica de seleccionar una sugerencia random fuera del shell de tabs
+- Expected files or systems: repositorios `MediaRepository`, nuevo view model/componente para random pick
+- Validation: `npx tsc --noEmit`
+- Review gate: el shell de tabs no contiene logica de negocio ni manejo de errores detallado
+- Estado: completada
+
+### Fase 2: Modal e integracion con tab bar
+
+- Goal: conectar la estrella central con un modal centrado que soporte carga, vacio, error y reroll
+- Expected files or systems: `mobile/app/(tabs)/_layout.tsx`, nuevo modal/componente random watchlist
+- Validation: `npx tsc --noEmit`
+- Review gate: la estrella abre el modal sin navegar y la UI comunica claramente el estado
+- Estado: completada
+
+### Fase 3: QA y cierre
+
+- Goal: revisar tipado y documentar riesgos residuales
+- Expected files or systems: mobile y docs de implementacion
+- Validation: `npx tsc --noEmit`
+- Review gate: queda claro el comportamiento cuando la watchlist esta vacia y cuando falla la carga
+- Estado: completada
+
+## Cierre
+
+- La estrella central de la tab bar ahora abre un modal con una sugerencia random de la watchlist
+- La seleccion prioriza peliculas guardadas y cae a series solo si no hay peliculas disponibles
+- El modal soporta carga, watchlist vacia, error, reroll y acceso a la ficha completa del titulo sugerido
+- Validaciones ejecutadas:
+- `npx tsc --noEmit`
+- Riesgo residual aceptado: sigue pendiente validacion manual en Expo/dispositivo real para ajustar sensacion del modal, altura del contenido y feedback de la estrella en la tab bar

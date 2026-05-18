@@ -1,17 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MediaItem, WatchLogEnrichedEntry } from '../../../domain/entities/media';
 import { PublicUserProfile, PublicUserStats } from '../../../domain/entities/social';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
+import { MediaStatusListItem, useMediaStatusListViewModel } from './MediaStatusListViewModel';
+import { ProfileWatchlistTab } from './ProfileWatchlistTab';
 import { useProfileViewModel } from './ProfileViewModel';
+import { WatchLogDiaryContent } from './WatchLogDiaryContent';
+import { useWatchLogListViewModel } from './WatchLogListViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w300';
 const BIO_MAX_LENGTH = 160;
 const POSTER_CARD_WIDTH = (Dimensions.get('window').width - darkDesign.spacing.xl * 2 - darkDesign.spacing.md * 3) / 4;
+type ProfileTabKey = 'profile' | 'watchlist' | 'diary';
 
 export default function ProfileScreen() {
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>('profile');
   const {
     user,
     profileSummary,
@@ -59,9 +66,10 @@ export default function ProfileScreen() {
     selectFavoriteForActiveSlot,
     clearFavoriteSlot,
     openDetail,
-    openDiary,
     openNetwork,
   } = useProfileViewModel();
+  const watchlist = useMediaStatusListViewModel('watchlist');
+  const diary = useWatchLogListViewModel();
 
   if (loading) {
     return (
@@ -84,6 +92,10 @@ export default function ProfileScreen() {
     ? favoriteDrafts
     : Array.from({ length: 4 }, (_, index) => favorites.find((item) => item.position === index)?.media ?? null);
 
+  function openWatchlistDetail(item: MediaStatusListItem) {
+    openDetail(item.media_type, item.tmdb_id);
+  }
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <FavoritePickerModal
@@ -101,9 +113,13 @@ export default function ProfileScreen() {
       />
 
       <View style={styles.header}>
-        <Pressable style={styles.iconButton} onPress={isEditing ? cancelEditing : startEditing}>
-          <Ionicons name={isEditing ? 'close' : 'create-outline'} size={20} color={darkDesign.colors.text} />
-        </Pressable>
+        {activeTab === 'profile' ? (
+          <Pressable style={styles.iconButton} onPress={isEditing ? cancelEditing : startEditing}>
+            <Ionicons name={isEditing ? 'close' : 'create-outline'} size={20} color={darkDesign.colors.text} />
+          </Pressable>
+        ) : (
+          <View style={styles.iconButtonPlaceholder} />
+        )}
         <View style={styles.headerSpacer} />
         <Pressable style={styles.iconButton} onPress={handleLogout} disabled={loggingOut}>
           <Ionicons
@@ -114,142 +130,205 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.heroSection}>
-        {user.avatar_url ? (
-          <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
-        ) : (
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initial}</Text>
-          </View>
-        )}
-
-        <Text style={styles.displayName}>{user.display_name ?? user.username}</Text>
-        <Text style={styles.usernameMeta}>@{user.username}</Text>
-
-        {profileSummaryLoading || statsLoading ? (
-          <ActivityIndicator size="small" color={darkDesign.colors.accent} />
-        ) : (
-          <ProfileStatsBar
-            profileSummary={profileSummary}
-            stats={stats}
-            error={profileSummaryError ?? statsError}
-            onOpenFollowers={() => openNetwork('followers')}
-            onOpenFollowing={() => openNetwork('following')}
-          />
-        )}
-
-        {isEditingBio ? (
-          <TextInput
-            style={styles.bioInput}
-            value={bioDraft}
-            onChangeText={setBioDraft}
-            onBlur={saveBioInline}
-            placeholder="Cuenta algo sobre ti"
-            placeholderTextColor={darkDesign.colors.textFaint}
-            multiline
-            maxLength={BIO_MAX_LENGTH}
-            textAlignVertical="top"
-            selectionColor={darkDesign.colors.accent}
-            autoFocus
-          />
-        ) : (
-          <Pressable style={styles.bioPressable} onPress={startBioEditing}>
-            <Text style={styles.bio}>
-              {user.bio && user.bio.trim().length > 0 ? user.bio : 'Toca para anadir tu bio'}
-            </Text>
-          </Pressable>
-        )}
-
-        {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
+      <View style={styles.profileTabs}>
+        <ProfileTopTab
+          label="Perfil"
+          active={activeTab === 'profile'}
+          onPress={() => setActiveTab('profile')}
+        />
+        <ProfileTopTab
+          label="Watchlist"
+          active={activeTab === 'watchlist'}
+          onPress={() => setActiveTab('watchlist')}
+        />
+        <ProfileTopTab
+          label="Diario"
+          active={activeTab === 'diary'}
+          onPress={() => setActiveTab('diary')}
+        />
       </View>
 
-      {isEditing ? (
-        <View style={styles.editorCard}>
-          <Text style={styles.editorTitle}>Editar perfil</Text>
-          <Text style={styles.inputLabel}>Nombre visible</Text>
-          <TextInput
-            style={styles.input}
-            value={displayNameDraft}
-            onChangeText={setDisplayNameDraft}
-            placeholder="Como quieres mostrarte"
-            placeholderTextColor={darkDesign.colors.textFaint}
-            selectionColor={darkDesign.colors.accent}
-          />
-          <Text style={styles.inputLabel}>Avatar URL</Text>
-          <TextInput
-            style={styles.input}
-            value={avatarUrlDraft}
-            onChangeText={setAvatarUrlDraft}
-            placeholder="https://..."
-            placeholderTextColor={darkDesign.colors.textFaint}
-            autoCapitalize="none"
-            selectionColor={darkDesign.colors.accent}
-          />
-          <View style={styles.editorActions}>
-            <Pressable style={styles.secondaryButton} onPress={cancelEditing}>
-              <Text style={styles.secondaryButtonText}>Cancelar</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryButton,
-                styles.editorPrimaryButton,
-                pressed ? styles.pressed : null,
-                savingProfile ? styles.disabled : null,
-              ]}
-              onPress={saveProfile}
-              disabled={savingProfile}
-            >
-              <Text style={styles.primaryButtonText}>{savingProfile ? 'Guardando...' : 'Guardar cambios'}</Text>
-            </Pressable>
+      {activeTab === 'profile' ? (
+        <>
+          <View style={styles.heroSection}>
+            {user.avatar_url ? (
+              <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{initial}</Text>
+              </View>
+            )}
+
+            <Text style={styles.displayName}>{user.display_name ?? user.username}</Text>
+            <Text style={styles.usernameMeta}>@{user.username}</Text>
+
+            {profileSummaryLoading || statsLoading ? (
+              <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+            ) : (
+              <ProfileStatsBar
+                profileSummary={profileSummary}
+                stats={stats}
+                error={profileSummaryError ?? statsError}
+                onOpenFollowers={() => openNetwork('followers')}
+                onOpenFollowing={() => openNetwork('following')}
+              />
+            )}
+
+            {isEditingBio ? (
+              <TextInput
+                style={styles.bioInput}
+                value={bioDraft}
+                onChangeText={setBioDraft}
+                onBlur={saveBioInline}
+                placeholder="Cuenta algo sobre ti"
+                placeholderTextColor={darkDesign.colors.textFaint}
+                multiline
+                maxLength={BIO_MAX_LENGTH}
+                textAlignVertical="top"
+                selectionColor={darkDesign.colors.accent}
+                autoFocus
+              />
+            ) : (
+              <Pressable style={styles.bioPressable} onPress={startBioEditing}>
+                <Text style={styles.bio}>
+                  {user.bio && user.bio.trim().length > 0 ? user.bio : 'Toca para anadir tu bio'}
+                </Text>
+              </Pressable>
+            )}
+
+            {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
           </View>
-        </View>
+
+          {isEditing ? (
+            <View style={styles.editorCard}>
+              <Text style={styles.editorTitle}>Editar perfil</Text>
+              <Text style={styles.inputLabel}>Nombre visible</Text>
+              <TextInput
+                style={styles.input}
+                value={displayNameDraft}
+                onChangeText={setDisplayNameDraft}
+                placeholder="Como quieres mostrarte"
+                placeholderTextColor={darkDesign.colors.textFaint}
+                selectionColor={darkDesign.colors.accent}
+              />
+              <Text style={styles.inputLabel}>Avatar URL</Text>
+              <TextInput
+                style={styles.input}
+                value={avatarUrlDraft}
+                onChangeText={setAvatarUrlDraft}
+                placeholder="https://..."
+                placeholderTextColor={darkDesign.colors.textFaint}
+                autoCapitalize="none"
+                selectionColor={darkDesign.colors.accent}
+              />
+              <View style={styles.editorActions}>
+                <Pressable style={styles.secondaryButton} onPress={cancelEditing}>
+                  <Text style={styles.secondaryButtonText}>Cancelar</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    styles.editorPrimaryButton,
+                    pressed ? styles.pressed : null,
+                    savingProfile ? styles.disabled : null,
+                  ]}
+                  onPress={saveProfile}
+                  disabled={savingProfile}
+                >
+                  <Text style={styles.primaryButtonText}>{savingProfile ? 'Guardando...' : 'Guardar cambios'}</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Favorites</Text>
+            {favoritesLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
+            {favoritesError ? <Text style={styles.errorText}>{favoritesError}</Text> : null}
+
+            <View style={styles.favoritesGrid}>
+              {favoriteItems.map((item, index) => (
+                <FavoritePosterCard
+                  key={`${index}-${item?.tmdb_id ?? 'empty'}`}
+                  media={item}
+                  index={index}
+                  active={isEditingFavorites && activeFavoriteSlot === index}
+                  editable
+                  onSelect={() => openFavoritePicker(index)}
+                  onClear={() => clearFavoriteSlot(index)}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent activity</Text>
+              <Pressable style={styles.sectionAction} onPress={() => setActiveTab('diary')}>
+                <Text style={styles.sectionActionText}>Ver diario</Text>
+              </Pressable>
+            </View>
+
+            {recentWatchLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
+            {recentWatchError ? <Text style={styles.errorText}>{recentWatchError}</Text> : null}
+            {!recentWatchLoading && recentWatch.length === 0 ? (
+              <Text style={styles.emptyText}>Todavia no has registrado visionados recientes.</Text>
+            ) : null}
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.posterRail}>
+              {recentWatch.map((item) => (
+                <RecentActivityCard
+                  key={item.id}
+                  item={item}
+                  onOpen={() => openDetail(item.media.media_type, item.media.tmdb_id)}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        </>
       ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Favorites</Text>
-        {favoritesLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
-        {favoritesError ? <Text style={styles.errorText}>{favoritesError}</Text> : null}
+      {activeTab === 'watchlist' ? (
+        <ProfileWatchlistTab
+          username={user.username}
+          items={watchlist.items}
+          loading={watchlist.loading}
+          error={watchlist.error}
+          onOpenDetail={openWatchlistDetail}
+        />
+      ) : null}
 
-        <View style={styles.favoritesGrid}>
-          {favoriteItems.map((item, index) => (
-            <FavoritePosterCard
-              key={`${index}-${item?.tmdb_id ?? 'empty'}`}
-              media={item}
-              index={index}
-              active={isEditingFavorites && activeFavoriteSlot === index}
-              editable
-              onSelect={() => openFavoritePicker(index)}
-              onClear={() => clearFavoriteSlot(index)}
-            />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent activity</Text>
-          <Pressable style={styles.sectionAction} onPress={openDiary}>
-            <Text style={styles.sectionActionText}>Diario</Text>
-          </Pressable>
-        </View>
-
-        {recentWatchLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
-        {recentWatchError ? <Text style={styles.errorText}>{recentWatchError}</Text> : null}
-        {!recentWatchLoading && recentWatch.length === 0 ? (
-          <Text style={styles.emptyText}>Todavia no has registrado visionados recientes.</Text>
-        ) : null}
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.posterRail}>
-          {recentWatch.map((item) => (
-            <RecentActivityCard
-              key={item.id}
-              item={item}
-              onOpen={() => openDetail(item.media.media_type, item.media.tmdb_id)}
-            />
-          ))}
-        </ScrollView>
-      </View>
+      {activeTab === 'diary' ? (
+        <WatchLogDiaryContent
+          items={diary.items}
+          loading={diary.loading}
+          deletingId={diary.deletingId}
+          error={diary.error}
+          onOpenDetail={diary.openDetail}
+          onDelete={diary.removeItem}
+          eyebrow="Diario"
+          title="Tu historial"
+          subtitle="Todas tus entradas, ordenadas por mes."
+        />
+      ) : null}
     </ScrollView>
+  );
+}
+
+function ProfileTopTab({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.profileTabButton} onPress={onPress}>
+      <Text style={[styles.profileTabLabel, active ? styles.profileTabLabelActive : null]}>{label}</Text>
+      <View style={[styles.profileTabIndicator, active ? styles.profileTabIndicatorActive : null]} />
+    </Pressable>
   );
 }
 
@@ -539,6 +618,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: darkDesign.colors.canvas,
+  },
+  iconButtonPlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  profileTabs: {
+    flexDirection: 'row',
+    paddingHorizontal: darkDesign.spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: darkDesign.colors.border,
+    backgroundColor: darkDesign.colors.canvas,
+  },
+  profileTabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: darkDesign.spacing.sm,
+    paddingTop: darkDesign.spacing.sm,
+    paddingBottom: darkDesign.spacing.md,
+  },
+  profileTabLabel: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.caption,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  profileTabLabelActive: {
+    color: darkDesign.colors.text,
+  },
+  profileTabIndicator: {
+    width: '100%',
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: 'transparent',
+  },
+  profileTabIndicatorActive: {
+    backgroundColor: darkDesign.colors.accent,
   },
   heroSection: {
     alignItems: 'center',

@@ -487,10 +487,6 @@ export function useProfileViewModel() {
     });
   }
 
-  function openDiary() {
-    router.push('/(tabs)/diary');
-  }
-
   function openLists() {
     router.push('/(tabs)/lists');
   }
@@ -579,7 +575,6 @@ export function useProfileViewModel() {
     selectFavoriteForActiveSlot,
     clearFavoriteSlot,
     openDetail,
-    openDiary,
     openLists,
     openNetwork,
   };
