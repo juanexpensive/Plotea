@@ -1,23 +1,30 @@
-import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import type { ListInvitation, ListSummary } from '../../../domain/entities/lists';
 import { useMyListsViewModel } from './MyListsViewModel';
+
+const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
 
 const design = {
   emerald: '#3ecf8e',
   emeraldDeep: '#24b47e',
-  ink: '#171717',
-  inkMute: '#707070',
-  canvas: '#ffffff',
-  canvasSoft: '#fafafa',
-  hairline: '#dfdfdf',
-  hairlineStrong: '#c7c7c7',
-  danger: '#ff2201',
+  canvasNight: '#171717',
+  canvasNightSoft: '#1c1c1c',
+  canvasNightRaised: '#202020',
+  hairline: '#2a2a2a',
+  hairlineStrong: '#353535',
+  onDark: '#ffffff',
+  onDarkMute: '#b2b2b2',
+  onDarkSoft: '#8b8b8b',
+  danger: '#ff6b57',
 };
 
 export default function MyListsScreen() {
+  const [showComposer, setShowComposer] = useState(false);
   const {
     ownedLists,
     sharedLists,
+    listPreviews,
     pendingInvitations,
     loading,
     saving,
@@ -30,220 +37,327 @@ export default function MyListsScreen() {
     respondToInvitation,
   } = useMyListsViewModel();
 
-  return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.eyebrow}>LISTAS</Text>
-      <Text style={styles.title}>Colecciones propias y conjuntas</Text>
-      <Text style={styles.subtitle}>Crea una lista, comparte cine con gente de confianza y responde invitaciones desde aqui.</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Nueva lista</Text>
-        <TextInput
-          style={styles.input}
-          value={form.name}
-          onChangeText={(value) => updateForm({ name: value })}
-          placeholder="Nombre de la lista"
-          placeholderTextColor="#9a9a9a"
-          selectionColor={design.emerald}
-        />
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={form.description ?? ''}
-          onChangeText={(value) => updateForm({ description: value })}
-          placeholder="Descripcion breve"
-          placeholderTextColor="#9a9a9a"
-          multiline
-          selectionColor={design.emerald}
-        />
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Lista publica</Text>
-          <Switch
-            value={form.is_public}
-            onValueChange={(value) => updateForm({ is_public: value })}
-            trackColor={{ false: '#d4d4d4', true: '#4ade80' }}
-            thumbColor={form.is_public ? design.ink : '#fff'}
-          />
-        </View>
-        <Pressable
-          style={({ pressed }) => [styles.primaryButton, pressed ? styles.primaryButtonPressed : null, saving ? styles.disabled : null]}
-          onPress={submit}
-          disabled={saving}
-        >
-          <Text style={styles.primaryButtonText}>{saving ? 'Creando...' : 'Crear lista'}</Text>
-        </Pressable>
-      </View>
-
-      {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="small" color={design.emerald} />
-        </View>
-      ) : null}
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-      <Section title="Invitaciones" emptyText="No tienes invitaciones pendientes.">
-        {pendingInvitations.map((invitation) => (
-          <View key={invitation.id} style={styles.invitationCard}>
-            <View style={styles.rowTop}>
-              <Text style={styles.rowTitle}>{invitation.list_name}</Text>
-              <StatusPill label="Pendiente" tone="green" />
-            </View>
-            <Text style={styles.rowMeta}>de @{invitation.owner.username}</Text>
-            {invitation.list_description ? <Text style={styles.rowDescription}>{invitation.list_description}</Text> : null}
-            <View style={styles.actionsRow}>
-              <Pressable
-                style={({ pressed }) => [styles.primaryButtonSmall, pressed ? styles.primaryButtonPressed : null, processingInvitationId === invitation.id ? styles.disabled : null]}
-                onPress={() => void respondToInvitation(invitation.id, 'accept')}
-                disabled={processingInvitationId === invitation.id}
-              >
-                <Text style={styles.primaryButtonText}>{processingInvitationId === invitation.id ? 'Procesando...' : 'Aceptar'}</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.secondaryButtonSmall, pressed ? styles.pressed : null, processingInvitationId === invitation.id ? styles.disabled : null]}
-                onPress={() => void respondToInvitation(invitation.id, 'deny')}
-                disabled={processingInvitationId === invitation.id}
-              >
-                <Text style={styles.secondaryButtonText}>Denegar</Text>
-              </Pressable>
-            </View>
-          </View>
-        ))}
-      </Section>
-
-      <Section title="Mis listas" emptyText="Aun no has creado ninguna lista.">
-        {ownedLists.map((list) => (
-          <ListRow key={list.id} title={list.name} meta={`${list.items_count} ${list.items_count === 1 ? 'obra' : 'obras'} · ${list.is_public ? 'Publica' : 'Privada'}`} pillLabel="Owner" onPress={() => openList(list.id)} />
-        ))}
-      </Section>
-
-      <Section title="Compartidas conmigo" emptyText="Cuando aceptes una invitacion, aparecera aqui.">
-        {sharedLists.map((list) => (
-          <ListRow key={list.id} title={list.name} meta={`${list.items_count} ${list.items_count === 1 ? 'obra' : 'obras'} · por @${list.owner.username}`} pillLabel="Compartida" onPress={() => openList(list.id)} />
-        ))}
-      </Section>
-    </ScrollView>
+  const allLists = useMemo(
+    () =>
+      [...ownedLists, ...sharedLists].sort(
+        (left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime(),
+      ),
+    [ownedLists, sharedLists],
   );
-}
 
-function Section({
-  title,
-  emptyText,
-  children,
-}: {
-  title: string;
-  emptyText: string;
-  children: ReactNode;
-}) {
-  const content = Array.isArray(children) ? children.filter(Boolean) : children;
-  const hasContent = Array.isArray(content) ? content.length > 0 : Boolean(content);
+  async function handleSubmit() {
+    const created = await submit();
+    if (created) {
+      setShowComposer(false);
+    }
+  }
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {hasContent ? content : <Text style={styles.emptyText}>{emptyText}</Text>}
+    <View style={styles.screen}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={design.emerald} />
+          </View>
+        ) : null}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        {pendingInvitations.length > 0 ? (
+          <View style={styles.section}>
+            {pendingInvitations.map((invitation) => (
+              <InvitationCard
+                key={invitation.id}
+                invitation={invitation}
+                busy={processingInvitationId === invitation.id}
+                onAccept={() => void respondToInvitation(invitation.id, 'accept')}
+                onDeny={() => void respondToInvitation(invitation.id, 'deny')}
+              />
+            ))}
+          </View>
+        ) : null}
+
+        <View style={styles.section}>
+          {allLists.length > 0 ? (
+            allLists.map((list) => (
+              <ListCard
+                key={list.id}
+                list={list}
+                posters={listPreviews[list.id] ?? []}
+                onPress={() => openList(list.id)}
+              />
+            ))
+          ) : (
+            <EmptyPanel text="Todavia no tienes listas." />
+          )}
+        </View>
+      </ScrollView>
+
+      {showComposer ? (
+        <>
+          <Pressable style={styles.backdrop} onPress={() => setShowComposer(false)} />
+          <View style={styles.composerCard}>
+            <View style={styles.composerHeader}>
+              <Text style={styles.composerTitle}>Nueva lista</Text>
+              <Pressable style={({ pressed }) => [styles.closeButton, pressed ? styles.pressed : null]} onPress={() => setShowComposer(false)}>
+                <Text style={styles.closeButtonText}>Cerrar</Text>
+              </Pressable>
+            </View>
+            <TextInput
+              style={styles.input}
+              value={form.name}
+              onChangeText={(value) => updateForm({ name: value })}
+              placeholder="Nombre de la lista"
+              placeholderTextColor={design.onDarkSoft}
+              selectionColor={design.emerald}
+            />
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={form.description ?? ''}
+              onChangeText={(value) => updateForm({ description: value })}
+              placeholder="Descripcion breve"
+              placeholderTextColor={design.onDarkSoft}
+              multiline
+              selectionColor={design.emerald}
+            />
+            <View style={styles.composerFooter}>
+              <View style={styles.toggleStack}>
+                <Text style={styles.toggleLabel}>Lista publica</Text>
+              </View>
+              <Switch
+                value={form.is_public}
+                onValueChange={(value) => updateForm({ is_public: value })}
+                trackColor={{ false: '#3a3a3a', true: '#4ade80' }}
+                thumbColor={form.is_public ? design.canvasNight : '#f6f6f6'}
+              />
+            </View>
+            <Pressable
+              style={({ pressed }) => [styles.primaryButton, pressed ? styles.primaryButtonPressed : null, saving ? styles.disabled : null]}
+              onPress={() => void handleSubmit()}
+              disabled={saving}
+            >
+              <Text style={styles.primaryButtonText}>{saving ? 'Creando...' : 'Crear lista'}</Text>
+            </Pressable>
+          </View>
+        </>
+      ) : null}
+
+      <Pressable
+        style={({ pressed }) => [styles.fab, pressed ? styles.primaryButtonPressed : null]}
+        onPress={() => setShowComposer(true)}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </Pressable>
     </View>
   );
 }
 
-function ListRow({
-  title,
-  meta,
-  pillLabel,
+function InvitationCard({
+  invitation,
+  busy,
+  onAccept,
+  onDeny,
+}: {
+  invitation: ListInvitation;
+  busy: boolean;
+  onAccept: () => void;
+  onDeny: () => void;
+}) {
+  return (
+    <View style={styles.invitationCard}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{invitation.list_name}</Text>
+        <Text style={styles.countLabel}>Invitacion</Text>
+      </View>
+      {invitation.list_description ? <Text style={styles.cardDescription}>{truncateDescription(invitation.list_description)}</Text> : null}
+      <Text style={styles.metaText}>de @{invitation.owner.username}</Text>
+      <View style={styles.actionsRow}>
+        <Pressable
+          style={({ pressed }) => [styles.primaryButtonSmall, pressed ? styles.primaryButtonPressed : null, busy ? styles.disabled : null]}
+          onPress={onAccept}
+          disabled={busy}
+        >
+          <Text style={styles.primaryButtonText}>{busy ? 'Procesando...' : 'Aceptar'}</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.secondaryButtonSmall, pressed ? styles.pressed : null, busy ? styles.disabled : null]}
+          onPress={onDeny}
+          disabled={busy}
+        >
+          <Text style={styles.secondaryButtonText}>Denegar</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function ListCard({
+  list,
+  posters,
   onPress,
 }: {
-  title: string;
-  meta: string;
-  pillLabel: string;
+  list: ListSummary;
+  posters: string[];
   onPress: () => void;
 }) {
   return (
-    <Pressable style={({ pressed }) => [styles.listRow, pressed ? styles.pressed : null]} onPress={onPress}>
-      <View style={styles.rowBody}>
-        <View style={styles.rowTop}>
-          <Text style={styles.rowTitle}>{title}</Text>
-          <StatusPill label={pillLabel} tone="soft" />
-        </View>
-        <Text style={styles.rowMeta}>{meta}</Text>
+    <Pressable style={({ pressed }) => [styles.listCard, pressed ? styles.pressed : null]} onPress={onPress}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{list.name}</Text>
+        <Text style={styles.countLabel}>{formatCountLabel(list.items_count)}</Text>
       </View>
-      <Text style={styles.rowAction}>Abrir</Text>
+      <PosterStrip posters={posters} />
+      <Text style={styles.cardDescription}>{truncateDescription(list.description)}</Text>
     </Pressable>
   );
 }
 
-function StatusPill({ label, tone }: { label: string; tone: 'green' | 'soft' }) {
+function PosterStrip({ posters }: { posters: string[] }) {
+  const cells = posters.slice(0, 3);
+
   return (
-    <View style={tone === 'green' ? styles.greenPill : styles.softPill}>
-      <Text style={styles.pillText}>{label}</Text>
+    <View style={styles.posterStrip}>
+      {[0, 1, 2].map((index) => {
+        const posterPath = cells[index] ?? null;
+
+        return posterPath ? (
+          <Image key={`${posterPath}-${index}`} source={{ uri: `${TMDB_IMAGE}${posterPath}` }} style={styles.posterTile} />
+        ) : (
+          <View key={`empty-${index}`} style={[styles.posterTile, styles.posterFallback]} />
+        );
+      })}
     </View>
   );
+}
+
+function EmptyPanel({ text }: { text: string }) {
+  return (
+    <View style={styles.emptyPanel}>
+      <Text style={styles.emptyText}>{text}</Text>
+    </View>
+  );
+}
+
+function formatCountLabel(count: number) {
+  return `${count} ${count === 1 ? 'film' : 'films'}`;
+}
+
+function truncateDescription(description: string | null | undefined) {
+  if (!description?.trim()) {
+    return ' ';
+  }
+
+  const firstParagraph = description.trim().split(/\n\s*\n/)[0]?.replace(/\s+/g, ' ').trim() ?? '';
+  const maxLength = 110;
+
+  if (firstParagraph.length <= maxLength) {
+    return firstParagraph;
+  }
+
+  return `${firstParagraph.slice(0, maxLength).trimEnd()}...`;
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: design.canvasNight,
+  },
+  scroll: {
+    flex: 1,
+    backgroundColor: design.canvasNight,
   },
   content: {
-    padding: 20,
-    gap: 18,
-    paddingBottom: 36,
+    paddingTop: 18,
+    paddingBottom: 120,
   },
-  eyebrow: {
-    color: design.inkMute,
-    fontSize: 12,
-    letterSpacing: 1.2,
-    fontWeight: '600',
+  section: {
+    gap: 1,
   },
-  title: {
-    color: design.ink,
-    fontSize: 30,
-    lineHeight: 34,
-    fontWeight: '500',
-    letterSpacing: -0.4,
+  loadingBox: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
-  subtitle: {
-    color: design.inkMute,
-    fontSize: 15,
-    lineHeight: 22,
+  errorText: {
+    color: design.danger,
+    fontSize: 13,
+    lineHeight: 18,
+    paddingHorizontal: 24,
+    paddingBottom: 12,
   },
-  card: {
-    backgroundColor: design.canvas,
-    borderRadius: 12,
-    borderWidth: 1,
+  invitationCard: {
+    backgroundColor: design.canvasNightSoft,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     borderColor: design.hairline,
-    padding: 18,
-    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 18,
+    gap: 14,
+  },
+  listCard: {
+    backgroundColor: design.canvasNightSoft,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: design.hairline,
+    paddingHorizontal: 24,
+    paddingVertical: 18,
+    gap: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 14,
   },
   cardTitle: {
-    color: design.ink,
-    fontSize: 18,
-    fontWeight: '500',
+    flex: 1,
+    color: design.onDark,
+    fontSize: 23,
+    lineHeight: 28,
+    fontWeight: '600',
+    letterSpacing: -0.5,
   },
-  input: {
-    minHeight: 42,
-    borderRadius: 6,
+  countLabel: {
+    color: design.onDarkMute,
+    fontSize: 15,
+    lineHeight: 22,
+    paddingTop: 2,
+  },
+  posterStrip: {
+    flexDirection: 'row',
+    width: '100%',
+    maxWidth: 252,
+    height: 120,
+    borderRadius: 10,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: design.hairlineStrong,
-    backgroundColor: design.canvas,
-    paddingHorizontal: 12,
-    color: design.ink,
+    backgroundColor: design.canvasNightRaised,
+  },
+  posterTile: {
+    flex: 1,
+    height: '100%',
+    backgroundColor: design.canvasNightRaised,
+  },
+  posterFallback: {
+    borderRightWidth: 1,
+    borderRightColor: design.hairline,
+  },
+  cardDescription: {
+    color: design.onDarkMute,
     fontSize: 15,
+    lineHeight: 22,
+    minHeight: 22,
   },
-  textArea: {
-    minHeight: 92,
-    paddingTop: 12,
-    textAlignVertical: 'top',
+  metaText: {
+    color: design.onDarkSoft,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  toggleRow: {
+  actionsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  toggleLabel: {
-    color: design.ink,
-    fontSize: 15,
+    gap: 10,
   },
   primaryButton: {
-    minHeight: 42,
+    minHeight: 44,
     borderRadius: 6,
     backgroundColor: design.emerald,
     alignItems: 'center',
@@ -263,14 +377,14 @@ const styles = StyleSheet.create({
     backgroundColor: design.emeraldDeep,
   },
   primaryButtonText: {
-    color: design.ink,
+    color: design.canvasNight,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   secondaryButtonSmall: {
     minHeight: 38,
     borderRadius: 6,
-    backgroundColor: design.canvas,
+    backgroundColor: design.canvasNightRaised,
     borderWidth: 1,
     borderColor: design.hairlineStrong,
     alignItems: 'center',
@@ -279,114 +393,117 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   secondaryButtonText: {
-    color: design.ink,
+    color: design.onDark,
     fontSize: 14,
     fontWeight: '500',
   },
-  loadingBox: {
-    paddingVertical: 10,
-    alignItems: 'center',
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
-  errorText: {
-    color: design.danger,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  section: {
-    gap: 10,
-  },
-  sectionTitle: {
-    color: design.ink,
-    fontSize: 20,
-    fontWeight: '500',
-    letterSpacing: -0.2,
-  },
-  emptyText: {
-    color: design.inkMute,
-    fontSize: 14,
-    lineHeight: 20,
-    backgroundColor: design.canvasSoft,
-    borderRadius: 12,
+  composerCard: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 94,
+    backgroundColor: design.canvasNightSoft,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: design.hairline,
-    padding: 16,
+    borderColor: design.hairlineStrong,
+    padding: 18,
+    gap: 14,
   },
-  invitationCard: {
-    backgroundColor: design.canvas,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: design.hairline,
-    padding: 16,
-    gap: 10,
-  },
-  listRow: {
-    backgroundColor: design.canvas,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: design.hairline,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  rowBody: {
-    flex: 1,
-    gap: 6,
-  },
-  rowTop: {
+  composerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 12,
   },
-  rowTitle: {
-    color: design.ink,
-    fontSize: 16,
-    fontWeight: '500',
+  composerTitle: {
+    color: design.onDark,
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '600',
+  },
+  closeButton: {
+    minHeight: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  closeButtonText: {
+    color: design.onDarkSoft,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  input: {
+    minHeight: 44,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: design.hairlineStrong,
+    backgroundColor: design.canvasNightRaised,
+    paddingHorizontal: 12,
+    color: design.onDark,
+    fontSize: 15,
+  },
+  textArea: {
+    minHeight: 88,
+    paddingTop: 12,
+    textAlignVertical: 'top',
+  },
+  composerFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  toggleStack: {
     flex: 1,
   },
-  rowMeta: {
-    color: design.inkMute,
-    fontSize: 13,
-    lineHeight: 18,
+  toggleLabel: {
+    color: design.onDark,
+    fontSize: 15,
+    fontWeight: '500',
   },
-  rowDescription: {
-    color: design.ink,
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 24,
+    width: 66,
+    height: 66,
+    borderRadius: 20,
+    backgroundColor: design.emerald,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.24,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  fabText: {
+    color: design.canvasNight,
+    fontSize: 34,
+    lineHeight: 36,
+    fontWeight: '400',
+    marginTop: -2,
+  },
+  emptyPanel: {
+    backgroundColor: design.canvasNightSoft,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: design.hairline,
+    paddingHorizontal: 24,
+    paddingVertical: 18,
+  },
+  emptyText: {
+    color: design.onDarkMute,
     fontSize: 14,
     lineHeight: 20,
   },
-  rowAction: {
-    color: design.ink,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  greenPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: design.emerald,
-  },
-  softPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: design.canvasSoft,
-    borderWidth: 1,
-    borderColor: design.hairline,
-  },
-  pillText: {
-    color: design.ink,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
   pressed: {
-    opacity: 0.8,
+    opacity: 0.84,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.55,
   },
 });

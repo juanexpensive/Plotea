@@ -1,7 +1,7 @@
 import api from '../../infrastructure/http/api';
 import { TokenPair, User } from '../../domain/entities/auth';
 import { isUnauthorizedError } from '../../infrastructure/http/apiErrors';
-import { tokenStorage } from '../../infrastructure/storage/tokenStorage';
+import { authSessionManager } from '../../infrastructure/auth/AuthSessionManager';
 
 export async function register(
   email: string,
@@ -23,16 +23,16 @@ export async function getMe(): Promise<User> {
 }
 
 export async function logout(): Promise<void> {
-  const refreshToken = await tokenStorage.getRefreshToken();
+  const refreshToken = await authSessionManager.getRefreshToken();
   if (!refreshToken) {
-    await tokenStorage.clear();
+    await authSessionManager.clearSession();
     return;
   }
 
   try {
     await api.post('/auth/logout', { refresh_token: refreshToken });
   } finally {
-    await tokenStorage.clear();
+    await authSessionManager.clearSession();
   }
 }
 
@@ -50,8 +50,8 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 export async function hasValidSession(): Promise<boolean> {
-  const token = await tokenStorage.getAccessToken();
-  if (!token) {
+  const hasRecoverableSession = await authSessionManager.restoreSession();
+  if (!hasRecoverableSession) {
     return false;
   }
 
@@ -60,7 +60,7 @@ export async function hasValidSession(): Promise<boolean> {
     return true;
   } catch (error) {
     if (isUnauthorizedError(error)) {
-      await tokenStorage.clear();
+      await authSessionManager.clearSession();
     }
     return false;
   }

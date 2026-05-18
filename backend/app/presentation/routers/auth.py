@@ -82,14 +82,14 @@ async def login(
     return TokenResponse(access_token=result.access_token, refresh_token=result.refresh_token)
 
 
-@router.post("/refresh")
+@router.post("/refresh", response_model=TokenResponse)
 async def refresh(
     data: RefreshRequest,
     session: AsyncSession = Depends(get_db),
-) -> dict:
+) -> TokenResponse:
     use_case = RefreshUseCase(RefreshTokenRepository(session))
-    access_token = await use_case.execute(data.refresh_token)
-    return {"access_token": access_token, "token_type": "bearer"}
+    tokens = await use_case.execute(data.refresh_token)
+    return TokenResponse(access_token=tokens.access_token, refresh_token=tokens.refresh_token)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

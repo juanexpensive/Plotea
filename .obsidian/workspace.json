@@ -1,0 +1,203 @@
+{
+  "main": {
+    "id": "d73afecbe834f025",
+    "type": "split",
+    "children": [
+      {
+        "id": "005e98c85ebb86ec",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "665f5f29ed5ab022",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Mejoras.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Mejoras"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "0cf9d06b3daa8ec1",
+    "type": "split",
+    "children": [
+      {
+        "id": "3014798baadcfb05",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a176bca887674215",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorador de archivos"
+            }
+          },
+          {
+            "id": "ac68fa316592b847",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Buscar"
+            }
+          },
+          {
+            "id": "05839a15095315a4",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Marcadores"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "1e75406f4d5bcc50",
+    "type": "split",
+    "children": [
+      {
+        "id": "72e9dfa20c261f5a",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d95b0df3f0a1e2a4",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Mejoras.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Enlaces entrantes de Mejoras"
+            }
+          },
+          {
+            "id": "69d370055f8d6a72",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Mejoras.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Enlaces salientes de Mejoras"
+            }
+          },
+          {
+            "id": "deca54be7a008859",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Etiquetas"
+            }
+          },
+          {
+            "id": "866a8c8a7b336316",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Todas las propiedades"
+            }
+          },
+          {
+            "id": "0a39b996ddc9df7c",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Mejoras.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Esquema de Mejoras"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir selector rápido": false,
+      "graph:Abrir vista gráfica": false,
+      "canvas:Crear nuevo lienzo": false,
+      "daily-notes:Abrir la nota de hoy": false,
+      "templates:Insertar plantilla": false,
+      "command-palette:Abrir paleta de comandos": false,
+      "bases:Crear nueva base": false
+    }
+  },
+  "active": "665f5f29ed5ab022",
+  "lastOpenFiles": [
+    "mobile/src/presentation/features/profile/ProfileScreen.tsx",
+    "mobile/src/presentation/features/lists/MyListsScreen.tsx",
+    "mobile/dist/assets/e20945d7c929279ef7a6f1db184a4470",
+    "mobile/dist/assets/d8e7601e3df962f83c62371ac14964d8",
+    "mobile/dist/assets/d8b800c443b8972542883e0b9de2bdc6",
+    "mobile/dist/assets/d84e297c3b3e49a614248143d53e40ca",
+    "mobile/dist/assets/d2285965fe34b05465047401b8595dd0",
+    "mobile/dist/assets/d1ea1496f9057eb392d5bbf3732a61b7",
+    "mobile/dist/assets/ca4b48e04dc1ce10bfbddb262c8b835f",
+    "mobile/dist/assets/c79c3606a1cf168006ad3979763c7e0c",
+    "mobile/dist/assets/b49ae8ab2dbccb02c4d11caaacf09eab",
+    "mobile/node_modules/expo-secure-store/CHANGELOG.md",
+    "Plotea.png",
+    "Mejoras.md"
+  ]
+}

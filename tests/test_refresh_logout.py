@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models.refresh_token import RefreshToken
@@ -27,7 +27,29 @@ async def test_refresh_valid_token(async_client: AsyncClient):
     tokens = await _register_and_login(async_client)
     resp = await async_client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
     assert resp.status_code == 200
-    assert "access_token" in resp.json()
+    body = resp.json()
+    assert "access_token" in body
+    assert "refresh_token" in body
+    assert body["refresh_token"] != tokens["refresh_token"]
+    assert body["token_type"] == "bearer"
+
+
+@pytest.mark.asyncio
+async def test_refresh_rotates_old_token(async_client: AsyncClient):
+    tokens = await _register_and_login(async_client)
+
+    refresh_resp = await async_client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
+    assert refresh_resp.status_code == 200
+    rotated_tokens = refresh_resp.json()
+
+    old_token_resp = await async_client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
+    assert old_token_resp.status_code == 401
+
+    next_refresh_resp = await async_client.post(
+        "/auth/refresh",
+        json={"refresh_token": rotated_tokens["refresh_token"]},
+    )
+    assert next_refresh_resp.status_code == 200
 
 
 @pytest.mark.asyncio
@@ -50,6 +72,30 @@ async def test_refresh_expired_token(async_client: AsyncClient, db_session: Asyn
 
     resp = await async_client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_refresh_extends_expiration_window(async_client: AsyncClient, db_session: AsyncSession):
+    tokens = await _register_and_login(async_client)
+    original_hash = hash_token(tokens["refresh_token"])
+    shortened_expiry = datetime.now(timezone.utc) + timedelta(days=1)
+    await db_session.execute(
+        update(RefreshToken)
+        .where(RefreshToken.token_hash == original_hash)
+        .values(expires_at=shortened_expiry)
+    )
+    await db_session.commit()
+
+    refresh_resp = await async_client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
+    assert refresh_resp.status_code == 200
+    next_hash = hash_token(refresh_resp.json()["refresh_token"])
+
+    refreshed_token = (
+        await db_session.execute(
+            select(RefreshToken).where(RefreshToken.token_hash == next_hash)
+        )
+    ).scalar_one()
+    assert refreshed_token.expires_at.replace(tzinfo=timezone.utc) > shortened_expiry
 
 
 @pytest.mark.asyncio

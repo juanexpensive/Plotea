@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models.refresh_token import RefreshToken as RefreshTokenModel
@@ -23,6 +23,15 @@ class RefreshTokenRepository(IRefreshTokenRepository):
         )
         row = result.scalar_one_or_none()
         return self._to_entity(row) if row else None
+
+    async def replace(self, current_token_hash: str, next_token_hash: str, expires_at: datetime) -> bool:
+        result = await self._session.execute(
+            update(RefreshTokenModel)
+            .where(RefreshTokenModel.token_hash == current_token_hash)
+            .values(token_hash=next_token_hash, expires_at=expires_at)
+        )
+        await self._session.commit()
+        return result.rowcount == 1
 
     async def delete_by_hash(self, token_hash: str) -> None:
         await self._session.execute(

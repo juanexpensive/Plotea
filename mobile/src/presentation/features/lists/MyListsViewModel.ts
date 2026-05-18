@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { acceptListInvitation, createList, denyListInvitation, getMyLists } from '../../../data/repositories/ListsRepository';
+import { acceptListInvitation, createList, denyListInvitation, getListDetail, getMyLists } from '../../../data/repositories/ListsRepository';
 import { ListInvitation, ListSummary, ListWriteRequest } from '../../../domain/entities/lists';
 import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
 
@@ -15,6 +15,7 @@ export function useMyListsViewModel() {
   const invitationLock = useRef<number | null>(null);
   const [ownedLists, setOwnedLists] = useState<ListSummary[]>([]);
   const [sharedLists, setSharedLists] = useState<ListSummary[]>([]);
+  const [listPreviews, setListPreviews] = useState<Record<number, string[]>>({});
   const [pendingInvitations, setPendingInvitations] = useState<ListInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -28,11 +29,13 @@ export function useMyListsViewModel() {
     setError(null);
 
     getMyLists()
-      .then((data) => {
+      .then(async (data) => {
         if (active) {
-          setOwnedLists(data.owned_lists);
-          setSharedLists(data.shared_lists);
-          setPendingInvitations(data.pending_invitations_received);
+          applyOverview(data);
+          const previews = await loadListPreviews([...data.owned_lists, ...data.shared_lists]);
+          if (active) {
+            setListPreviews(previews);
+          }
         }
       })
       .catch((error) => {
@@ -62,9 +65,19 @@ export function useMyListsViewModel() {
     setForm((current) => ({ ...current, ...patch }));
   }
 
+  function applyOverview(data: {
+    owned_lists: ListSummary[];
+    shared_lists: ListSummary[];
+    pending_invitations_received: ListInvitation[];
+  }) {
+    setOwnedLists(data.owned_lists);
+    setSharedLists(data.shared_lists);
+    setPendingInvitations(data.pending_invitations_received);
+  }
+
   async function submit() {
     if (saving || submitLock.current) {
-      return;
+      return false;
     }
 
     submitLock.current = true;
@@ -78,12 +91,14 @@ export function useMyListsViewModel() {
       });
       setForm(EMPTY_FORM);
       router.push({ pathname: '/list-detail', params: { list_id: created.id } });
+      return true;
     } catch (error) {
       if (isUnauthorizedError(error)) {
         router.replace('/login');
-        return;
+        return false;
       }
       setError(getApiErrorMessage(error, 'No se pudo crear la lista.'));
+      return false;
     } finally {
       submitLock.current = false;
       setSaving(false);
@@ -109,9 +124,8 @@ export function useMyListsViewModel() {
         await denyListInvitation(invitationId);
       }
       const refreshed = await getMyLists();
-      setOwnedLists(refreshed.owned_lists);
-      setSharedLists(refreshed.shared_lists);
-      setPendingInvitations(refreshed.pending_invitations_received);
+      applyOverview(refreshed);
+      setListPreviews(await loadListPreviews([...refreshed.owned_lists, ...refreshed.shared_lists]));
     } catch (error) {
       if (isUnauthorizedError(error)) {
         router.replace('/login');
@@ -127,6 +141,7 @@ export function useMyListsViewModel() {
   return {
     ownedLists,
     sharedLists,
+    listPreviews,
     pendingInvitations,
     loading,
     saving,
@@ -138,4 +153,24 @@ export function useMyListsViewModel() {
     openList,
     respondToInvitation,
   };
+}
+
+async function loadListPreviews(lists: ListSummary[]) {
+  const uniqueLists = lists.filter((list, index, array) => array.findIndex((item) => item.id === list.id) === index);
+  const entries = await Promise.all(
+    uniqueLists.map(async (list) => {
+      try {
+        const detail = await getListDetail(list.id);
+        const posters = detail.items
+          .map((item) => item.media_summary?.poster_path)
+          .filter((posterPath): posterPath is string => Boolean(posterPath))
+          .slice(0, 3);
+        return [list.id, posters] as const;
+      } catch {
+        return [list.id, []] as const;
+      }
+    }),
+  );
+
+  return Object.fromEntries(entries);
 }

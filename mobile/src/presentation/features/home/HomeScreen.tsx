@@ -488,9 +488,6 @@ export default function HomeScreen() {
       <View style={styles.heroShell}>
         <View style={styles.topRow}>
           <Text style={styles.appTitle}>Inicio</Text>
-          <Pressable style={styles.heroUtility} onPress={() => router.push('/(tabs)/social')}>
-            <Text style={styles.heroUtilityText}>Social</Text>
-          </Pressable>
         </View>
 
         <Pressable style={({ pressed }) => [styles.searchShell, pressed ? styles.cardPressed : null]} onPress={openSearchModal}>

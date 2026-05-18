@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { login } from '../../../data/repositories/AuthRepository';
 import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
-import { tokenStorage } from '../../../infrastructure/storage/tokenStorage';
+import { authSessionManager } from '../../../infrastructure/auth/AuthSessionManager';
 
 export function useLoginViewModel() {
   const [email, setEmail] = useState('');
@@ -21,10 +21,7 @@ export function useLoginViewModel() {
 
     try {
       const tokens = await login(email, password);
-      await tokenStorage.save({
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-      });
+      await authSessionManager.saveTokenPair(tokens);
       router.replace('/(tabs)/home');
     } catch (err: any) {
       const status = err?.response?.status;

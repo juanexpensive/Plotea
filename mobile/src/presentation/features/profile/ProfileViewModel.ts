@@ -17,6 +17,37 @@ function toFavoriteDrafts(items: FavoriteMediaItem[]): Array<MediaItem | null> {
   return drafts;
 }
 
+function applyFavoriteSelection(
+  drafts: Array<MediaItem | null>,
+  position: number,
+  media: MediaItem,
+): Array<MediaItem | null> {
+  const next = [...drafts];
+  const duplicateIndex = next.findIndex(
+    (item) => item?.tmdb_id === media.tmdb_id && item?.media_type === media.media_type,
+  );
+
+  if (duplicateIndex >= 0) {
+    next[duplicateIndex] = null;
+  }
+
+  next[position] = media;
+  return next;
+}
+
+function removeFavoriteSelection(
+  drafts: Array<MediaItem | null>,
+  position: number,
+): Array<MediaItem | null> {
+  return drafts.map((item, index) => (index === position ? null : item));
+}
+
+function toFavoritePayload(drafts: Array<MediaItem | null>) {
+  return drafts
+    .map((item, position) => (item ? { position, tmdb_id: item.tmdb_id, media_type: item.media_type } : null))
+    .filter((item): item is { position: number; tmdb_id: number; media_type: 'movie' | 'tv' } => item !== null);
+}
+
 export function useProfileViewModel() {
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<PublicUserStats | null>(null);
@@ -302,6 +333,17 @@ export function useProfileViewModel() {
     setSuccessMessage(null);
   }
 
+  function openFavoritePicker(position: number) {
+    setIsEditingFavorites(true);
+    setFavoriteDrafts(toFavoriteDrafts(favorites));
+    setActiveFavoriteSlot(position);
+    setFavoriteQuery('');
+    setFavoriteSearchResults([]);
+    setFavoriteSearchError(null);
+    setFavoritesError(null);
+    setSuccessMessage(null);
+  }
+
   function cancelFavoriteEditing() {
     setIsEditingFavorites(false);
     setFavoriteDrafts(toFavoriteDrafts(favorites));
@@ -310,25 +352,7 @@ export function useProfileViewModel() {
     setFavoriteSearchError(null);
   }
 
-  function assignFavorite(media: MediaItem) {
-    setFavoriteDrafts((current) => {
-      const next = [...current];
-      const duplicateIndex = next.findIndex(
-        (item) => item?.tmdb_id === media.tmdb_id && item?.media_type === media.media_type,
-      );
-      if (duplicateIndex >= 0) {
-        next[duplicateIndex] = null;
-      }
-      next[activeFavoriteSlot] = media;
-      return next;
-    });
-  }
-
-  function clearFavoriteSlot(position: number) {
-    setFavoriteDrafts((current) => current.map((item, index) => (index === position ? null : item)));
-  }
-
-  async function saveFavorites() {
+  async function persistFavoriteDrafts(nextDrafts: Array<MediaItem | null>) {
     if (savingFavorites) {
       return;
     }
@@ -336,13 +360,10 @@ export function useProfileViewModel() {
     setSavingFavorites(true);
     setFavoritesError(null);
     setSuccessMessage(null);
+    setFavoriteDrafts(nextDrafts);
 
     try {
-      const updated = await updateMyFavoriteMedia(
-        favoriteDrafts
-          .map((item, position) => (item ? { position, tmdb_id: item.tmdb_id, media_type: item.media_type } : null))
-          .filter((item): item is { position: number; tmdb_id: number; media_type: 'movie' | 'tv' } => item !== null),
-      );
+      const updated = await updateMyFavoriteMedia(toFavoritePayload(nextDrafts));
       setFavorites(updated);
       setFavoriteDrafts(toFavoriteDrafts(updated));
       setIsEditingFavorites(false);
@@ -358,6 +379,16 @@ export function useProfileViewModel() {
     } finally {
       setSavingFavorites(false);
     }
+  }
+
+  async function selectFavoriteForActiveSlot(media: MediaItem) {
+    const nextDrafts = applyFavoriteSelection(favoriteDrafts, activeFavoriteSlot, media);
+    await persistFavoriteDrafts(nextDrafts);
+  }
+
+  async function clearFavoriteSlot(position: number) {
+    const nextDrafts = removeFavoriteSelection(favoriteDrafts, position);
+    await persistFavoriteDrafts(nextDrafts);
   }
 
   function openDetail(mediaType: 'movie' | 'tv', tmdbId: number) {
@@ -416,10 +447,10 @@ export function useProfileViewModel() {
     cancelEditing,
     saveProfile,
     startFavoriteEditing,
+    openFavoritePicker,
     cancelFavoriteEditing,
-    assignFavorite,
+    selectFavoriteForActiveSlot,
     clearFavoriteSlot,
-    saveFavorites,
     openDetail,
     openDiary,
     openLists,

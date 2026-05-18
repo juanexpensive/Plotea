@@ -12,6 +12,9 @@ class IRefreshTokenRepository(ABC):
     async def get_by_hash(self, token_hash: str) -> RefreshTokenEntity | None: ...
 
     @abstractmethod
+    async def replace(self, current_token_hash: str, next_token_hash: str, expires_at: datetime) -> bool: ...
+
+    @abstractmethod
     async def delete_by_hash(self, token_hash: str) -> None: ...
 
     @abstractmethod
