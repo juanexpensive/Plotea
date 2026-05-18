@@ -183,21 +183,22 @@
       "bases:Crear nueva base": false
     }
   },
-  "active": "665f5f29ed5ab022",
+  "active": "a176bca887674215",
   "lastOpenFiles": [
+    "mobile/app/profile-network.tsx",
+    "mobile/src/presentation/features/profile/ProfileNetworkScreen.tsx",
+    "mobile/src/presentation/features/profile/ProfileNetworkViewModel.ts",
+    "backend/app/domain/usecases/social/__pycache__/list_following.cpython-312.pyc",
+    "backend/app/domain/usecases/social/__pycache__/list_followers.cpython-312.pyc",
+    "backend/app/domain/usecases/social/list_following.py",
+    "backend/app/domain/usecases/social/list_followers.py",
+    "backend/app/data/repositories/__pycache__/user_repository.cpython-312.pyc.2499505309296",
+    "mobile/src/presentation/features/lists/ListDetailScreen.tsx",
+    "Mejoras.md",
+    "html view.md",
     "mobile/src/presentation/features/profile/ProfileScreen.tsx",
     "mobile/src/presentation/features/lists/MyListsScreen.tsx",
-    "mobile/dist/assets/e20945d7c929279ef7a6f1db184a4470",
-    "mobile/dist/assets/d8e7601e3df962f83c62371ac14964d8",
-    "mobile/dist/assets/d8b800c443b8972542883e0b9de2bdc6",
-    "mobile/dist/assets/d84e297c3b3e49a614248143d53e40ca",
-    "mobile/dist/assets/d2285965fe34b05465047401b8595dd0",
-    "mobile/dist/assets/d1ea1496f9057eb392d5bbf3732a61b7",
-    "mobile/dist/assets/ca4b48e04dc1ce10bfbddb262c8b835f",
-    "mobile/dist/assets/c79c3606a1cf168006ad3979763c7e0c",
-    "mobile/dist/assets/b49ae8ab2dbccb02c4d11caaacf09eab",
     "mobile/node_modules/expo-secure-store/CHANGELOG.md",
-    "Plotea.png",
-    "Mejoras.md"
+    "Plotea.png"
   ]
 }

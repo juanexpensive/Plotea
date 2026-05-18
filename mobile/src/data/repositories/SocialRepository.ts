@@ -16,6 +16,16 @@ export async function searchUsers(query: string): Promise<PublicUserSummary[]> {
   return response.data;
 }
 
+export async function getMyFollowers(): Promise<PublicUserSummary[]> {
+  const response = await api.get<PublicUserSummary[]>('/users/me/followers');
+  return response.data;
+}
+
+export async function getMyFollowing(): Promise<PublicUserSummary[]> {
+  const response = await api.get<PublicUserSummary[]>('/users/me/following');
+  return response.data;
+}
+
 export async function getPublicProfile(username: string): Promise<PublicUserProfile> {
   const response = await api.get<PublicUserProfile>(`/users/${encodeURIComponent(username)}`);
   return response.data;

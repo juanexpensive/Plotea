@@ -2,11 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { getMe, logout } from '../../../data/repositories/AuthRepository';
 import { searchMedia } from '../../../data/repositories/MediaRepository';
-import { getMyFavoriteMedia, getUserStats, updateMyFavoriteMedia, updateMyProfile } from '../../../data/repositories/SocialRepository';
+import {
+  getMyFavoriteMedia,
+  getPublicProfile,
+  getUserStats,
+  updateMyFavoriteMedia,
+  updateMyProfile,
+} from '../../../data/repositories/SocialRepository';
 import { getMyRecentWatchLog } from '../../../data/repositories/WatchLogRepository';
 import { User } from '../../../domain/entities/auth';
 import { MediaItem, WatchLogEnrichedEntry } from '../../../domain/entities/media';
-import { FavoriteMediaItem, PublicUserStats } from '../../../domain/entities/social';
+import { FavoriteMediaItem, PublicUserProfile, PublicUserStats } from '../../../domain/entities/social';
 import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
 
 function toFavoriteDrafts(items: FavoriteMediaItem[]): Array<MediaItem | null> {
@@ -50,6 +56,7 @@ function toFavoritePayload(drafts: Array<MediaItem | null>) {
 
 export function useProfileViewModel() {
   const [user, setUser] = useState<User | null>(null);
+  const [profileSummary, setProfileSummary] = useState<PublicUserProfile | null>(null);
   const [stats, setStats] = useState<PublicUserStats | null>(null);
   const [favorites, setFavorites] = useState<FavoriteMediaItem[]>([]);
   const [recentWatch, setRecentWatch] = useState<WatchLogEnrichedEntry[]>([]);
@@ -57,15 +64,18 @@ export function useProfileViewModel() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingFavorites, setSavingFavorites] = useState(false);
+  const [profileSummaryLoading, setProfileSummaryLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
   const [recentWatchLoading, setRecentWatchLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [profileSummaryError, setProfileSummaryError] = useState<string | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
   const [favoritesError, setFavoritesError] = useState<string | null>(null);
   const [recentWatchError, setRecentWatchError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingBio, setIsEditingBio] = useState(false);
   const [displayNameDraft, setDisplayNameDraft] = useState('');
   const [bioDraft, setBioDraft] = useState('');
   const [avatarUrlDraft, setAvatarUrlDraft] = useState('');
@@ -120,6 +130,7 @@ export function useProfileViewModel() {
     let active = true;
     setLoading(true);
     setError(null);
+    setProfileSummaryError(null);
     setStatsError(null);
     setFavoritesError(null);
     setRecentWatchError(null);
@@ -131,6 +142,31 @@ export function useProfileViewModel() {
         }
 
         setUser(nextUser);
+        setProfileSummaryLoading(true);
+        getPublicProfile(nextUser.username)
+          .then((nextProfileSummary) => {
+            if (active) {
+              setProfileSummary(nextProfileSummary);
+              setProfileSummaryError(null);
+            }
+          })
+          .catch((summaryError) => {
+            if (!active) {
+              return;
+            }
+            if (isUnauthorizedError(summaryError)) {
+              router.replace('/login');
+              return;
+            }
+            setProfileSummaryError(getApiErrorMessage(summaryError, 'No se pudo cargar tu red.'));
+            setProfileSummary(null);
+          })
+          .finally(() => {
+            if (active) {
+              setProfileSummaryLoading(false);
+            }
+          });
+
         if (!isEditing) {
           setDisplayNameDraft(nextUser.display_name ?? '');
           setBioDraft(nextUser.bio ?? '');
@@ -297,6 +333,20 @@ export function useProfileViewModel() {
       setAvatarUrlDraft(updatedUser.avatar_url ?? '');
       setIsEditing(false);
       setSuccessMessage('Perfil actualizado.');
+      setProfileSummaryLoading(true);
+      try {
+        const nextProfileSummary = await getPublicProfile(updatedUser.username);
+        setProfileSummary(nextProfileSummary);
+        setProfileSummaryError(null);
+      } catch (summaryError) {
+        if (isUnauthorizedError(summaryError)) {
+          router.replace('/login');
+          return;
+        }
+        setProfileSummaryError(getApiErrorMessage(summaryError, 'No se pudo cargar tu red.'));
+      } finally {
+        setProfileSummaryLoading(false);
+      }
       setStatsLoading(true);
       try {
         const nextStats = await getUserStats(updatedUser.username);
@@ -317,6 +367,42 @@ export function useProfileViewModel() {
         return;
       }
       setError(getApiErrorMessage(saveError, 'No se pudo actualizar el perfil.'));
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  async function saveBioInline() {
+    if (!user || savingProfile) {
+      return;
+    }
+
+    const normalizedBio = bioDraft.trim();
+    const currentBio = user.bio ?? '';
+
+    if (normalizedBio === currentBio) {
+      setIsEditingBio(false);
+      setBioDraft(user.bio ?? '');
+      return;
+    }
+
+    setSavingProfile(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const updatedUser = await updateMyProfile({
+        bio: normalizedBio === '' ? null : normalizedBio,
+      });
+      setUser(updatedUser);
+      setBioDraft(updatedUser.bio ?? '');
+      setIsEditingBio(false);
+    } catch (saveError) {
+      if (isUnauthorizedError(saveError)) {
+        router.replace('/login');
+        return;
+      }
+      setError(getApiErrorMessage(saveError, 'No se pudo actualizar la bio.'));
     } finally {
       setSavingProfile(false);
     }
@@ -409,8 +495,43 @@ export function useProfileViewModel() {
     router.push('/(tabs)/lists');
   }
 
+  function startBioEditing() {
+    if (!user) {
+      return;
+    }
+
+    setError(null);
+    setBioDraft(user.bio ?? '');
+    setIsEditingBio(true);
+  }
+
+  function cancelBioEditing() {
+    if (!user) {
+      return;
+    }
+
+    setBioDraft(user.bio ?? '');
+    setIsEditingBio(false);
+  }
+
+  function openNetwork(tab: 'followers' | 'following') {
+    if (!user) {
+      return;
+    }
+
+    router.push({
+      pathname: '/profile-network',
+      params: {
+        tab,
+        username: user.username,
+        display_name: user.display_name ?? user.username,
+      },
+    });
+  }
+
   return {
     user,
+    profileSummary,
     stats,
     favorites,
     recentWatch,
@@ -418,15 +539,18 @@ export function useProfileViewModel() {
     loggingOut,
     savingProfile,
     savingFavorites,
+    profileSummaryLoading,
     statsLoading,
     favoritesLoading,
     recentWatchLoading,
     error,
+    profileSummaryError,
     statsError,
     favoritesError,
     recentWatchError,
     successMessage,
     isEditing,
+    isEditingBio,
     displayNameDraft,
     bioDraft,
     avatarUrlDraft,
@@ -446,7 +570,10 @@ export function useProfileViewModel() {
     startEditing,
     cancelEditing,
     saveProfile,
+    saveBioInline,
     startFavoriteEditing,
+    startBioEditing,
+    cancelBioEditing,
     openFavoritePicker,
     cancelFavoriteEditing,
     selectFavoriteForActiveSlot,
@@ -454,5 +581,6 @@ export function useProfileViewModel() {
     openDetail,
     openDiary,
     openLists,
+    openNetwork,
   };
 }

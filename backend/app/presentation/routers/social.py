@@ -30,6 +30,8 @@ from app.domain.usecases.social.get_my_favorite_media import GetMyFavoriteMediaU
 from app.domain.usecases.social.get_public_profile import GetPublicProfileUseCase
 from app.domain.usecases.social.get_user_stats import GetUserStatsUseCase
 from app.domain.usecases.social.list_feed import ListFeedUseCase
+from app.domain.usecases.social.list_followers import ListFollowersUseCase
+from app.domain.usecases.social.list_following import ListFollowingUseCase
 from app.domain.usecases.social.list_visual_feed import ListVisualFeedUseCase
 from app.domain.usecases.social.search_users import SearchUsersUseCase
 from app.domain.usecases.social.unfollow_user import UnfollowUserUseCase
@@ -70,6 +72,7 @@ def _to_summary_response(user: PublicUserSummary) -> PublicUserSummaryResponse:
         display_name=user.display_name,
         avatar_url=user.avatar_url,
         is_following=user.is_following,
+        follows_me=user.follows_me,
     )
 
 
@@ -276,6 +279,24 @@ async def get_public_profile(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return _to_profile_response(user)
+
+
+@router.get("/users/me/followers", response_model=list[PublicUserSummaryResponse])
+async def list_my_followers(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[PublicUserSummaryResponse]:
+    users = await ListFollowersUseCase(UserRepository(session)).execute(current_user.id)
+    return [_to_summary_response(user) for user in users]
+
+
+@router.get("/users/me/following", response_model=list[PublicUserSummaryResponse])
+async def list_my_following(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[PublicUserSummaryResponse]:
+    users = await ListFollowingUseCase(UserRepository(session)).execute(current_user.id)
+    return [_to_summary_response(user) for user in users]
 
 
 @router.put("/users/me", response_model=UserResponse)

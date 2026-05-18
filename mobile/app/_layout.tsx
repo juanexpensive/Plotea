@@ -48,6 +48,10 @@ export default function RootLayout() {
         options={{ headerShown: true, title: 'Perfil publico' }}
       />
       <Stack.Screen
+        name="profile-network"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="my-lists"
         options={{ headerShown: true, title: 'Mis listas' }}
       />

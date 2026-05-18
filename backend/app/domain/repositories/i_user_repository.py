@@ -18,6 +18,12 @@ class IUserRepository(ABC):
     async def search_public(self, query: str, current_user_id: int, limit: int = 10) -> list[PublicUserSummary]: ...
 
     @abstractmethod
+    async def list_followers(self, current_user_id: int, limit: int = 100) -> list[PublicUserSummary]: ...
+
+    @abstractmethod
+    async def list_following(self, current_user_id: int, limit: int = 100) -> list[PublicUserSummary]: ...
+
+    @abstractmethod
     async def search_mutual_followers(
         self,
         query: str,

@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -5,33 +7,26 @@ import {
   Animated,
   Image,
   LayoutAnimation,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
+  NativeSyntheticEvent,
+  TextLayoutEventData,
   TextInput,
   UIManager,
   View,
 } from 'react-native';
 import { ListItem, ListOwner } from '../../../domain/entities/lists';
+import { MediaItem } from '../../../domain/entities/media';
+import { darkDesign } from '../../theme/darkDesign';
+import { sharedStyles } from '../../theme/sharedStyles';
 import { useListDetailViewModel } from './ListDetailViewModel';
 
-const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
-
-const design = {
-  emerald: '#3ecf8e',
-  emeraldDeep: '#24b47e',
-  ink: '#171717',
-  inkMute: '#707070',
-  canvas: '#ffffff',
-  canvasSoft: '#fafafa',
-  hairline: '#dfdfdf',
-  hairlineStrong: '#c7c7c7',
-  danger: '#ff2201',
-  shadow: 'rgba(0,0,0,0.08)',
-};
+const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w300';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -41,6 +36,12 @@ export default function ListDetailScreen() {
   const { list_id } = useLocalSearchParams<{ list_id?: string }>();
   const listId = list_id ? Number(list_id) : null;
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isEditingHero, setIsEditingHero] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [hasLongDescription, setHasLongDescription] = useState(false);
+  const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const {
     detail,
     form,
@@ -73,10 +74,52 @@ export default function ListDetailScreen() {
     openCollaboratorProfile,
   } = useListDetailViewModel(listId);
 
+  const participants = detail ? [detail.owner, ...detail.collaborators] : [];
+  const canShowDescriptionToggle = Boolean(detail?.description) && hasLongDescription;
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!detail || !isEditingHero) {
+      return;
+    }
+
+    const normalizedName = form.name.trim();
+    const normalizedDescription = form.description?.trim() || null;
+    const hasChanged =
+      normalizedName !== detail.name ||
+      normalizedDescription !== detail.description ||
+      form.is_public !== detail.is_public;
+
+    if (!hasChanged || saving) {
+      return;
+    }
+
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+
+    autosaveTimeoutRef.current = setTimeout(() => {
+      void saveMetadata();
+    }, 500);
+
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, [detail, form, isEditingHero, saveMetadata, saving]);
+
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={design.emerald} />
+        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
       </View>
     );
   }
@@ -117,174 +160,447 @@ export default function ListDetailScreen() {
     setSelectedKey(swapped ? null : key);
   }
 
+  async function onAddItem(item: MediaItem) {
+    await handleAddItem(item);
+    setIsAddModalVisible(false);
+  }
+
+  async function onInviteUser(user: ListOwner) {
+    await inviteCollaborator(user);
+    setIsInviteModalVisible(false);
+  }
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {detail ? (
-        <>
-          <View style={styles.heroCard}>
-            <Text style={styles.eyebrow}>LISTA</Text>
-            <Text style={styles.title}>{detail.name}</Text>
-            <Pressable onPress={openOwnerProfile}>
-              <Text style={styles.ownerMeta}>Creada por @{detail.owner.username}</Text>
-            </Pressable>
-            {detail.description ? <Text style={styles.description}>{detail.description}</Text> : null}
-            <View style={styles.badgesRow}>
-              <StatusPill label={detail.relationship === 'owner' ? 'Owner' : detail.relationship === 'collaborator' ? 'Colaborador' : 'Viewer'} tone={detail.relationship === 'viewer' ? 'soft' : 'green'} />
-              <StatusPill label={detail.is_public ? 'Publica' : 'Privada'} tone="soft" />
-            </View>
-          </View>
+    <View style={styles.screen}>
+      <StatusBar style="light" />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {detail ? (
+          <>
+            <InviteModal
+              visible={isInviteModalVisible}
+              query={inviteQuery}
+              results={inviteResults}
+              loading={inviteLoading}
+              error={inviteError}
+              saving={saving}
+              onChangeQuery={setInviteQuery}
+              onClose={() => setIsInviteModalVisible(false)}
+              onClear={() => setInviteQuery('')}
+              onInvite={onInviteUser}
+            />
 
-          <View style={styles.metaCard}>
-            <Text style={styles.sectionTitle}>Equipo</Text>
-            <Pressable onPress={openOwnerProfile}>
-              <Text style={styles.metaLine}>Owner: @{detail.owner.username}</Text>
-            </Pressable>
-            {detail.collaborators.length > 0 ? (
-              <View style={styles.collaboratorsList}>
-                {detail.collaborators.map((user) => (
-                  <View key={user.id} style={styles.collaboratorRow}>
-                    <Pressable style={styles.collaboratorBody} onPress={() => openCollaboratorProfile(user.username)}>
-                      <Text style={styles.collaboratorName}>@{user.username}</Text>
-                      <Text style={styles.collaboratorMeta}>{user.display_name ?? 'Colaborador activo'}</Text>
-                    </Pressable>
-                    {canManageCollaborators ? (
-                      <Pressable style={({ pressed }) => [styles.removeChip, pressed ? styles.pressed : null]} onPress={() => void removeCollaborator(user)}>
-                        <Text style={styles.removeChipText}>Quitar</Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text style={styles.metaMuted}>Todavia no hay colaboradores activos.</Text>
-            )}
-          </View>
+            <AddMediaModal
+              visible={isAddModalVisible}
+              query={query}
+              results={searchResults}
+              loading={searchLoading}
+              error={searchError}
+              saving={saving}
+              onChangeQuery={setQuery}
+              onClose={() => setIsAddModalVisible(false)}
+              onClear={() => setQuery('')}
+              onAdd={onAddItem}
+            />
 
-          {canManageCollaborators ? (
-            <View style={styles.panel}>
-              <Text style={styles.sectionTitle}>Invitar colaborador</Text>
-              <Text style={styles.panelCopy}>Solo apareceran usuarios con follow mutuo y sin invitacion pendiente.</Text>
-              <TextInput
-                style={styles.input}
-                value={inviteQuery}
-                onChangeText={setInviteQuery}
-                placeholder="Busca por username"
-                placeholderTextColor="#9a9a9a"
-                selectionColor={design.emerald}
-              />
-              {inviteLoading ? <ActivityIndicator size="small" color={design.emerald} /> : null}
-              {inviteError ? <Text style={styles.errorText}>{inviteError}</Text> : null}
-              <View style={styles.resultsList}>
-                {inviteResults.map((user) => (
-                  <View key={user.id} style={styles.searchRow}>
-                    <View style={styles.searchRowBody}>
-                      <Text style={styles.searchRowTitle}>@{user.username}</Text>
-                      <Text style={styles.searchRowMeta}>{user.display_name ?? 'Follow mutuo'}</Text>
-                    </View>
-                    <Pressable style={({ pressed }) => [styles.primaryInlineButton, pressed ? styles.primaryPressed : null, saving ? styles.disabled : null]} onPress={() => void inviteCollaborator(user)} disabled={saving}>
-                      <Text style={styles.primaryInlineButtonText}>Invitar</Text>
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : null}
-
-          {canEdit ? (
-            <View style={styles.panel}>
-              <Text style={styles.sectionTitle}>Editar lista</Text>
-              <TextInput
-                style={styles.input}
-                value={form.name}
-                onChangeText={(value) => updateForm({ name: value })}
-                placeholder="Nombre"
-                placeholderTextColor="#9a9a9a"
-                selectionColor={design.emerald}
-              />
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={form.description ?? ''}
-                onChangeText={(value) => updateForm({ description: value })}
-                placeholder="Descripcion"
-                placeholderTextColor="#9a9a9a"
-                multiline
-                selectionColor={design.emerald}
-              />
-              <View style={styles.toggleRow}>
-                <Text style={styles.toggleLabel}>Lista publica</Text>
-                <Switch
-                  value={form.is_public}
-                  onValueChange={(value) => updateForm({ is_public: value })}
-                  trackColor={{ false: '#d4d4d4', true: '#4ade80' }}
-                  thumbColor={form.is_public ? design.ink : '#fff'}
-                />
-              </View>
-              <View style={styles.actionsRow}>
-                <Pressable style={({ pressed }) => [styles.primaryButton, pressed ? styles.primaryPressed : null, saving ? styles.disabled : null]} onPress={saveMetadata} disabled={saving}>
-                  <Text style={styles.primaryButtonText}>{saving ? 'Guardando...' : 'Guardar'}</Text>
-                </Pressable>
-                {canDelete ? (
-                  <Pressable style={({ pressed }) => [styles.secondaryDangerButton, pressed ? styles.pressed : null, deleting ? styles.disabled : null]} onPress={handleDeleteList} disabled={deleting}>
-                    <Text style={styles.secondaryDangerText}>{deleting ? 'Borrando...' : 'Borrar'}</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            </View>
-          ) : null}
-
-          {canEdit ? (
-            <View style={styles.panel}>
-              <Text style={styles.sectionTitle}>Anadir obra</Text>
-              <TextInput
-                style={styles.input}
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Busca una pelicula o serie"
-                placeholderTextColor="#9a9a9a"
-                selectionColor={design.emerald}
-              />
-              {searchLoading ? <ActivityIndicator size="small" color={design.emerald} /> : null}
-              {searchError ? <Text style={styles.errorText}>{searchError}</Text> : null}
-              <View style={styles.resultsList}>
-                {searchResults.slice(0, 6).map((item) => (
+            <View style={styles.heroSection}>
+              {canEdit && isEditingHero ? (
+                <View style={styles.topRow}>
+                  <View style={styles.iconSpacer} />
                   <Pressable
-                    key={`${item.media_type}-${item.tmdb_id}`}
-                    style={({ pressed }) => [styles.searchRow, pressed ? styles.pressed : null]}
-                    onPress={() => void handleAddItem(item)}
+                    style={styles.iconButton}
+                    onPress={() => {
+                      void saveMetadata();
+                      setIsEditingHero(false);
+                    }}
                   >
-                    <View style={styles.searchRowBody}>
-                      <Text style={styles.searchRowTitle}>{item.title}</Text>
-                      <Text style={styles.searchRowMeta}>{`${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`}</Text>
-                    </View>
-                    <Text style={styles.rowAction}>Anadir</Text>
+                    <Ionicons name="close" size={20} color={darkDesign.colors.text} />
                   </Pressable>
-                ))}
-              </View>
+                </View>
+              ) : null}
+
+
+
+              <Pressable
+                disabled={!canEdit || isEditingHero}
+                onPress={() => canEdit ? setIsEditingHero(true) : undefined}
+                style={({ pressed }) => [styles.titleBlock, canEdit && !isEditingHero && pressed ? styles.pressed : null]}
+              >
+                {isEditingHero ? (
+                  <>
+                    <TextInput
+                      style={styles.titleInput}
+                      value={form.name}
+                      onChangeText={(value) => updateForm({ name: value })}
+                      placeholder="Nombre"
+                      placeholderTextColor={darkDesign.colors.textFaint}
+                      selectionColor={darkDesign.colors.accent}
+                    />
+                    <TextInput
+                      style={styles.descriptionInput}
+                      value={form.description ?? ''}
+                      onChangeText={(value) => updateForm({ description: value })}
+                      placeholder="Descripcion"
+                      placeholderTextColor={darkDesign.colors.textFaint}
+                      multiline
+                      selectionColor={darkDesign.colors.accent}
+                    />
+                    <View style={styles.heroEditFooter}>
+                      <View style={styles.toggleRow}>
+                        <View style={styles.toggleCopy}>
+                          <Text style={styles.toggleLabel}>Lista publica</Text>
+                          <Text style={styles.toggleHint}>Haz visible la coleccion al resto de usuarios.</Text>
+                        </View>
+                        <Switch
+                          value={form.is_public}
+                          onValueChange={(value) => updateForm({ is_public: value })}
+                          trackColor={{ false: darkDesign.colors.borderStrong, true: darkDesign.colors.accentDeep }}
+                          thumbColor={form.is_public ? darkDesign.colors.onAccent : darkDesign.colors.text}
+                        />
+                      </View>
+                      {saving ? (
+                        <View style={styles.inlineSavingRow}>
+                          <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+                          <Text style={styles.inlineSavingText}>Guardando cambios...</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    {detail.description ? (
+                      <Text
+                        style={styles.descriptionMeasure}
+                        onTextLayout={(event: NativeSyntheticEvent<TextLayoutEventData>) => {
+                          setHasLongDescription(event.nativeEvent.lines.length > 3);
+                        }}
+                      >
+                        {detail.description}
+                      </Text>
+                    ) : null}
+                    <Text style={styles.title}>{detail.name}</Text>
+                    {detail.description ? (
+                      <Text
+                        style={styles.description}
+                        numberOfLines={isDescriptionExpanded ? undefined : 3}
+                      >
+                        {detail.description}
+                      </Text>
+                    ) : null}
+                    {canShowDescriptionToggle ? (
+                      <Text style={styles.readMoreText} onPress={() => setIsDescriptionExpanded((current) => !current)}>
+                        {isDescriptionExpanded ? 'Leer menos' : 'Leer mas'}
+                      </Text>
+                    ) : null}
+                    {canEdit ? <Text style={styles.editHint}>Toca para editar titulo y descripcion</Text> : null}
+                  </>
+                )}
+              </Pressable>
             </View>
-          ) : null}
 
-          {canEdit ? <Text style={styles.helper}>Toca una obra y luego otra para intercambiar su posicion.</Text> : null}
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {canEdit ? <Text style={styles.helper}>Toca una obra y luego otra para intercambiar su posicion.</Text> : null}
+            <View style={styles.membersCard}>
+              <View style={styles.memberInfo}>
+                <AvatarStack users={participants} />
+                <View style={styles.memberCopy}>
+                  <Pressable onPress={openOwnerProfile}>
+                    <Text style={styles.ownerText}>@{detail.owner.username}</Text>
+                  </Pressable>
+                  <Text style={styles.memberMeta}>
+                    {participants.length} personas · {detail.is_public ? 'Lista publica' : 'Lista privada'}
+                  </Text>
+                </View>
+              </View>
 
-          <View style={styles.itemsList}>
-            {detail.items.map((item) => (
-              <AnimatedListCard
-                key={toItemKey(item)}
-                item={item}
-                selected={selectedKey === toItemKey(item)}
-                editable={canEdit}
-                onPress={() => void onItemPress(item)}
-                onRemove={canEdit ? () => handleRemoveItem(item) : undefined}
-              />
-            ))}
-          </View>
-        </>
+              {canManageCollaborators ? (
+                <Pressable style={styles.inviteButton} onPress={() => setIsInviteModalVisible(true)}>
+                  <Ionicons name="person-add-outline" size={16} color={darkDesign.colors.text} />
+                  <Text style={styles.inviteButtonText}>Invite</Text>
+                </Pressable>
+              ) : null}
+            </View>
+
+            <View style={styles.posterGrid}>
+              {detail.items.map((item, index) => (
+                <View key={toItemKey(item)} style={[styles.gridCell, index % 4 === 3 ? styles.gridCellLast : null]}>
+                  <PosterTile
+                    item={item}
+                    selected={selectedKey === toItemKey(item)}
+                    editable={canEdit}
+                    onPress={() => void onItemPress(item)}
+                    onRemove={canEdit ? () => handleRemoveItem(item) : undefined}
+                  />
+                </View>
+              ))}
+
+              {canEdit ? (
+                <View style={[styles.gridCell, detail.items.length % 4 === 3 ? styles.gridCellLast : null]}>
+                  <Pressable style={({ pressed }) => [styles.addTile, pressed ? styles.pressed : null]} onPress={() => setIsAddModalVisible(true)}>
+                    <Ionicons name="add" size={28} color={darkDesign.colors.textMuted} />
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
+
+            {detail.collaborators.length > 0 ? (
+              <View style={styles.collaboratorsPanel}>
+                <Text style={styles.panelTitle}>Collaborators</Text>
+                <View style={styles.collaboratorsList}>
+                  {detail.collaborators.map((user) => (
+                    <View key={user.id} style={styles.collaboratorRow}>
+                      <Pressable style={styles.collaboratorBody} onPress={() => openCollaboratorProfile(user.username)}>
+                        <Text style={styles.collaboratorName}>@{user.username}</Text>
+                        <Text style={styles.collaboratorMeta}>{user.display_name ?? 'Colaborador activo'}</Text>
+                      </Pressable>
+                      {canManageCollaborators ? (
+                        <Pressable style={({ pressed }) => [styles.removeChip, pressed ? styles.pressed : null]} onPress={() => void removeCollaborator(user)}>
+                          <Text style={styles.removeChipText}>Quitar</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </>
+        ) : null}
+      </ScrollView>
+
+      {canEdit ? (
+        <Pressable style={({ pressed }) => [styles.fab, pressed ? styles.pressed : null]} onPress={() => setIsAddModalVisible(true)}>
+          <Ionicons name="add" size={28} color={darkDesign.colors.onAccent} />
+        </Pressable>
       ) : null}
-    </ScrollView>
+    </View>
   );
 }
 
-function AnimatedListCard({
+function InviteModal({
+  visible,
+  query,
+  results,
+  loading,
+  error,
+  saving,
+  onChangeQuery,
+  onClose,
+  onClear,
+  onInvite,
+}: {
+  visible: boolean;
+  query: string;
+  results: ListOwner[];
+  loading: boolean;
+  error: string | null;
+  saving: boolean;
+  onChangeQuery: (value: string) => void;
+  onClose: () => void;
+  onClear: () => void;
+  onInvite: (user: ListOwner) => void | Promise<void>;
+}) {
+  const hasQuery = query.trim().length > 0;
+  const canSearch = query.trim().length >= 2;
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+      <View style={styles.modalScreen}>
+        <StatusBar style="light" />
+        <View style={styles.modalHeader}>
+          <Pressable style={styles.modalIconButton} onPress={onClose}>
+            <Ionicons name="arrow-back" size={22} color={darkDesign.colors.text} />
+          </Pressable>
+          <View style={styles.modalInputShell}>
+            <Text style={styles.modalEyebrow}>INVITE</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={query}
+              onChangeText={onChangeQuery}
+              placeholder="Buscar colaborador"
+              placeholderTextColor={darkDesign.colors.textFaint}
+              autoCapitalize="none"
+              autoCorrect={false}
+              selectionColor={darkDesign.colors.accent}
+              autoFocus
+            />
+          </View>
+          <Pressable style={styles.modalIconButton} onPress={hasQuery ? onClear : onClose}>
+            <Ionicons name={hasQuery ? 'close' : 'close-outline'} size={22} color={darkDesign.colors.text} />
+          </Pressable>
+        </View>
+
+        {!canSearch ? (
+          <EmptyModalState
+            title="Busca a alguien"
+            body="Escribe al menos 2 caracteres para encontrar personas invitables."
+          />
+        ) : (
+          <ScrollView style={styles.modalResults} contentContainerStyle={styles.modalResultsContent}>
+            <ResultState loading={loading} error={error} emptyMessage="No hay usuarios disponibles" hasResults={results.length > 0}>
+              {results.map((user) => (
+                <View key={user.id} style={styles.resultRow}>
+                  <MiniAvatar user={user} />
+                  <View style={styles.resultCopy}>
+                    <Text style={styles.resultTitle}>@{user.username}</Text>
+                    <Text style={styles.resultMeta}>{user.display_name ?? 'Follow mutuo'}</Text>
+                  </View>
+                  <Pressable
+                    style={({ pressed }) => [styles.resultAction, pressed ? styles.primaryPressed : null, saving ? styles.disabled : null]}
+                    onPress={() => void onInvite(user)}
+                    disabled={saving}
+                  >
+                    <Text style={styles.resultActionText}>Invitar</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </ResultState>
+          </ScrollView>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
+function AddMediaModal({
+  visible,
+  query,
+  results,
+  loading,
+  error,
+  saving,
+  onChangeQuery,
+  onClose,
+  onClear,
+  onAdd,
+}: {
+  visible: boolean;
+  query: string;
+  results: MediaItem[];
+  loading: boolean;
+  error: string | null;
+  saving: boolean;
+  onChangeQuery: (value: string) => void;
+  onClose: () => void;
+  onClear: () => void;
+  onAdd: (item: MediaItem) => void | Promise<void>;
+}) {
+  const hasQuery = query.trim().length > 0;
+  const canSearch = query.trim().length >= 2;
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+      <View style={styles.modalScreen}>
+        <StatusBar style="light" />
+        <View style={styles.modalHeader}>
+          <Pressable style={styles.modalIconButton} onPress={onClose}>
+            <Ionicons name="arrow-back" size={22} color={darkDesign.colors.text} />
+          </Pressable>
+          <View style={styles.modalInputShell}>
+            <Text style={styles.modalEyebrow}>ADD TO LIST</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={query}
+              onChangeText={onChangeQuery}
+              placeholder="Buscar pelicula o serie"
+              placeholderTextColor={darkDesign.colors.textFaint}
+              autoCapitalize="none"
+              autoCorrect={false}
+              selectionColor={darkDesign.colors.accent}
+              autoFocus
+            />
+          </View>
+          <Pressable style={styles.modalIconButton} onPress={hasQuery ? onClear : onClose}>
+            <Ionicons name={hasQuery ? 'close' : 'close-outline'} size={22} color={darkDesign.colors.text} />
+          </Pressable>
+        </View>
+
+        {!canSearch ? (
+          <EmptyModalState
+            title="Empieza a escribir"
+            body="Usa al menos 2 caracteres para encontrar peliculas o series."
+          />
+        ) : (
+          <ScrollView style={styles.modalResults} contentContainerStyle={styles.modalResultsContent}>
+            <ResultState loading={loading} error={error} emptyMessage="No hay resultados" hasResults={results.length > 0}>
+              {results.slice(0, 9).map((item) => (
+                <Pressable
+                  key={`${item.media_type}-${item.tmdb_id}`}
+                  style={({ pressed }) => [styles.resultRow, pressed ? styles.pressed : null, saving ? styles.disabled : null]}
+                  onPress={() => void onAdd(item)}
+                  disabled={saving}
+                >
+                  {item.poster_path ? (
+                    <Image source={{ uri: `${TMDB_IMAGE}${item.poster_path}` }} style={styles.resultPoster} />
+                  ) : (
+                    <View style={[styles.resultPoster, styles.posterFallback]} />
+                  )}
+                  <View style={styles.resultCopy}>
+                    <Text style={styles.resultTitle}>{item.title}</Text>
+                    <Text style={styles.resultMeta}>
+                      {item.media_type === 'movie' ? 'Pelicula' : 'Serie'}
+                      {item.release_date ? ` · ${item.release_date.slice(0, 4)}` : ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.resultLink}>Anadir</Text>
+                </Pressable>
+              ))}
+            </ResultState>
+          </ScrollView>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
+function EmptyModalState({ title, body }: { title: string; body: string }) {
+  return (
+    <View style={styles.modalEmptyState}>
+      <Text style={styles.modalEmptyTitle}>{title}</Text>
+      <Text style={styles.modalEmptyBody}>{body}</Text>
+    </View>
+  );
+}
+
+function ResultState({
+  loading,
+  error,
+  emptyMessage,
+  hasResults,
+  children,
+}: {
+  loading: boolean;
+  error: string | null;
+  emptyMessage: string;
+  hasResults: boolean;
+  children: React.ReactNode;
+}) {
+  if (loading) {
+    return (
+      <View style={styles.modalState}>
+        <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.modalState}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
+  if (!hasResults) {
+    return (
+      <View style={styles.modalState}>
+        <Text style={styles.mutedText}>{emptyMessage}</Text>
+      </View>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+function PosterTile({
   item,
   selected,
   editable,
@@ -298,46 +614,59 @@ function AnimatedListCard({
   onRemove?: () => void;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(0.98)).current;
+  const opacity = useRef(new Animated.Value(0.92)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(scale, { toValue: selected ? 1.015 : 1, duration: 140, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: selected ? 1 : 0.98, duration: 140, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: selected ? 1.03 : 1, duration: 140, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: selected ? 1 : 0.92, duration: 140, useNativeDriver: true }),
     ]).start();
   }, [opacity, scale, selected]);
 
-  const title = item.media_summary?.title ?? `${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`;
-
   return (
-    <Animated.View style={[styles.itemCard, selected ? styles.itemCardSelected : null, { transform: [{ scale }], opacity }]}>
-      <Pressable style={styles.itemMain} onPress={onPress}>
+    <Animated.View style={[styles.posterTile, selected ? styles.posterTileSelected : null, { transform: [{ scale }], opacity }]}>
+      <Pressable onPress={onPress} style={styles.posterTilePressable}>
         {item.media_summary?.poster_path ? (
-          <Image source={{ uri: `${TMDB_IMAGE}${item.media_summary.poster_path}` }} style={styles.poster} />
+          <Image source={{ uri: `${TMDB_IMAGE}${item.media_summary.poster_path}` }} style={styles.posterImage} />
         ) : (
-          <View style={[styles.poster, styles.posterFallback]} />
+          <View style={[styles.posterImage, styles.posterFallback]} />
         )}
-        <View style={styles.itemBody}>
-          <Text style={styles.itemTitle}>{title}</Text>
-          <Text style={styles.itemMeta}>
-            {`Posicion ${item.position + 1} · ${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`}
-          </Text>
-          <Text style={styles.itemAuthor}>Anadida por @{item.added_by.username}</Text>
-        </View>
+        {editable && onRemove ? (
+          <Pressable style={styles.posterRemoveButton} onPress={onRemove}>
+            <Ionicons name="close" size={14} color={darkDesign.colors.text} />
+          </Pressable>
+        ) : null}
       </Pressable>
-      {editable && onRemove ? (
-        <Pressable style={({ pressed }) => [styles.removeChip, pressed ? styles.pressed : null]} onPress={onRemove}>
-          <Text style={styles.removeChipText}>Quitar</Text>
-        </Pressable>
-      ) : null}
     </Animated.View>
   );
 }
 
-function StatusPill({ label, tone }: { label: string; tone: 'green' | 'soft' }) {
+function AvatarStack({ users }: { users: ListOwner[] }) {
+  const visibleUsers = users.slice(0, 3);
+  const hiddenCount = users.length - visibleUsers.length;
+
   return (
-    <View style={tone === 'green' ? styles.greenPill : styles.softPill}>
-      <Text style={styles.pillText}>{label}</Text>
+    <View style={styles.avatarStack}>
+      {visibleUsers.map((user) => (
+        <MiniAvatar key={user.id} user={user} stacked />
+      ))}
+      {hiddenCount > 0 ? (
+        <View style={[styles.miniAvatar, styles.avatarCounter]}>
+          <Text style={styles.avatarCounterText}>+{hiddenCount}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function MiniAvatar({ user, stacked = false }: { user: ListOwner; stacked?: boolean }) {
+  const initial = (user.display_name ?? user.username).charAt(0).toUpperCase();
+
+  return user.avatar_url ? (
+    <Image source={{ uri: user.avatar_url }} style={[styles.miniAvatarImage, stacked ? styles.stackedAvatar : null]} />
+  ) : (
+    <View style={[styles.miniAvatar, stacked ? styles.stackedAvatar : null]}>
+      <Text style={styles.miniAvatarText}>{initial}</Text>
     </View>
   );
 }
@@ -347,321 +676,468 @@ function toItemKey(item: ListItem) {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#f3f4f6',
-  },
+  screen: sharedStyles.screen,
   content: {
-    padding: 20,
-    gap: 16,
-    paddingBottom: 36,
+    ...sharedStyles.scrollContent,
+    paddingTop: 0,
+    paddingBottom: 120,
+    gap: darkDesign.spacing.xl,
   },
-  centered: {
-    flex: 1,
+  centered: sharedStyles.centered,
+  heroSection: {
+    gap: darkDesign.spacing.sm,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f3f4f6',
-    padding: 24,
-  },
-  heroCard: {
-    backgroundColor: design.canvas,
-    borderRadius: 12,
+    backgroundColor: darkDesign.colors.canvasInset,
     borderWidth: 1,
-    borderColor: design.hairline,
-    padding: 20,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    borderColor: darkDesign.colors.border,
   },
-  eyebrow: {
-    color: design.inkMute,
-    fontSize: 12,
-    letterSpacing: 1.2,
-    fontWeight: '600',
+  iconSpacer: {
+    width: 40,
+    height: 40,
   },
   title: {
-    color: design.ink,
-    fontSize: 30,
-    lineHeight: 34,
-    fontWeight: '500',
-    letterSpacing: -0.4,
+    color: darkDesign.colors.text,
+    fontSize: 31,
+    lineHeight: 36,
+    fontWeight: '800',
+    letterSpacing: -0.9,
   },
-  ownerMeta: {
-    color: design.ink,
-    fontSize: 14,
-    fontWeight: '500',
+  titleBlock: {
+    gap: darkDesign.spacing.sm,
   },
   description: {
-    color: design.inkMute,
-    fontSize: 15,
-    lineHeight: 22,
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.body,
+    marginTop: -4,
   },
-  badgesRow: {
+  descriptionMeasure: {
+    position: 'absolute',
+    opacity: 0,
+    left: 0,
+    right: 0,
+    pointerEvents: 'none',
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.body,
+  },
+  readMoreText: {
+    color: '#ffb787',
+    ...darkDesign.typography.caption,
+    fontWeight: '700',
+  },
+  editHint: {
+    color: darkDesign.colors.textFaint,
+    ...darkDesign.typography.micro,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  membersCard: {
     flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  metaCard: {
-    backgroundColor: design.canvas,
-    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: darkDesign.spacing.md,
+    padding: darkDesign.spacing.md,
+    borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.panel,
     borderWidth: 1,
-    borderColor: design.hairline,
-    padding: 16,
-    gap: 10,
+    borderColor: darkDesign.colors.border,
   },
-  sectionTitle: {
-    color: design.ink,
-    fontSize: 18,
-    fontWeight: '500',
+  memberInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkDesign.spacing.md,
+    flex: 1,
   },
-  metaLine: {
-    color: design.ink,
-    fontSize: 14,
+  memberCopy: {
+    flex: 1,
+    gap: 3,
   },
-  metaMuted: {
-    color: design.inkMute,
-    fontSize: 14,
+  ownerText: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.caption,
+    fontWeight: '700',
+  },
+  memberMeta: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.micro,
+  },
+  inviteButton: {
+    minHeight: 38,
+    borderRadius: darkDesign.radii.pill,
+    backgroundColor: darkDesign.colors.canvasRaised,
+    borderWidth: 1,
+    borderColor: darkDesign.colors.borderStrong,
+    paddingHorizontal: darkDesign.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  inviteButtonText: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.micro,
+    fontWeight: '700',
+  },
+  titleInput: {
+    color: darkDesign.colors.text,
+    fontSize: 31,
+    lineHeight: 36,
+    fontWeight: '800',
+    letterSpacing: -0.9,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  descriptionInput: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.body,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    minHeight: 88,
+    textAlignVertical: 'top',
+  },
+  heroEditFooter: {
+    gap: darkDesign.spacing.md,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: darkDesign.spacing.md,
+  },
+  toggleCopy: {
+    flex: 1,
+  },
+  toggleLabel: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.body,
+    fontWeight: '600',
+  },
+  toggleHint: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.micro,
+    marginTop: 2,
+  },
+  inlineSavingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkDesign.spacing.sm,
+  },
+  inlineSavingText: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.caption,
+  },
+  primaryPressed: {
+    backgroundColor: darkDesign.colors.accentDeep,
+  },
+  primaryButtonText: sharedStyles.primaryButtonText,
+  dangerButton: {
+    minHeight: 42,
+    borderRadius: darkDesign.radii.sm,
+    borderWidth: 1,
+    borderColor: '#7a3030',
+    backgroundColor: '#2a1515',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: darkDesign.spacing.lg,
+    flex: 1,
+  },
+  dangerButtonText: {
+    color: '#ffb0b0',
+    ...darkDesign.typography.button,
+  },
+  helper: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.caption,
+    textAlign: 'center',
+    marginTop: -8,
+  },
+  posterGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+  },
+  gridCell: {
+    width: '24%',
+    marginRight: '1.333%',
+    marginBottom: darkDesign.spacing.md,
+  },
+  gridCellLast: {
+    marginRight: 0,
+  },
+  posterTile: {
+    width: '100%',
+    aspectRatio: 2 / 3,
+    borderRadius: 0,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: darkDesign.colors.border,
+    backgroundColor: darkDesign.colors.panel,
+  },
+  posterTileSelected: {
+    borderColor: darkDesign.colors.accent,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  posterTilePressable: {
+    flex: 1,
+  },
+  posterImage: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.88,
+    borderRadius: 0,
+  },
+  posterFallback: {
+    backgroundColor: darkDesign.colors.canvasRaisedSoft,
+  },
+  posterRemoveButton: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addTile: {
+    width: '100%',
+    aspectRatio: 2 / 3,
+    borderRadius: 0,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: darkDesign.colors.borderStrong,
+    backgroundColor: darkDesign.colors.canvasInset,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  collaboratorsPanel: {
+    ...sharedStyles.panel,
+    padding: darkDesign.spacing.lg,
+    borderRadius: darkDesign.radii.xl,
+  },
+  panelTitle: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.section,
+    marginBottom: darkDesign.spacing.sm,
   },
   collaboratorsList: {
-    gap: 10,
+    gap: darkDesign.spacing.sm,
   },
   collaboratorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: darkDesign.spacing.sm,
   },
   collaboratorBody: {
     flex: 1,
     gap: 3,
   },
   collaboratorName: {
-    color: design.ink,
-    fontSize: 15,
-    fontWeight: '500',
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.caption,
+    fontWeight: '700',
   },
   collaboratorMeta: {
-    color: design.inkMute,
-    fontSize: 13,
-  },
-  panel: {
-    backgroundColor: design.canvas,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: design.hairline,
-    padding: 16,
-    gap: 12,
-  },
-  panelCopy: {
-    color: design.inkMute,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  input: {
-    minHeight: 42,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: design.hairlineStrong,
-    backgroundColor: design.canvas,
-    paddingHorizontal: 12,
-    color: design.ink,
-    fontSize: 15,
-  },
-  textArea: {
-    minHeight: 92,
-    paddingTop: 12,
-    textAlignVertical: 'top',
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  toggleLabel: {
-    color: design.ink,
-    fontSize: 15,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  primaryButton: {
-    minHeight: 42,
-    borderRadius: 6,
-    backgroundColor: design.emerald,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    flex: 1,
-  },
-  primaryPressed: {
-    backgroundColor: design.emeraldDeep,
-  },
-  primaryButtonText: {
-    color: design.ink,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  secondaryDangerButton: {
-    minHeight: 42,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#f0b4ab',
-    backgroundColor: design.canvas,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    flex: 1,
-  },
-  secondaryDangerText: {
-    color: design.danger,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  resultsList: {
-    gap: 10,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderTopWidth: 1,
-    borderTopColor: design.hairline,
-    paddingTop: 10,
-  },
-  searchRowBody: {
-    flex: 1,
-    gap: 4,
-  },
-  searchRowTitle: {
-    color: design.ink,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  searchRowMeta: {
-    color: design.inkMute,
-    fontSize: 13,
-  },
-  primaryInlineButton: {
-    minHeight: 34,
-    borderRadius: 6,
-    backgroundColor: design.emerald,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  primaryInlineButtonText: {
-    color: design.ink,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  helper: {
-    color: design.inkMute,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  errorText: {
-    color: design.danger,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  itemsList: {
-    gap: 12,
-  },
-  itemCard: {
-    borderWidth: 1,
-    borderColor: design.hairline,
-    borderRadius: 12,
-    backgroundColor: design.canvas,
-    padding: 12,
-    gap: 10,
-  },
-  itemCardSelected: {
-    borderColor: design.emerald,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  itemMain: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
-  poster: {
-    width: 54,
-    height: 81,
-    borderRadius: 8,
-    backgroundColor: '#e5e7eb',
-  },
-  posterFallback: {
-    backgroundColor: '#e5e7eb',
-  },
-  itemBody: {
-    flex: 1,
-    gap: 6,
-  },
-  itemTitle: {
-    color: design.ink,
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  itemMeta: {
-    color: design.inkMute,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  itemAuthor: {
-    color: design.ink,
-    fontSize: 12,
-    lineHeight: 17,
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.micro,
   },
   removeChip: {
     alignSelf: 'flex-start',
     minHeight: 32,
-    borderRadius: 6,
+    borderRadius: darkDesign.radii.sm,
     borderWidth: 1,
-    borderColor: '#f0b4ab',
-    backgroundColor: design.canvas,
+    borderColor: '#7a3030',
+    backgroundColor: '#2a1515',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: darkDesign.spacing.sm,
   },
   removeChipText: {
-    color: design.danger,
-    fontSize: 12,
-    fontWeight: '600',
+    color: '#ffb0b0',
+    ...darkDesign.typography.micro,
+    fontWeight: '700',
   },
-  greenPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: design.emerald,
+  modalScreen: {
+    flex: 1,
+    backgroundColor: '#101418',
+    paddingTop: 56,
   },
-  softPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: design.canvasSoft,
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkDesign.spacing.md,
+    paddingHorizontal: darkDesign.spacing.lg,
+    paddingBottom: darkDesign.spacing.lg,
+  },
+  modalIconButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalInputShell: {
+    flex: 1,
+    gap: 6,
+  },
+  modalEyebrow: {
+    color: darkDesign.colors.textFaint,
+    ...darkDesign.typography.micro,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontWeight: '700',
+  },
+  modalInput: {
+    color: darkDesign.colors.text,
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    paddingVertical: 0,
+  },
+  modalResults: {
+    flex: 1,
+  },
+  modalResultsContent: {
+    paddingHorizontal: darkDesign.spacing.lg,
+    paddingBottom: 32,
+  },
+  modalEmptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: darkDesign.spacing.xxl,
+    gap: darkDesign.spacing.sm,
+  },
+  modalEmptyTitle: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.section,
+  },
+  modalEmptyBody: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.body,
+    textAlign: 'center',
+  },
+  modalState: {
+    minHeight: 160,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mutedText: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.caption,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkDesign.spacing.md,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: darkDesign.colors.border,
+  },
+  resultPoster: {
+    width: 64,
+    height: 96,
+    borderRadius: darkDesign.radii.md,
+    backgroundColor: darkDesign.colors.borderStrong,
+  },
+  resultCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  resultTitle: {
+    color: darkDesign.colors.text,
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '700',
+  },
+  resultMeta: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.caption,
+  },
+  resultAction: {
+    minHeight: 34,
+    borderRadius: darkDesign.radii.pill,
+    backgroundColor: darkDesign.colors.canvasRaised,
     borderWidth: 1,
-    borderColor: design.hairline,
+    borderColor: darkDesign.colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: darkDesign.spacing.md,
   },
-  pillText: {
-    color: design.ink,
-    fontSize: 12,
-    fontWeight: '500',
+  resultActionText: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.micro,
+    fontWeight: '700',
   },
-  rowAction: {
-    color: design.ink,
-    fontSize: 12,
-    fontWeight: '600',
+  resultLink: {
+    color: '#ffb787',
+    ...darkDesign.typography.micro,
+    fontWeight: '700',
   },
-  pressed: {
-    opacity: 0.8,
+  avatarStack: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  disabled: {
-    opacity: 0.5,
+  miniAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: darkDesign.colors.panelStrong,
+    borderWidth: 2,
+    borderColor: darkDesign.colors.panel,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  miniAvatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: darkDesign.colors.panel,
+  },
+  stackedAvatar: {
+    marginRight: -10,
+  },
+  miniAvatarText: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.micro,
+    fontWeight: '700',
+  },
+  avatarCounter: {
+    backgroundColor: darkDesign.colors.canvasRaised,
+  },
+  avatarCounterText: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.micro,
+    fontWeight: '700',
+  },
+  fab: {
+    position: 'absolute',
+    right: 24,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: darkDesign.colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...darkDesign.shadows.card,
+  },
+  errorText: sharedStyles.errorText,
+  pressed: sharedStyles.pressed,
+  disabled: sharedStyles.disabled,
 });

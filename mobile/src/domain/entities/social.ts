@@ -4,6 +4,7 @@ export interface PublicUserSummary {
   display_name: string | null;
   avatar_url: string | null;
   is_following: boolean;
+  follows_me: boolean;
 }
 
 export interface PublicUserProfile extends PublicUserSummary {

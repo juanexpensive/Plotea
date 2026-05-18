@@ -29,12 +29,9 @@ class UserRepository(IUserRepository):
         row = result.scalar_one_or_none()
         return self._to_entity(row) if row else None
 
-    async def search_public(self, query: str, current_user_id: int, limit: int = 10) -> list[PublicUserSummary]:
-        normalized_query = query.strip().lower()
-        if normalized_query == "":
-            return []
-
-        is_following = (
+    @staticmethod
+    def _is_following_expression(current_user_id: int):
+        return (
             select(func.count())
             .select_from(FollowModel)
             .where(
@@ -45,8 +42,67 @@ class UserRepository(IUserRepository):
             > 0
         )
 
+    @staticmethod
+    def _follows_me_expression(current_user_id: int):
+        return (
+            select(func.count())
+            .select_from(FollowModel)
+            .where(
+                FollowModel.follower_id == UserModel.id,
+                FollowModel.followed_id == current_user_id,
+            )
+            .scalar_subquery()
+            > 0
+        )
+
+    async def _list_social_users(
+        self,
+        *,
+        current_user_id: int,
+        relation_filter,
+        limit: int,
+    ) -> list[PublicUserSummary]:
+        is_following = self._is_following_expression(current_user_id)
+        follows_me = self._follows_me_expression(current_user_id)
+
         result = await self._session.execute(
-            select(UserModel, is_following.label("is_following"))
+            select(
+                UserModel,
+                is_following.label("is_following"),
+                follows_me.label("follows_me"),
+            )
+            .where(UserModel.id != current_user_id)
+            .where(relation_filter)
+            .order_by(UserModel.username.asc())
+            .limit(limit)
+        )
+
+        return [
+            PublicUserSummary(
+                id=model.id,
+                username=model.username,
+                display_name=model.display_name,
+                avatar_url=model.avatar_url,
+                is_following=bool(is_following_value),
+                follows_me=bool(follows_me_value),
+            )
+            for model, is_following_value, follows_me_value in result.all()
+        ]
+
+    async def search_public(self, query: str, current_user_id: int, limit: int = 10) -> list[PublicUserSummary]:
+        normalized_query = query.strip().lower()
+        if normalized_query == "":
+            return []
+
+        is_following = self._is_following_expression(current_user_id)
+        follows_me = self._follows_me_expression(current_user_id)
+
+        result = await self._session.execute(
+            select(
+                UserModel,
+                is_following.label("is_following"),
+                follows_me.label("follows_me"),
+            )
             .where(func.lower(UserModel.username).contains(normalized_query))
             .order_by(UserModel.username.asc())
             .limit(limit)
@@ -58,9 +114,44 @@ class UserRepository(IUserRepository):
                 display_name=model.display_name,
                 avatar_url=model.avatar_url,
                 is_following=bool(is_following_value),
+                follows_me=bool(follows_me_value),
             )
-            for model, is_following_value in result.all()
+            for model, is_following_value, follows_me_value in result.all()
         ]
+
+    async def list_followers(self, current_user_id: int, limit: int = 100) -> list[PublicUserSummary]:
+        relation_filter = (
+            select(func.count())
+            .select_from(FollowModel)
+            .where(
+                FollowModel.follower_id == UserModel.id,
+                FollowModel.followed_id == current_user_id,
+            )
+            .scalar_subquery()
+            > 0
+        )
+        return await self._list_social_users(
+            current_user_id=current_user_id,
+            relation_filter=relation_filter,
+            limit=limit,
+        )
+
+    async def list_following(self, current_user_id: int, limit: int = 100) -> list[PublicUserSummary]:
+        relation_filter = (
+            select(func.count())
+            .select_from(FollowModel)
+            .where(
+                FollowModel.follower_id == current_user_id,
+                FollowModel.followed_id == UserModel.id,
+            )
+            .scalar_subquery()
+            > 0
+        )
+        return await self._list_social_users(
+            current_user_id=current_user_id,
+            relation_filter=relation_filter,
+            limit=limit,
+        )
 
     async def search_mutual_followers(
         self,
@@ -109,6 +200,7 @@ class UserRepository(IUserRepository):
                 display_name=model.display_name,
                 avatar_url=model.avatar_url,
                 is_following=True,
+                follows_me=True,
             )
             for model in result.scalars().all()
         ]
@@ -142,16 +234,7 @@ class UserRepository(IUserRepository):
             .where(WatchLogModel.user_id == UserModel.id)
             .scalar_subquery()
         )
-        is_following = (
-            select(func.count())
-            .select_from(FollowModel)
-            .where(
-                FollowModel.follower_id == current_user_id,
-                FollowModel.followed_id == UserModel.id,
-            )
-            .scalar_subquery()
-            > 0
-        )
+        is_following = self._is_following_expression(current_user_id)
 
         result = await self._session.execute(
             select(

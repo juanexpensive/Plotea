@@ -417,3 +417,77 @@
 - `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
 - `npx tsc --noEmit`
 - Riesgo residual aceptado: la concurrencia entre colaboradores sigue siendo `last write wins` y falta validacion manual en Expo/dispositivo real
+
+# Fase 14 - Perfil social propio y vista de red
+
+## Objetivo
+
+- Refinar visualmente `ProfileScreen` para que favoritos y actividad reciente se lean como una galeria mas limpia, y anadir una vista propia de red con `Seguidores` y `Siguiendo`.
+
+## Alcance
+
+- En alcance:
+- Endpoints backend para listar `followers` y `following` del usuario autenticado
+- Contrato social ampliado con `follows_me` para distinguir reciprocidad
+- Nueva ruta mobile dedicada para la red del perfil propio
+- Acciones follow/unfollow desde la lista de red
+- Ajustes visuales en `ProfileScreen` para posters rectos, tamano unificado y sin metadatos debajo
+- Contadores pulsables de `Seguidores` y `Siguiendo` en el perfil propio
+- Fuera de alcance:
+- Tab `Blocked`
+- Vista de red para perfiles publicos
+- Busqueda o filtros dentro de la nueva pantalla
+- Nuevos tests E2E visuales mobile
+
+## Fases
+
+### Fase 1: Documentacion y contrato
+
+- Goal: fijar el alcance tecnico, el contrato `follows_me` y la secuencia de trabajo antes de editar
+- Expected files or systems: `implementation.md`, `implementation_details.md`, slice social backend/mobile
+- Validation: docs actualizadas y checklist QA aplicada al cambio
+- Review gate: el flujo follower/following y la UX de CTA quedan cerrados antes de tocar produccion
+- Estado: completada
+
+### Fase 2: Backend followers/following
+
+- Goal: exponer listas de seguidores y seguidos del usuario autenticado con informacion suficiente para la UI
+- Expected files or systems: entidades sociales, `IUserRepository`, `UserRepository`, use cases de `social`, schemas/routers, `tests/test_social.py`
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- Review gate: el backend distingue `is_following` y `follows_me` sin ambiguedad y mantiene el estilo del slice social
+- Estado: completada
+
+### Fase 3: Cliente mobile y nueva ruta
+
+- Goal: conectar la nueva API con una pantalla dedicada `profile-network`
+- Expected files or systems: `mobile/src/domain/entities/social.ts`, `mobile/src/data/repositories/SocialRepository.ts`, nueva ruta stack, view model y screen de red
+- Validation: `npx tsc --noEmit`
+- Review gate: la pantalla abre en la tab correcta y soporta follow/unfollow optimista por fila
+- Estado: completada
+
+### Fase 4: Ajustes del perfil propio
+
+- Goal: alinear visualmente favoritos y recent activity y anadir accesos a red desde stats
+- Expected files or systems: `ProfileViewModel`, `ProfileScreen`
+- Validation: `npx tsc --noEmit`
+- Review gate: favoritos y recent activity comparten tamano visual y ya no muestran titulos debajo
+- Estado: completada
+
+### Fase 5: QA, self-review y riesgos
+
+- Goal: ejecutar checks, revisar diff y dejar documentadas las incertidumbres reales
+- Expected files or systems: backend, mobile y docs de implementacion
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`, `npx tsc --noEmit`
+- Review gate: quedan documentados los riesgos de validacion visual manual y de sincronizacion de contadores
+- Estado: completada
+
+## Cierre
+
+- Backend social ahora expone `GET /users/me/followers` y `GET /users/me/following`
+- El contrato de resumen social incluye `follows_me` para distinguir reciprocidad sin logica frágil en mobile
+- `ProfileScreen` ahora muestra `Seguidores` y `Siguiendo`, unifica el tamano de posters y elimina metadatos debajo de favoritos y actividad reciente
+- Mobile anade la nueva pantalla dedicada `profile-network` con tabs `Following` y `Followers`, y CTA de follow/unfollow por fila
+- Validaciones ejecutadas:
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- `npx tsc --noEmit`
+- Riesgo residual aceptado: falta validacion manual en Expo/dispositivo real para afinar tactilidad, espaciado y percepcion visual del nuevo screen de red

@@ -879,3 +879,154 @@
 - La migracion de Alembic se anadio al repo, pero no se ha validado en esta sesion contra una base PostgreSQL real.
 - La concurrencia entre colaboradores mantiene semantica `last write wins`.
 - Durante la verificacion en este PC aparecio inestabilidad de Expo Go/AVD que no queda respaldada por los checks del proyecto (`expo-doctor`, export Android y `tsc` pasan); huele mas a problema de entorno local/emulador que a regression funcional del codigo de listas.
+
+# Fase 14 - Perfil social propio y vista de red Details
+
+## Repository Context
+
+- Relevant files:
+- `backend/app/domain/entities/social.py`
+- `backend/app/domain/repositories/i_user_repository.py`
+- `backend/app/data/repositories/user_repository.py`
+- `backend/app/domain/usecases/social`
+- `backend/app/presentation/schemas/social.py`
+- `backend/app/presentation/routers/social.py`
+- `mobile/src/domain/entities/social.ts`
+- `mobile/src/data/repositories/SocialRepository.ts`
+- `mobile/src/presentation/features/profile/ProfileViewModel.ts`
+- `mobile/src/presentation/features/profile/ProfileScreen.tsx`
+- nueva ruta/screen/view model de red propia
+- `tests/test_social.py`
+- Existing patterns to follow:
+- repositorios HTTP finos en mobile con view models por pantalla
+- slice social backend ya separado por entidades, repositorio y use cases
+- `useFocusEffect` para refresco al volver a foco
+- Constraints:
+- el perfil propio hoy usa `getMe` + `getUserStats(username)` y no dispone de lista de red
+- `PublicUserSummary` actual no distingue el caso "me sigue pero yo no le sigo"
+- la referencia visual pide densidad alta y CTA clara, pero hay que mantener coherencia con el sistema dark existente
+
+## Decisions Locked
+
+- Se anade `follows_me` al contrato de resumen social para evitar inferencias ambiguas en cliente
+- La vista de red es una pantalla dedicada de stack, no modal
+- La pantalla tiene solo dos tabs: `following` y `followers`
+- El CTA de fila sigue esta regla:
+- `is_following = true` -> mostrar check y permitir unfollow
+- `is_following = false` -> mostrar plus y permitir follow, independientemente de si `follows_me` es `true` o `false`
+- `follows_me` se expone igualmente para que la UI pueda distinguir reciprocidad y futuras variaciones sin recalcular nada
+- `ProfileScreen` elimina todos los metadatos bajo posters en favoritos y actividad reciente
+- Los posters de favoritos y actividad reciente usan el mismo ancho visual y `borderRadius: 0`
+
+## Phase Notes
+
+### Phase 1
+
+- Detailed tasks:
+- Actualizar `implementation.md` y `implementation_details.md`
+- Revisar el slice social existente en backend y mobile
+- Confirmar el hueco real de API para followers/following
+- Findings:
+- No existian endpoints cliente/backend para listar red propia
+- La mejor extension minima del contrato es `follows_me` en `PublicUserSummary`
+- Tests:
+- por ejecutar en fases posteriores
+- Review notes:
+- La UI del mock pide una pantalla dedicada; mantenerlo en una sola screen complicaria demasiado `ProfileScreen`
+- Status:
+- completed
+
+### Phase 2
+
+- Detailed tasks:
+- Extender entidades y schemas sociales con `follows_me`
+- Anadir metodos de repositorio para `list_followers` y `list_following`
+- Crear use cases especificos
+- Exponer `GET /users/me/followers` y `GET /users/me/following`
+- Cubrir con tests contrato y flags de reciprocidad
+- Findings:
+- Reutilizar el mismo resumen social evita abrir un DTO paralelo para la vista de red
+- Centralizar `is_following` y `follows_me` en el repositorio reduce duplicacion entre busqueda y listas de red
+- Tests:
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- Review notes:
+- revisar orden estable y exclusion del propio usuario
+- Status:
+- completed
+
+### Phase 3
+
+- Detailed tasks:
+- Ampliar entidades mobile y `SocialRepository`
+- Crear `ProfileNetworkViewModel`
+- Crear `ProfileNetworkScreen` y ruta stack
+- Hacer follow/unfollow optimista por fila sin duplicar logica innecesaria
+- Findings:
+- La ruta dedicada permite mantener `ProfileScreen` ligera y evita meter tabs/modales extra en la pantalla principal
+- La actualizacion optimista necesitaba tocar ambas colecciones (`followers` y `following`) para que las tabs no quedasen inconsistentes
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- usar el tab inicial de la ruta para abrir en `Seguidores` o `Siguiendo`
+- Status:
+- completed
+
+### Phase 4
+
+- Detailed tasks:
+- Anadir contadores pulsables a `ProfileScreen`
+- Ajustar favoritos y recent activity a posters rectos y mismo tamano
+- Eliminar textos inferiores de ambas galerias
+- Recargar el perfil al volver desde la pantalla de red aprovechando el refresh por foco existente
+- Findings:
+- Recargar `getPublicProfile(username)` dentro del perfil propio fue suficiente para reutilizar contadores existentes sin crear endpoint nuevo para `/users/me`
+- Mover la accion de quitar favorita a un overlay mantiene la limpieza visual sin perder la capacidad de editar slots
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- el riesgo principal es mantener el perfil legible al meter mas stats sin romper la composicion central
+- Status:
+- completed
+
+### Phase 5
+
+- Detailed tasks:
+- Ejecutar tests backend del slice social
+- Ejecutar TypeScript en mobile
+- Revisar diff con checklist de funcionalidad, completitud, claridad y testing
+- Actualizar hallazgos y riesgos reales
+- Findings:
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q` pasa con 20 tests verdes
+- `npx tsc --noEmit` pasa
+- Sigue pendiente validacion manual en Expo/dispositivo real
+- Tests:
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- `npx tsc --noEmit`
+- Review notes:
+- dejar explicitado si quedo pendiente validacion manual en Expo
+- Status:
+- completed
+
+## Review Findings
+
+- fixed: el backend ya expone listas de followers/following y devuelve `follows_me`
+- fixed: `ProfileScreen` alinea favoritos y recent activity con posters del mismo ancho y sin metadatos inferiores
+- fixed: existe una ruta dedicada de red propia con CTA de follow/unfollow por fila
+- accepted risk: no se ha validado visualmente en Expo/dispositivo real el feeling final de la pantalla `profile-network`
+- accepted risk: la vista de red actual no incluye busqueda, filtros ni paginacion; para la escala actual se asume suficiente
+
+## Deferred Work
+
+- Vista de red equivalente para perfiles publicos
+- Busqueda, filtros o paginacion en la pantalla de red
+- Ajustes visuales mas amplios del hero de perfil fuera de esta fase
+
+## Final Confidence Check
+
+- Confidence score:
+- 8.9/10
+- Likely code review callouts:
+- Puede salir la conversacion de si `follows_me` debia anadirse al resumen social general o limitarse a los endpoints de red
+- Tambien puede pedirse validacion manual del layout de `profile-network` en distintos tamanos de pantalla
+- Residual risks:
+- No se ha hecho prueba manual en Expo/dispositivo real en esta sesion

@@ -11,6 +11,7 @@ class PublicUserSummary:
     display_name: str | None
     avatar_url: str | None
     is_following: bool
+    follows_me: bool
 
 
 @dataclass

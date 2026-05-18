@@ -69,7 +69,76 @@ async def test_search_users_by_username_and_follow_state(async_client: AsyncClie
             "display_name": None,
             "avatar_url": None,
             "is_following": True,
+            "follows_me": False,
         }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_my_followers_lists_users_with_follow_flags(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "network-owner@example.com", "networkowner")
+    follower_only = await _register_and_login(async_client, "follower-only@example.com", "followeronly")
+    mutual = await _register_and_login(async_client, "mutual@example.com", "mutualfriend")
+    await _register_and_login(async_client, "outsider@example.com", "outsider")
+
+    await async_client.post("/users/1/follow", headers=_headers(follower_only))
+    await async_client.post("/users/1/follow", headers=_headers(mutual))
+    await async_client.post("/users/3/follow", headers=_headers(owner))
+
+    response = await async_client.get("/users/me/followers", headers=_headers(owner))
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": 2,
+            "username": "followeronly",
+            "display_name": None,
+            "avatar_url": None,
+            "is_following": False,
+            "follows_me": True,
+        },
+        {
+            "id": 3,
+            "username": "mutualfriend",
+            "display_name": None,
+            "avatar_url": None,
+            "is_following": True,
+            "follows_me": True,
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_my_following_lists_users_with_follow_flags(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "network-owner-2@example.com", "networkowner2")
+    followed_only = await _register_and_login(async_client, "followed-only@example.com", "followedonly")
+    mutual = await _register_and_login(async_client, "mutual-2@example.com", "mutualtwo")
+    await _register_and_login(async_client, "outsider-2@example.com", "outsidertwo")
+
+    await async_client.post("/users/2/follow", headers=_headers(owner))
+    await async_client.post("/users/3/follow", headers=_headers(owner))
+    await async_client.post("/users/1/follow", headers=_headers(mutual))
+
+    response = await async_client.get("/users/me/following", headers=_headers(owner))
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": 2,
+            "username": "followedonly",
+            "display_name": None,
+            "avatar_url": None,
+            "is_following": True,
+            "follows_me": False,
+        },
+        {
+            "id": 3,
+            "username": "mutualtwo",
+            "display_name": None,
+            "avatar_url": None,
+            "is_following": True,
+            "follows_me": True,
+        },
     ]
 
 

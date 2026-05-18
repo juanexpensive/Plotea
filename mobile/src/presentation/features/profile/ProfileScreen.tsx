@@ -1,35 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MediaItem, WatchLogEnrichedEntry } from '../../../domain/entities/media';
-import { PublicUserStats } from '../../../domain/entities/social';
+import { PublicUserProfile, PublicUserStats } from '../../../domain/entities/social';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { useProfileViewModel } from './ProfileViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w300';
 const BIO_MAX_LENGTH = 160;
-
-function formatRating(rating: number | null) {
-  return rating === null ? 'Sin nota' : `${(rating / 2).toFixed(1)} / 5`;
-}
-
-function formatShortDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat('es-ES', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(date);
-}
+const POSTER_CARD_WIDTH = (Dimensions.get('window').width - darkDesign.spacing.xl * 2 - darkDesign.spacing.md * 3) / 4;
 
 export default function ProfileScreen() {
   const {
     user,
+    profileSummary,
     stats,
     favorites,
     recentWatch,
@@ -37,15 +22,18 @@ export default function ProfileScreen() {
     loggingOut,
     savingProfile,
     savingFavorites,
+    profileSummaryLoading,
     statsLoading,
     favoritesLoading,
     recentWatchLoading,
     error,
+    profileSummaryError,
     statsError,
     favoritesError,
     recentWatchError,
     successMessage,
     isEditing,
+    isEditingBio,
     displayNameDraft,
     bioDraft,
     avatarUrlDraft,
@@ -64,12 +52,15 @@ export default function ProfileScreen() {
     startEditing,
     cancelEditing,
     saveProfile,
+    saveBioInline,
+    startBioEditing,
     openFavoritePicker,
     cancelFavoriteEditing,
     selectFavoriteForActiveSlot,
     clearFavoriteSlot,
     openDetail,
     openDiary,
+    openNetwork,
   } = useProfileViewModel();
 
   if (loading) {
@@ -92,12 +83,11 @@ export default function ProfileScreen() {
   const favoriteItems = isEditingFavorites
     ? favoriteDrafts
     : Array.from({ length: 4 }, (_, index) => favorites.find((item) => item.position === index)?.media ?? null);
-  const isFavoritePickerVisible = isEditingFavorites;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <FavoritePickerModal
-        visible={isFavoritePickerVisible}
+        visible={isEditingFavorites}
         query={favoriteQuery}
         results={favoriteSearchResults}
         loading={favoriteSearchLoading}
@@ -114,9 +104,13 @@ export default function ProfileScreen() {
         <Pressable style={styles.iconButton} onPress={isEditing ? cancelEditing : startEditing}>
           <Ionicons name={isEditing ? 'close' : 'create-outline'} size={20} color={darkDesign.colors.text} />
         </Pressable>
-        <Text style={styles.username}>{user.username}</Text>
+        <View style={styles.headerSpacer} />
         <Pressable style={styles.iconButton} onPress={handleLogout} disabled={loggingOut}>
-          <Ionicons name={loggingOut ? 'hourglass-outline' : 'ellipsis-vertical'} size={20} color={darkDesign.colors.text} />
+          <Ionicons
+            name={loggingOut ? 'hourglass-outline' : 'ellipsis-vertical'}
+            size={20}
+            color={darkDesign.colors.text}
+          />
         </Pressable>
       </View>
 
@@ -129,13 +123,42 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {statsLoading ? (
+        <Text style={styles.displayName}>{user.display_name ?? user.username}</Text>
+        <Text style={styles.usernameMeta}>@{user.username}</Text>
+
+        {profileSummaryLoading || statsLoading ? (
           <ActivityIndicator size="small" color={darkDesign.colors.accent} />
         ) : (
-          <ProfileStatsBar stats={stats} error={statsError} />
+          <ProfileStatsBar
+            profileSummary={profileSummary}
+            stats={stats}
+            error={profileSummaryError ?? statsError}
+            onOpenFollowers={() => openNetwork('followers')}
+            onOpenFollowing={() => openNetwork('following')}
+          />
         )}
 
-        {user.bio ? <Text style={styles.bio}>{user.bio}</Text> : null}
+        {isEditingBio ? (
+          <TextInput
+            style={styles.bioInput}
+            value={bioDraft}
+            onChangeText={setBioDraft}
+            onBlur={saveBioInline}
+            placeholder="Cuenta algo sobre ti"
+            placeholderTextColor={darkDesign.colors.textFaint}
+            multiline
+            maxLength={BIO_MAX_LENGTH}
+            textAlignVertical="top"
+            selectionColor={darkDesign.colors.accent}
+            autoFocus
+          />
+        ) : (
+          <Pressable style={styles.bioPressable} onPress={startBioEditing}>
+            <Text style={styles.bio}>
+              {user.bio && user.bio.trim().length > 0 ? user.bio : 'Toca para anadir tu bio'}
+            </Text>
+          </Pressable>
+        )}
 
         {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
       </View>
@@ -152,19 +175,6 @@ export default function ProfileScreen() {
             placeholderTextColor={darkDesign.colors.textFaint}
             selectionColor={darkDesign.colors.accent}
           />
-          <Text style={styles.inputLabel}>Bio</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={bioDraft}
-            onChangeText={setBioDraft}
-            placeholder="Cuenta algo sobre ti"
-            placeholderTextColor={darkDesign.colors.textFaint}
-            multiline
-            maxLength={BIO_MAX_LENGTH}
-            textAlignVertical="top"
-            selectionColor={darkDesign.colors.accent}
-          />
-          <Text style={styles.inputCounter}>{bioDraft.length}/{BIO_MAX_LENGTH}</Text>
           <Text style={styles.inputLabel}>Avatar URL</Text>
           <TextInput
             style={styles.input}
@@ -196,10 +206,7 @@ export default function ProfileScreen() {
       ) : null}
 
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Favorites</Text>
-        </View>
-
+        <Text style={styles.sectionTitle}>Favorites</Text>
         {favoritesLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
         {favoritesError ? <Text style={styles.errorText}>{favoritesError}</Text> : null}
 
@@ -242,41 +249,47 @@ export default function ProfileScreen() {
           ))}
         </ScrollView>
       </View>
-
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </ScrollView>
   );
 }
 
 function ProfileStatsBar({
+  profileSummary,
   stats,
   error,
+  onOpenFollowers,
+  onOpenFollowing,
 }: {
+  profileSummary: PublicUserProfile | null;
   stats: PublicUserStats | null;
   error: string | null;
+  onOpenFollowers: () => void;
+  onOpenFollowing: () => void;
 }) {
   if (error) {
     return <Text style={styles.errorText}>{error}</Text>;
   }
 
-  if (!stats) {
+  if (!stats || !profileSummary) {
     return <Text style={styles.emptyText}>Todavia no hay datos suficientes.</Text>;
   }
 
-  const statItems = [
-    { label: 'Films', value: String(stats.watched_count) },
-    { label: 'Hours', value: stats.estimated_hours.toFixed(1) },
-    { label: 'Avg', value: stats.average_rating === null ? '-' : stats.average_rating.toFixed(1) },
-  ];
-
   return (
-    <View style={styles.statsRow}>
-      {statItems.map((item) => (
-        <View key={item.label} style={styles.statItem}>
-          <Text style={styles.statValue}>{item.value}</Text>
-          <Text style={styles.statLabel}>{item.label}</Text>
+    <View style={styles.statsPanel}>
+      <View style={styles.statsRow}>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{stats.watched_count}</Text>
+          <Text style={styles.statLabel}>Peliculas</Text>
         </View>
-      ))}
+        <Pressable style={styles.networkStatButton} onPress={onOpenFollowing}>
+          <Text style={styles.statValue}>{profileSummary.following_count}</Text>
+          <Text style={styles.statLabel}>Siguiendo</Text>
+        </Pressable>
+        <Pressable style={styles.networkStatButton} onPress={onOpenFollowers}>
+          <Text style={styles.statValue}>{profileSummary.followers_count}</Text>
+          <Text style={styles.statLabel}>Seguidores</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -307,16 +320,10 @@ function FavoritePosterCard({
           </View>
         )}
       </Pressable>
-
-      {editable ? (
-        <View style={styles.posterCardFooter}>
-          <Text style={styles.posterMeta}>{media ? media.title : 'Toca para elegir'}</Text>
-          {media ? (
-            <Pressable onPress={onClear}>
-              <Text style={styles.clearSlotText}>Quitar</Text>
-            </Pressable>
-          ) : null}
-        </View>
+      {editable && media ? (
+        <Pressable style={styles.clearSlotButton} onPress={onClear}>
+          <Ionicons name="close" size={14} color={darkDesign.colors.text} />
+        </Pressable>
       ) : null}
     </View>
   );
@@ -501,9 +508,6 @@ function RecentActivityCard({
       ) : (
         <View style={[styles.posterImage, styles.posterFallback]} />
       )}
-      <Text style={styles.activityTitle} numberOfLines={2}>{item.media.title}</Text>
-      <Text style={styles.activityDate}>{formatShortDate(item.watched_at)}</Text>
-      <Text style={styles.activityRating}>{formatRating(item.rating)}</Text>
     </Pressable>
   );
 }
@@ -525,6 +529,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: darkDesign.spacing.xl,
     paddingBottom: darkDesign.spacing.lg,
   },
+  headerSpacer: {
+    flex: 1,
+  },
   iconButton: {
     width: 40,
     height: 40,
@@ -532,15 +539,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: darkDesign.colors.canvas,
-  },
-  username: {
-    flex: 1,
-    color: darkDesign.colors.text,
-    fontSize: 30,
-    fontWeight: '700',
-    letterSpacing: -0.8,
-    textAlign: 'center',
-    marginHorizontal: darkDesign.spacing.md,
   },
   heroSection: {
     alignItems: 'center',
@@ -574,15 +572,36 @@ const styles = StyleSheet.create({
     fontSize: 40,
     fontWeight: '700',
   },
-  statsRow: {
-    flexDirection: 'row',
+  displayName: {
+    color: darkDesign.colors.text,
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.8,
+    textAlign: 'center',
+  },
+  usernameMeta: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.caption,
+    textAlign: 'center',
+    marginTop: -8,
+  },
+  statsPanel: {
     width: '100%',
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: darkDesign.colors.border,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    width: '100%',
     paddingVertical: darkDesign.spacing.md,
   },
   statItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  networkStatButton: {
     flex: 1,
     alignItems: 'center',
     gap: 2,
@@ -599,11 +618,24 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  bioPressable: {
+    width: '100%',
+  },
   bio: {
     color: darkDesign.colors.textSoft,
     ...darkDesign.typography.body,
     textAlign: 'center',
     maxWidth: 320,
+    alignSelf: 'center',
+  },
+  bioInput: {
+    ...sharedStyles.input,
+    ...sharedStyles.textArea,
+    width: '100%',
+    minHeight: 88,
+    color: darkDesign.colors.textSoft,
+    textAlign: 'center',
+    paddingTop: darkDesign.spacing.md,
   },
   editorCard: {
     ...sharedStyles.panel,
@@ -618,17 +650,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.1,
   },
   inputLabel: sharedStyles.label,
-  inputCounter: {
-    color: darkDesign.colors.textFaint,
-    ...darkDesign.typography.micro,
-    textAlign: 'right',
-    marginTop: -4,
-  },
   input: sharedStyles.input,
-  textArea: {
-    ...sharedStyles.textArea,
-    minHeight: 90,
-  },
   editorActions: {
     flexDirection: 'row',
     gap: darkDesign.spacing.sm,
@@ -686,8 +708,7 @@ const styles = StyleSheet.create({
     paddingRight: darkDesign.spacing.md,
   },
   posterCard: {
-    width: '23%',
-    gap: darkDesign.spacing.sm,
+    width: POSTER_CARD_WIDTH,
   },
   posterCardActive: {
     transform: [{ translateY: -2 }],
@@ -695,7 +716,7 @@ const styles = StyleSheet.create({
   posterImage: {
     width: '100%',
     aspectRatio: 2 / 3,
-    borderRadius: darkDesign.radii.lg,
+    borderRadius: 0,
     backgroundColor: darkDesign.colors.borderStrong,
     borderWidth: 1,
     borderColor: darkDesign.colors.borderStrong,
@@ -713,34 +734,15 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  posterCardFooter: {
-    gap: darkDesign.spacing.xs,
-    minHeight: 36,
-  },
-  posterMeta: {
-    color: darkDesign.colors.textMuted,
-    ...darkDesign.typography.micro,
-    fontSize: 10,
-    lineHeight: 12,
-  },
-  clearSlotText: {
-    color: darkDesign.colors.accentSoft,
-    ...darkDesign.typography.caption,
-    fontWeight: '600',
-  },
-  activityTitle: {
-    color: darkDesign.colors.text,
-    ...darkDesign.typography.caption,
-    fontWeight: '700',
-  },
-  activityDate: {
-    color: darkDesign.colors.textMuted,
-    ...darkDesign.typography.micro,
-  },
-  activityRating: {
-    color: darkDesign.colors.accentSoft,
-    ...darkDesign.typography.caption,
-    fontWeight: '700',
+  clearSlotButton: {
+    position: 'absolute',
+    top: darkDesign.spacing.xs,
+    right: darkDesign.spacing.xs,
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
   },
   searchState: {
     minHeight: 160,
@@ -765,11 +767,6 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  searchModalIcon: {
-    color: darkDesign.colors.text,
-    fontSize: 26,
-    fontWeight: '300',
   },
   searchModalInputShell: {
     flex: 1,
