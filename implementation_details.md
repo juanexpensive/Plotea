@@ -1435,3 +1435,108 @@
 - tambien pueden pedir una decision mas explicita sobre si el feature debe ser solo peliculas o peliculas+series
 - Residual risks:
 - no se ha hecho prueba manual en Expo/dispositivo real en esta sesion
+
+# Fase 17 - Random Pick con filtro de fuente Details
+
+## Repository Context
+
+- Relevant files:
+- `mobile/src/presentation/features/profile/RandomWatchlistPickModal.tsx`
+- `mobile/src/presentation/features/profile/randomPickSources.ts`
+- `mobile/src/data/repositories/ListsRepository.ts`
+- `mobile/src/data/repositories/SocialRepository.ts`
+- Existing patterns to follow:
+- modales fullscreen de seleccion ya usados en listas
+- resolucion mobile con `loading`, `error`, `unauthorized` y `requestIdRef`
+- `darkDesign` y `sharedStyles` para mantener el look del resto de la app
+- Constraints:
+- sin cambios backend
+- la otra persona se elige solo entre `following`
+- la fuente invalida debe caer a `Mi watchlist`
+
+## Decisions Locked
+
+- La configuracion de fuente se modela con tipos discriminados:
+- `watchlist:mine`
+- `list:owned-or-shared`
+- `watchlist:paired`
+- La composicion de candidatos se extrae a `randomPickSources.ts`
+- Las listas se obtienen desde `getMyLists()` y los items desde `getListDetail(listId)`
+- La watchlist conjunta mezcla ambas watchlists y luego prioriza peliculas sobre series
+- No se deduplican items repetidos entre pools en esta version
+
+## Phase Notes
+
+### Phase 1
+
+- Detailed tasks:
+- crear helper con tipos, resolucion de fuente y pick random reutilizable
+- sacar de JSX la logica de `watchlist`/`fallback`/`paired watchlist`
+- Findings:
+- separar la resolucion de fuente reduce mucho la complejidad ciclomativa del modal
+- el helper centraliza tanto el fallback a `Mi watchlist` como los copies de empty state por fuente
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- mantener ASCII en los textos del helper para evitar problemas de encoding
+- Status:
+- completed
+
+### Phase 2
+
+- Detailed tasks:
+- anadir boton de filtro en cabecera del modal
+- montar modal fullscreen secundario para elegir entre watchlist propia, listas y usuarios seguidos
+- conectar `getMyLists`, `getListDetail`, `getMyFollowing` y `getUserWatchlist`
+- Findings:
+- el selector secundario evita recargar el modal principal con demasiada UI
+- reutilizar `getMyFollowing` cumple la restriccion de no meter busqueda global de usuario
+- al recargar opciones cada vez que se abre el filtro reducimos riesgo de datos stale en listas/seguidos
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- comprobar manualmente si conviene cachear opciones si el coste percibido es alto
+- Status:
+- completed
+
+### Phase 3
+
+- Detailed tasks:
+- revisar diff, copys, fallbacks y estados vacios
+- ejecutar TypeScript y actualizar documentacion final
+- Findings:
+- `npx tsc --noEmit` pasa
+- el reroll conserva la fuente activa porque la carga se rehace con el `source` actual
+- el flujo comunica en UI cuando una lista o un usuario seguido dejan de ser validos y cae a `Tu watchlist`
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- queda pendiente la validacion manual en Expo para el alto del modal y la sensacion del selector de fuente
+- Status:
+- completed
+
+## Review Findings
+
+- fixed: el modal random ya no depende solo de `watchlist` propia
+- fixed: se puede elegir una lista propia o compartida como fuente alternativa
+- fixed: se puede mezclar la watchlist propia con la de alguien seguido
+- fixed: las fuentes invalidas vuelven a `Tu watchlist` con aviso visible
+- accepted risk: el filtro se mantiene solo en memoria del modal y no persiste entre reinicios de app
+- accepted risk: no hay deduplicacion entre watchlists combinadas y puede repetirse un titulo si ambas listas lo contienen
+- accepted risk: no se ha hecho prueba manual en Expo/dispositivo real en esta sesion
+
+## Deferred Work
+
+- decidir si interesa persistir la ultima fuente random elegida entre aperturas o sesiones
+- valorar deduplicacion entre watchlists combinadas si producto detecta picks repetidos
+- cubrir el flujo con tests UI o tests unitarios cuando el repo incorpore runner frontend
+
+## Final Confidence Check
+
+- Confidence score:
+- 9.1/10
+- Likely code review callouts:
+- puede pedirse cachear `getMyLists()` y `getMyFollowing()` mientras el modal siga montado
+- puede salir la duda de si la lista combinada deberia deduplicar titulos repetidos
+- Residual risks:
+- no se ha validado manualmente la experiencia en dispositivo real en esta sesion

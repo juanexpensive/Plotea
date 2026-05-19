@@ -702,3 +702,58 @@
 - Validaciones ejecutadas:
 - `npx tsc --noEmit`
 - Riesgo residual aceptado: sigue pendiente validacion manual en Expo/dispositivo real para ajustar sensacion del modal, altura del contenido y feedback de la estrella en la tab bar
+
+# Fase 17 - Random Pick con filtro de fuente
+
+## Objetivo
+
+- Ampliar el modal `random` para que pueda sugerir desde la watchlist propia, desde una lista propia/compartida o desde la mezcla entre tu watchlist y la de alguien a quien sigues.
+
+## Alcance
+
+- En alcance:
+- Anadir un filtro arriba a la izquierda en el modal random
+- Permitir elegir `Mi watchlist`, `Una de tus listas` y `2 watchlists`
+- Reutilizar solo APIs ya existentes para listas, following y watchlists publicas
+- Mantener `Otra random`, `Ver ficha completa`, estados vacios, errores y redirect por `401`
+- Fuera de alcance:
+- Cambios backend
+- Busqueda global de usuario
+- Deduplicacion de titulos repetidos entre watchlists
+- Persistencia del ultimo filtro entre sesiones
+
+## Fases
+
+### Fase 1: Tipos y resolucion de fuentes
+
+- Goal: extraer la composicion de candidatos y fallbacks a un helper testeable y tipado
+- Expected files or systems: modal random, helper local de fuentes random
+- Validation: `npx tsc --noEmit`
+- Review gate: la UI deja de mezclar seleccion de fuente, fallback y pick random en el mismo bloque
+- Estado: completada
+
+### Fase 2: Selector de fuente y datos asociados
+
+- Goal: abrir una experiencia secundaria para elegir lista o usuario seguido sin tocar backend
+- Expected files or systems: modal random, repositorios `ListsRepository` y `SocialRepository`
+- Validation: `npx tsc --noEmit`
+- Review gate: la fuente puede cambiar entre watchlist propia, listas propias/compartidas y watchlist conjunta
+- Estado: completada
+
+### Fase 3: QA y cierre
+
+- Goal: revisar tipado, fallbacks y documentar riesgos residuales reales
+- Expected files or systems: mobile y docs de implementacion
+- Validation: `npx tsc --noEmit`
+- Review gate: quedan explicitados fallback a `Mi watchlist`, limites de `following` y riesgos pendientes de validacion manual
+- Estado: completada
+
+## Cierre
+
+- El modal random ahora muestra un filtro en cabecera y deja elegir la fuente de la sugerencia
+- `Una de tus listas` usa listas propias y compartidas como pool alternativo
+- `2 watchlists` mezcla tu watchlist con la de una cuenta que sigues
+- Si la fuente elegida deja de ser valida, el flujo vuelve a `Tu watchlist` y lo comunica en UI
+- Validaciones ejecutadas:
+- `npx tsc --noEmit`
+- Riesgo residual aceptado: sigue pendiente validacion manual en Expo/dispositivo real para ajustar altura del modal secundario, scroll y tactilidad del cambio de fuente
