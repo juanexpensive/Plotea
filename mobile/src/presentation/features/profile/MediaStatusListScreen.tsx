@@ -1,5 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { getMediaTypeLabel } from '../../shared/mediaPresentation';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { MediaStatusListItem, useMediaStatusListViewModel } from './MediaStatusListViewModel';
@@ -13,7 +15,7 @@ export default function MediaStatusListScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="large" label="Cargando lista..." />
       </View>
     );
   }
@@ -50,8 +52,7 @@ export default function MediaStatusListScreen() {
 }
 
 function MediaStatusCard({ item, onPress }: { item: MediaStatusListItem; onPress: () => void }) {
-  const title =
-    item.detail?.title ?? `${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`;
+  const title = item.detail?.title ?? `${getMediaTypeLabel(item.media_type)} #${item.tmdb_id}`;
 
   return (
     <Pressable style={({ pressed }) => [styles.card, pressed ? styles.pressed : null]} onPress={onPress}>

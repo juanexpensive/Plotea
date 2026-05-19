@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { formatWatchLogScore, getMediaTypeLabel } from '../../shared/mediaPresentation';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { buildDiarySections, DiarySectionItem, getReleaseYear } from './watchLogDiarySections';
@@ -20,7 +22,7 @@ type WatchLogDiaryContentProps = {
 };
 
 function formatRatingText(rating: number | null) {
-  return rating === null ? 'Sin nota' : `${(rating / 2).toFixed(1)} / 5`;
+  return formatWatchLogScore(rating);
 }
 
 function getStarStates(rating: number | null) {
@@ -62,7 +64,7 @@ export function WatchLogDiaryContent({
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="large" label="Cargando diario..." />
       </View>
     );
   }
@@ -132,8 +134,7 @@ function WatchLogCard({
   onPress: () => void;
   onDelete?: () => void;
 }) {
-  const title =
-    item.detail?.title ?? `${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`;
+  const title = item.detail?.title ?? `${getMediaTypeLabel(item.media_type)} #${item.tmdb_id}`;
   const releaseYear = getReleaseYear(item.detail?.release_date);
   const starStates = getStarStates(item.rating);
 
@@ -169,7 +170,7 @@ function WatchLogCard({
           ) : (
             <Text style={styles.unratedText}>Sin nota</Text>
           )}
-          <Text style={styles.cardMeta}>{item.media_type === 'movie' ? 'Pelicula' : 'Serie'}</Text>
+          <Text style={styles.cardMeta}>{getMediaTypeLabel(item.media_type)}</Text>
         </View>
       </View>
       {onDelete ? (

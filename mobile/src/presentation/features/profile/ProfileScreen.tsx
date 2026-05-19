@@ -1,9 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MediaItem, WatchLogEnrichedEntry } from '../../../domain/entities/media';
 import { PublicUserProfile, PublicUserStats } from '../../../domain/entities/social';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
+import { formatMediaMetaLine } from '../../shared/mediaPresentation';
+import { ProfileSummaryStatsBar } from '../../shared/ProfileSummaryStatsBar';
+import { ProfileTopTab } from '../../shared/ProfileTopTab';
+import { uiCopy } from '../../shared/uiCopy';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { MediaStatusListItem, useMediaStatusListViewModel } from './MediaStatusListViewModel';
@@ -72,16 +78,23 @@ export default function ProfileScreen() {
   } = useProfileViewModel();
   const watchlist = useMediaStatusListViewModel('watchlist');
   const diary = useWatchLogListViewModel();
+  const isProfileTabBootstrapping =
+    activeTab === 'profile' &&
+    (loading || profileSummaryLoading || statsLoading || favoritesLoading || recentWatchLoading);
+  const isWatchlistTabBootstrapping = activeTab === 'watchlist' && (loading || watchlist.loading);
+  const isDiaryTabBootstrapping = activeTab === 'diary' && (loading || diary.loading);
+  const isBootstrapping =
+    isProfileTabBootstrapping || isWatchlistTabBootstrapping || isDiaryTabBootstrapping;
 
-  if (loading) {
+  if (isBootstrapping) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="large" label="Cargando perfil..." />
       </View>
     );
   }
 
-  if (error || !user) {
+  if (!user) {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>{error ?? 'Error desconocido'}</Text>
@@ -134,17 +147,17 @@ export default function ProfileScreen() {
 
       <View style={styles.profileTabs}>
         <ProfileTopTab
-          label="Perfil"
+          label={uiCopy.tabs.profile}
           active={activeTab === 'profile'}
           onPress={() => setActiveTab('profile')}
         />
         <ProfileTopTab
-          label="Watchlist"
+          label={uiCopy.tabs.watchlist}
           active={activeTab === 'watchlist'}
           onPress={() => setActiveTab('watchlist')}
         />
         <ProfileTopTab
-          label="Diario"
+          label={uiCopy.tabs.diary}
           active={activeTab === 'diary'}
           onPress={() => setActiveTab('diary')}
         />
@@ -167,7 +180,7 @@ export default function ProfileScreen() {
               )}
               <View style={styles.avatarBadge}>
                 {uploadingAvatar ? (
-                  <ActivityIndicator size="small" color={darkDesign.colors.text} />
+                  <PlotStarLoader size={20} />
                 ) : (
                   <Ionicons name="image-outline" size={16} color={darkDesign.colors.text} />
                 )}
@@ -217,24 +230,23 @@ export default function ProfileScreen() {
               </Pressable>
             )}
 
-            {profileSummaryLoading || statsLoading ? (
-              <ActivityIndicator size="small" color={darkDesign.colors.accent} />
-            ) : (
-              <ProfileStatsBar
-                profileSummary={profileSummary}
-                stats={stats}
-                error={profileSummaryError ?? statsError}
-                onOpenFollowers={() => openNetwork('followers')}
-                onOpenFollowing={() => openNetwork('following')}
-              />
-            )}
+            <ProfileStatsBar
+              profileSummary={profileSummary}
+              stats={stats}
+              error={profileSummaryError ?? statsError}
+              onOpenFollowers={() => openNetwork('followers')}
+              onOpenFollowing={() => openNetwork('following')}
+            />
 
+            <Pressable style={styles.loaderPreviewButton} onPress={() => router.push('/loader-preview')}>
+              <Text style={styles.loaderPreviewButtonText}>Ver preview del loader</Text>
+            </Pressable>
 
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
           </View>
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Favorites</Text>
-            {favoritesLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
+            <Text style={styles.sectionTitle}>{uiCopy.sections.favorites}</Text>
             {favoritesError ? <Text style={styles.errorText}>{favoritesError}</Text> : null}
 
             <View style={styles.favoritesGrid}>
@@ -254,13 +266,12 @@ export default function ProfileScreen() {
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent activity</Text>
+              <Text style={styles.sectionTitle}>{uiCopy.sections.recentActivity}</Text>
               <Pressable style={styles.sectionAction} onPress={() => setActiveTab('diary')}>
-                <Text style={styles.sectionActionText}>Ver diario</Text>
+                <Text style={styles.sectionActionText}>{uiCopy.actions.viewDiary}</Text>
               </Pressable>
             </View>
 
-            {recentWatchLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
             {recentWatchError ? <Text style={styles.errorText}>{recentWatchError}</Text> : null}
             {!recentWatchLoading && recentWatch.length === 0 ? (
               <Text style={styles.emptyText}>Todavia no has registrado visionados recientes.</Text>
@@ -306,23 +317,6 @@ export default function ProfileScreen() {
   );
 }
 
-function ProfileTopTab({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable style={styles.profileTabButton} onPress={onPress}>
-      <Text style={[styles.profileTabLabel, active ? styles.profileTabLabelActive : null]}>{label}</Text>
-      <View style={[styles.profileTabIndicator, active ? styles.profileTabIndicatorActive : null]} />
-    </Pressable>
-  );
-}
-
 function ProfileStatsBar({
   profileSummary,
   stats,
@@ -345,22 +339,15 @@ function ProfileStatsBar({
   }
 
   return (
-    <View style={styles.statsPanel}>
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{stats.watched_count}</Text>
-          <Text style={styles.statLabel}>Peliculas</Text>
-        </View>
-        <Pressable style={styles.networkStatButton} onPress={onOpenFollowing}>
-          <Text style={styles.statValue}>{profileSummary.following_count}</Text>
-          <Text style={styles.statLabel}>Siguiendo</Text>
-        </Pressable>
-        <Pressable style={styles.networkStatButton} onPress={onOpenFollowers}>
-          <Text style={styles.statValue}>{profileSummary.followers_count}</Text>
-          <Text style={styles.statLabel}>Seguidores</Text>
-        </Pressable>
-      </View>
-    </View>
+    <ProfileSummaryStatsBar
+      stats={{
+        watchedCount: stats.watched_count,
+        followingCount: profileSummary.following_count,
+        followersCount: profileSummary.followers_count,
+      }}
+      onOpenFollowing={onOpenFollowing}
+      onOpenFollowers={onOpenFollowers}
+    />
   );
 }
 
@@ -483,7 +470,7 @@ function FavoritePickerModal({
 
         <View style={styles.searchTabs}>
           <View style={styles.searchTabActive}>
-            <Text style={styles.searchTabActiveText}>Films</Text>
+            <Text style={styles.searchTabActiveText}>{uiCopy.labels.titles}</Text>
           </View>
         </View>
 
@@ -506,7 +493,7 @@ function FavoritePickerModal({
         )}
         {saving ? (
           <View style={styles.searchModalSaving}>
-            <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+            <PlotStarLoader size="small" />
             <Text style={styles.searchModalSavingText}>Guardando favorita...</Text>
           </View>
         ) : null}
@@ -529,7 +516,7 @@ function FavoriteSearchResults({
   if (loading) {
     return (
       <View style={styles.searchState}>
-        <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="small" />
       </View>
     );
   }
@@ -570,9 +557,6 @@ function FavoriteSearchResultRow({
   item: MediaItem;
   onPress: () => void;
 }) {
-  const releaseYear = item.release_date ? item.release_date.slice(0, 4) : 'Proximamente';
-  const score = item.vote_average > 0 ? `${(item.vote_average / 2).toFixed(1)} / 5` : 'Sin nota TMDB';
-
   return (
     <Pressable style={({ pressed }) => [styles.searchResultRow, pressed ? styles.pressed : null]} onPress={onPress}>
       {item.poster_path ? (
@@ -582,9 +566,7 @@ function FavoriteSearchResultRow({
       )}
       <View style={styles.searchResultBody}>
         <Text style={styles.searchResultTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.searchResultMeta}>
-          {releaseYear} · {item.media_type === 'movie' ? 'Pelicula' : 'Serie'} · {score}
-        </Text>
+        <Text style={styles.searchResultMeta}>{formatMediaMetaLine({ releaseDate: item.release_date, mediaType: item.media_type, voteAverage: item.vote_average })}</Text>
       </View>
     </Pressable>
   );
@@ -803,6 +785,20 @@ const styles = StyleSheet.create({
     color: darkDesign.colors.textSoft,
     textAlign: 'center',
     paddingTop: darkDesign.spacing.md,
+  },
+  loaderPreviewButton: {
+    minHeight: 42,
+    borderRadius: darkDesign.radii.pill,
+    borderWidth: 1,
+    borderColor: darkDesign.colors.borderStrong,
+    paddingHorizontal: darkDesign.spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: darkDesign.colors.canvasRaised,
+  },
+  loaderPreviewButtonText: {
+    color: darkDesign.colors.accentSoft,
+    ...darkDesign.typography.button,
   },
   actionMenuOverlay: {
     flex: 1,
@@ -1059,3 +1055,5 @@ const styles = StyleSheet.create({
   pressed: sharedStyles.pressed,
   disabled: sharedStyles.disabled,
 });
+
+

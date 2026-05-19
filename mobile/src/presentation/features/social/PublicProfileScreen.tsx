@@ -1,8 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FavoriteMediaItem, PublicUserProfile, PublicUserStats } from '../../../domain/entities/social';
 import { WatchLogEnrichedEntry } from '../../../domain/entities/media';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
+import { ProfileSummaryStatsBar } from '../../shared/ProfileSummaryStatsBar';
+import { ProfileTopTab } from '../../shared/ProfileTopTab';
+import { uiCopy } from '../../shared/uiCopy';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { ProfileWatchlistTab } from '../profile/ProfileWatchlistTab';
@@ -19,6 +23,7 @@ export default function PublicProfileScreen() {
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('profile');
   const {
     profile,
+    currentUsername,
     stats,
     favorites,
     recentWatch,
@@ -39,16 +44,23 @@ export default function PublicProfileScreen() {
     diaryError,
     toggleFollow,
   } = usePublicProfileViewModel(username);
+  const isProfileTabBootstrapping =
+    activeTab === 'profile' &&
+    (loading || statsLoading || favoritesLoading || recentWatchLoading);
+  const isWatchlistTabBootstrapping = activeTab === 'watchlist' && (loading || watchlistLoading);
+  const isDiaryTabBootstrapping = activeTab === 'diary' && (loading || diaryLoading);
+  const isBootstrapping =
+    isProfileTabBootstrapping || isWatchlistTabBootstrapping || isDiaryTabBootstrapping;
 
-  if (loading) {
+  if (isBootstrapping) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="large" label="Cargando perfil..." />
       </View>
     );
   }
 
-  if (error || !profile) {
+  if (!profile) {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>{error ?? 'No hemos podido cargar el perfil.'}</Text>
@@ -69,9 +81,9 @@ export default function PublicProfileScreen() {
       </View>
 
       <View style={styles.profileTabs}>
-        <ProfileTopTab label="Perfil" active={activeTab === 'profile'} onPress={() => setActiveTab('profile')} />
-        <ProfileTopTab label="Watchlist" active={activeTab === 'watchlist'} onPress={() => setActiveTab('watchlist')} />
-        <ProfileTopTab label="Diario" active={activeTab === 'diary'} onPress={() => setActiveTab('diary')} />
+        <ProfileTopTab label={uiCopy.tabs.profile} active={activeTab === 'profile'} onPress={() => setActiveTab('profile')} />
+        <ProfileTopTab label={uiCopy.tabs.watchlist} active={activeTab === 'watchlist'} onPress={() => setActiveTab('watchlist')} />
+        <ProfileTopTab label={uiCopy.tabs.diary} active={activeTab === 'diary'} onPress={() => setActiveTab('diary')} />
       </View>
 
       {activeTab === 'profile' ? (
@@ -96,11 +108,9 @@ export default function PublicProfileScreen() {
               </View>
             ) : null}
 
-            {statsLoading ? (
-              <ActivityIndicator size="small" color={darkDesign.colors.accent} />
-            ) : (
-              <PublicProfileStatsBar profile={profile} stats={stats} error={statsError} />
-            )}
+            <PublicProfileStatsBar profile={profile} stats={stats} error={statsError} />
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <Pressable
               style={({ pressed }) => [
@@ -109,7 +119,7 @@ export default function PublicProfileScreen() {
                 savingFollow ? styles.disabled : null,
               ]}
               onPress={toggleFollow}
-              disabled={savingFollow}
+              disabled={savingFollow || profile.username === currentUsername}
             >
               <Ionicons
                 name={profile.is_following ? 'checkmark-circle' : 'person-add-outline'}
@@ -123,8 +133,7 @@ export default function PublicProfileScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Favorites</Text>
-            {favoritesLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
+            <Text style={styles.sectionTitle}>{uiCopy.sections.favorites}</Text>
             {favoritesError ? <Text style={styles.errorText}>{favoritesError}</Text> : null}
             <View style={styles.favoritesGrid}>
               {favoriteItems.map((item, index) => (
@@ -146,13 +155,12 @@ export default function PublicProfileScreen() {
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent activity</Text>
+              <Text style={styles.sectionTitle}>{uiCopy.sections.recentActivity}</Text>
               <Pressable style={styles.sectionAction} onPress={() => setActiveTab('diary')}>
-                <Text style={styles.sectionActionText}>Ver diario</Text>
+                <Text style={styles.sectionActionText}>{uiCopy.actions.viewDiary}</Text>
               </Pressable>
             </View>
 
-            {recentWatchLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
             {recentWatchError ? <Text style={styles.errorText}>{recentWatchError}</Text> : null}
             {!recentWatchLoading && recentWatch.length === 0 ? (
               <Text style={styles.emptyText}>Todavia no tiene visionados recientes.</Text>
@@ -211,23 +219,6 @@ export default function PublicProfileScreen() {
   );
 }
 
-function ProfileTopTab({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable style={styles.profileTabButton} onPress={onPress}>
-      <Text style={[styles.profileTabLabel, active ? styles.profileTabLabelActive : null]}>{label}</Text>
-      <View style={[styles.profileTabIndicator, active ? styles.profileTabIndicatorActive : null]} />
-    </Pressable>
-  );
-}
-
 function PublicProfileStatsBar({
   profile,
   stats,
@@ -246,22 +237,13 @@ function PublicProfileStatsBar({
   }
 
   return (
-    <View style={styles.statsPanel}>
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{stats.watched_count}</Text>
-          <Text style={styles.statLabel}>Peliculas</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{profile.following_count}</Text>
-          <Text style={styles.statLabel}>Siguiendo</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{profile.followers_count}</Text>
-          <Text style={styles.statLabel}>Seguidores</Text>
-        </View>
-      </View>
-    </View>
+    <ProfileSummaryStatsBar
+      stats={{
+        watchedCount: stats.watched_count,
+        followingCount: profile.following_count,
+        followersCount: profile.followers_count,
+      }}
+    />
   );
 }
 

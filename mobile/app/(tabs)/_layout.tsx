@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { hasValidSession } from '../../src/data/repositories/AuthRepository';
 import { RandomWatchlistPickModal } from '../../src/presentation/features/profile/RandomWatchlistPickModal';
+import { PlotStarLoader } from '../../src/presentation/shared/PlotStarLoader';
 import { darkDesign } from '../../src/presentation/theme/darkDesign';
 
 export default function TabsLayout() {
@@ -24,7 +25,7 @@ export default function TabsLayout() {
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: darkDesign.colors.canvas, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="large" label="Preparando PlotSkip..." />
       </View>
     );
   }

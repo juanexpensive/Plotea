@@ -1,5 +1,6 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { PublicUserSummary } from '../../../domain/entities/social';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { useUserSearchViewModel } from './UserSearchViewModel';
@@ -25,7 +26,7 @@ export default function UserSearchScreen() {
       {!isSearching ? <Text style={styles.helper}>Escribe al menos 2 caracteres.</Text> : null}
       {loading ? (
         <View style={styles.centeredInline}>
-          <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+          <PlotStarLoader size="small" />
         </View>
       ) : null}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}

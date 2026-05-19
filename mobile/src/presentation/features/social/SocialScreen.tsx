@@ -1,14 +1,13 @@
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ActivityItem, VisualFeedItem } from '../../../domain/entities/social';
+import { formatWatchLogScore, getMediaTypeLabel } from '../../shared/mediaPresentation';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
+import { uiCopy } from '../../shared/uiCopy';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { useSocialViewModel } from './SocialViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w300';
-
-function formatRating(value: number | null) {
-  return value === null ? 'sin nota' : `${(value / 2).toFixed(1)} / 5`;
-}
 
 export default function SocialScreen() {
   const {
@@ -26,26 +25,30 @@ export default function SocialScreen() {
     openListDetail,
     openMediaDetail,
   } = useSocialViewModel();
+  const isBootstrapping = visualLoading || feedLoading;
+
+  if (isBootstrapping) {
+    return (
+      <View style={styles.screenCentered}>
+        <PlotStarLoader size="large" label="Cargando actividad..." />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.topRow}>
-        <Text style={styles.title}>Social</Text>
+        <Text style={styles.title}>{uiCopy.tabs.social}</Text>
         <Pressable style={styles.searchButton} onPress={openUserSearch}>
-          <Text style={styles.searchButtonText}>Buscar usuarios</Text>
+          <Text style={styles.searchButtonText}>{uiCopy.actions.searchUsers}</Text>
         </Pressable>
       </View>
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Radar visual</Text>
+          <Text style={styles.sectionTitle}>{uiCopy.sections.visualRadar}</Text>
           <Text style={styles.sectionCaption}>Agrupado por obra</Text>
         </View>
-        {visualLoading ? (
-          <View style={styles.stateCard}>
-            <ActivityIndicator size="small" color={darkDesign.colors.accent} />
-          </View>
-        ) : null}
         {!visualLoading && visualError ? <Text style={styles.errorText}>{visualError}</Text> : null}
         {!visualLoading && !visualError && visualItems.length === 0 ? (
           <View style={styles.stateCard}>
@@ -73,14 +76,9 @@ export default function SocialScreen() {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Actividad detallada</Text>
+          <Text style={styles.sectionTitle}>{uiCopy.sections.detailedActivity}</Text>
           <Text style={styles.sectionCaption}>Feed completo</Text>
         </View>
-        {feedLoading ? (
-          <View style={styles.stateCard}>
-            <ActivityIndicator size="small" color={darkDesign.colors.accent} />
-          </View>
-        ) : null}
         {!feedLoading && feedError ? <Text style={styles.errorText}>{feedError}</Text> : null}
         {!feedLoading && !feedError && feedItems.length === 0 ? (
           <View style={styles.stateCard}>
@@ -100,7 +98,7 @@ export default function SocialScreen() {
               />
             ))}
             <View style={styles.feedFooter}>
-              {feedRefreshing || feedLoadingMore ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
+              {feedRefreshing || feedLoadingMore ? <PlotStarLoader size="small" /> : null}
               {!feedRefreshing && !feedLoadingMore ? (
                 <Pressable style={styles.loadMoreButton} onPress={loadMoreFeed}>
                   <Text style={styles.loadMoreText}>Cargar mas</Text>
@@ -132,9 +130,7 @@ function VisualCard({
       )}
       <View style={styles.visualBody}>
         <Text style={styles.visualTitle} numberOfLines={2}>{item.media.title}</Text>
-        <Text style={styles.visualMeta}>
-          {item.media.media_type === 'movie' ? 'Pelicula' : 'Serie'} · {item.recent_activity_count} movimientos
-        </Text>
+        <Text style={styles.visualMeta}>{getMediaTypeLabel(item.media.media_type)} · {item.recent_activity_count} movimientos</Text>
         <View style={styles.peopleStack}>
           {item.participants.map((participant) => (
             <Pressable
@@ -150,7 +146,7 @@ function VisualCard({
               <View style={styles.personBody}>
                 <Text style={styles.personName} numberOfLines={1}>{participant.display_name ?? participant.username}</Text>
                 <Text style={styles.personMeta}>
-                  {participant.activity_type === 'review' ? 'Resena' : 'Visionado'} · {formatRating(participant.rating)}
+                  {participant.activity_type === 'review' ? 'Resena' : 'Visionado'} · {formatWatchLogScore(participant.rating)}
                 </Text>
               </View>
             </Pressable>
@@ -194,7 +190,7 @@ function SocialActivityCard({
             <View style={[styles.mediaPoster, styles.posterFallback]} />
           )}
           <View style={styles.mediaCopy}>
-            <Text style={styles.mediaLabel}>{item.media_type === 'movie' ? 'Pelicula' : 'Serie'}</Text>
+            <Text style={styles.mediaLabel}>{getMediaTypeLabel(item.media_type)}</Text>
             <Text style={styles.mediaTitle} numberOfLines={2}>{item.title}</Text>
           </View>
         </Pressable>
@@ -204,7 +200,7 @@ function SocialActivityCard({
           <Text style={styles.activityBody}>
             ha publicado una resena sobre {item.media_type === 'movie' ? 'una pelicula' : 'una serie'} {item.title}.
           </Text>
-          <Text style={styles.activityAccent}>Nota: {(item.rating / 2).toFixed(1)} / 5</Text>
+          <Text style={styles.activityAccent}>Nota: {formatWatchLogScore(item.rating)}</Text>
           <Text style={styles.activityPreview} numberOfLines={4}>
             {item.body_preview}
           </Text>
@@ -215,7 +211,7 @@ function SocialActivityCard({
           <Text style={styles.activityBody}>
             ha registrado un visionado de {item.media_type === 'movie' ? 'pelicula' : 'serie'} {item.title}.
           </Text>
-          <Text style={styles.activityAccent}>{`${item.watched_at} - ${formatRating(item.rating)}`}</Text>
+          <Text style={styles.activityAccent}>{`${item.watched_at} - ${formatWatchLogScore(item.rating)}`}</Text>
         </>
       ) : null}
       {item.activity_type === 'follow' ? (
@@ -248,6 +244,7 @@ function SocialActivityCard({
 
 const styles = StyleSheet.create({
   screen: sharedStyles.screen,
+  screenCentered: sharedStyles.centered,
   content: sharedStyles.scrollContent,
   topRow: {
     flexDirection: 'row',

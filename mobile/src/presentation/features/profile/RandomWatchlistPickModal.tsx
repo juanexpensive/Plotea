@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Modal,
   Pressable,
@@ -17,6 +16,7 @@ import { getMyFollowing, getUserWatchlist } from '../../../data/repositories/Soc
 import { MediaDetail, SavedMediaStatus } from '../../../domain/entities/media';
 import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
 import { formatTmdbScore, getMediaTypeLabel } from '../../shared/mediaPresentation';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import {
@@ -255,7 +255,7 @@ export function RandomWatchlistPickModal({ visible, onClose }: RandomWatchlistPi
 
             {loading ? (
               <View style={styles.stateBox}>
-                <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+                <PlotStarLoader size="large" label="Buscando algo bueno..." />
                 <Text style={styles.stateText}>Buscando algo bueno en la fuente que has elegido...</Text>
               </View>
             ) : null}
@@ -393,7 +393,7 @@ function FilterModal({
 
         {loading ? (
           <View style={styles.filterState}>
-            <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+            <PlotStarLoader size="large" label="Cargando filtros..." />
             <Text style={styles.stateText}>Cargando tus listas y las personas que sigues...</Text>
           </View>
         ) : null}

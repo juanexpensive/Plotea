@@ -3,7 +3,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Image,
   LayoutAnimation,
@@ -22,6 +21,7 @@ import {
 } from 'react-native';
 import { ListItem, ListOwner } from '../../../domain/entities/lists';
 import { MediaItem } from '../../../domain/entities/media';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { useListDetailViewModel } from './ListDetailViewModel';
@@ -119,7 +119,7 @@ export default function ListDetailScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="large" label="Cargando lista..." />
       </View>
     );
   }
@@ -259,7 +259,7 @@ export default function ListDetailScreen() {
                       </View>
                       {saving ? (
                         <View style={styles.inlineSavingRow}>
-                          <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+                          <PlotStarLoader size="small" />
                           <Text style={styles.inlineSavingText}>Guardando cambios...</Text>
                         </View>
                       ) : null}
@@ -576,7 +576,7 @@ function ResultState({
   if (loading) {
     return (
       <View style={styles.modalState}>
-        <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="small" />
       </View>
     );
   }

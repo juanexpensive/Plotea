@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import type { ListInvitation, ListSummary } from '../../../domain/entities/lists';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { useMyListsViewModel } from './MyListsViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
@@ -57,7 +58,7 @@ export default function MyListsScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {loading ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={design.emerald} />
+            <PlotStarLoader size="small" />
           </View>
         ) : null}
         {error ? <Text style={styles.errorText}>{error}</Text> : null}

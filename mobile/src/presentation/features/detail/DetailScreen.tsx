@@ -1,9 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ComponentProps, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Modal,
   Pressable,
@@ -16,6 +15,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Comment, Review, ReviewRating } from '../../../domain/entities/media';
+import {
+  buildDetailEyebrow,
+  buildDetailMetaLine,
+  formatTmdbScore,
+  formatUserScore,
+  getDisplayStatusLabel,
+} from '../../shared/mediaPresentation';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
+import { uiCopy } from '../../shared/uiCopy';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { useDetailViewModel } from './DetailViewModel';
@@ -24,7 +32,7 @@ const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w500';
 const REVIEW_RATINGS: ReviewRating[] = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
 const ACTION_ICON_SIZE = 22;
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
+type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 export default function DetailScreen() {
   const router = useRouter();
@@ -68,7 +76,7 @@ export default function DetailScreen() {
     return (
       <View style={styles.centered}>
         <StatusBar style="light" />
-        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="large" label="Cargando detalle..." />
       </View>
     );
   }
@@ -85,8 +93,8 @@ export default function DetailScreen() {
   const posterUri = detail.poster_path ? `${TMDB_IMAGE}${detail.poster_path}` : null;
   const overviewLead = getOverviewLead(detail.overview);
   const overviewBody = getOverviewBody(detail.overview, overviewLead);
-  const metaLine = buildMetaLine(detail.release_date, detail.runtime, detail.vote_average);
-  const eyebrow = buildEyebrow(media_type, detail.genres);
+  const metaLine = buildDetailMetaLine(detail.release_date, detail.runtime, detail.vote_average);
+  const eyebrow = buildDetailEyebrow(detail.media_type, detail.genres);
 
   return (
     <View style={styles.screen}>
@@ -131,13 +139,13 @@ export default function DetailScreen() {
                 {status ? (
                   <View style={[styles.infoPill, styles.infoPillActive]}>
                     <Text style={[styles.infoPillText, styles.infoPillTextActive]}>
-                      {status === 'watched' ? 'Vista' : 'Watchlist'}
+                      {getDisplayStatusLabel(status)}
                     </Text>
                   </View>
                 ) : null}
                 <View style={styles.infoPill}>
                   <Text style={styles.infoPillText}>
-                    {detail.vote_average.toFixed(1)} TMDB
+                    {formatTmdbScore(detail.vote_average)} TMDB
                   </Text>
                 </View>
               </View>
@@ -282,14 +290,14 @@ function ActionRail({
         onPress={onToggleWatched}
       />
       <ActionIconButton
-        icon={status === 'watchlist' ? 'bookmark' : 'bookmark-outline'}
-        label="Lista"
+        icon={status === 'watchlist' ? 'clock' : 'clock-outline'}
+        label={uiCopy.labels.pending}
         active={status === 'watchlist'}
         disabled={savingStatus}
         onPress={onToggleWatchlist}
       />
       <ActionIconButton
-        icon={showReviewForm ? 'create' : hasReview ? 'document-text' : 'create-outline'}
+        icon={showReviewForm || hasReview ? 'file-document-edit' : 'file-document-edit-outline'}
         label="Reseña"
         active={showReviewForm || hasReview}
         disabled={savingReview}
@@ -324,7 +332,7 @@ function ActionIconButton({
       onPress={onPress}
       disabled={disabled}
     >
-      <Ionicons
+      <MaterialCommunityIcons
         name={icon}
         size={ACTION_ICON_SIZE}
         color={active ? darkDesign.colors.accent : darkDesign.colors.textSoft}
@@ -521,7 +529,7 @@ function ReviewForm({
       <Text style={styles.formLabel}>Puntuación</Text>
       <View style={styles.ratingHeader}>
         <StarRatingInput value={reviewRating} onChange={onRatingChange} />
-        <Text style={styles.ratingValue}>{reviewRating.toFixed(1)}</Text>
+        <Text style={styles.ratingValue}>{formatUserScore(reviewRating)}</Text>
       </View>
       <Text style={styles.formLabel}>Reseña</Text>
       <TextInput
@@ -824,7 +832,7 @@ function ReviewComments({
         />
       ) : null}
       {threadState.isLoading ? (
-        <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="small" />
       ) : null}
       {threadState.error ? <Text style={styles.inlineError}>{threadState.error}</Text> : null}
       {!threadState.isLoading && threadState.comments.length === 0 ? (

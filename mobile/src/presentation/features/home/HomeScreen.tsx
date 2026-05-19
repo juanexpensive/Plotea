@@ -1,8 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   Modal,
@@ -16,14 +16,19 @@ import {
 } from 'react-native';
 import { MediaItem } from '../../../domain/entities/media';
 import { ActivityItem } from '../../../domain/entities/social';
+import {
+  formatFeaturedDescription,
+  formatMediaMetaLine,
+  formatTmdbScore,
+  formatWatchLogScore,
+  getMediaTypeLabel,
+} from '../../shared/mediaPresentation';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
+import { uiCopy } from '../../shared/uiCopy';
 import { darkDesign } from '../../theme/darkDesign';
 import { useHomeViewModel } from './HomeViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
-
-function formatTmdbRating(value: number) {
-  return `${(value / 2).toFixed(1)}`;
-}
 
 function MediaCard({ item }: { item: MediaItem }) {
   return (
@@ -38,8 +43,8 @@ function MediaCard({ item }: { item: MediaItem }) {
         <View style={[styles.poster, styles.posterFallback]} />
       )}
       <View style={styles.mediaMetaRow}>
-        <Text style={styles.mediaBadge}>{item.media_type === 'movie' ? 'Pelicula' : 'Serie'}</Text>
-        <Text style={styles.mediaScore}>{formatTmdbRating(item.vote_average)}</Text>
+        <Text style={styles.mediaBadge}>{getMediaTypeLabel(item.media_type)}</Text>
+        <Text style={styles.mediaScore}>{formatTmdbScore(item.vote_average)}</Text>
       </View>
       <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
       <Text style={styles.cardMeta}>{item.release_date ? item.release_date.slice(0, 4) : 'Proximamente'}</Text>
@@ -70,8 +75,6 @@ function SearchResultRow({
   item: MediaItem;
   onPress: () => void;
 }) {
-  const releaseYear = item.release_date ? item.release_date.slice(0, 4) : 'Proximamente';
-
   return (
     <Pressable style={({ pressed }) => [styles.searchResultRow, pressed ? styles.cardPressed : null]} onPress={onPress}>
       {item.poster_path ? (
@@ -81,9 +84,7 @@ function SearchResultRow({
       )}
       <View style={styles.searchResultBody}>
         <Text style={styles.searchResultTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.searchResultMeta}>
-          {releaseYear} · {item.media_type === 'movie' ? 'Pelicula' : 'Serie'} · {formatTmdbRating(item.vote_average)} / 5
-        </Text>
+        <Text style={styles.searchResultMeta}>{formatMediaMetaLine({ releaseDate: item.release_date, mediaType: item.media_type, voteAverage: item.vote_average })}</Text>
       </View>
     </Pressable>
   );
@@ -103,7 +104,7 @@ function SearchResults({
   if (loading) {
     return (
       <View style={styles.searchState}>
-        <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="small" />
       </View>
     );
   }
@@ -137,10 +138,6 @@ function SearchResults({
   );
 }
 
-function formatRating(value: number | null) {
-  return value === null ? 'sin nota' : `${(value / 2).toFixed(1)} / 5`;
-}
-
 function SocialFeed({
   items,
   loading,
@@ -170,17 +167,17 @@ function SocialFeed({
     <View style={styles.section}>
       <View style={styles.socialHeader}>
         <View style={styles.socialHeaderBody}>
-          <Text style={styles.sectionTitle}>Actividad de tu gente</Text>
+          <Text style={styles.sectionTitle}>{uiCopy.sections.socialActivity}</Text>
           <Text style={styles.socialSubtitle}>Resenas, visionados, listas y follows recientes.</Text>
         </View>
         <Pressable onPress={onOpenSearch}>
-          <Text style={styles.socialAction}>Buscar usuarios</Text>
+          <Text style={styles.socialAction}>{uiCopy.actions.searchUsers}</Text>
         </Pressable>
       </View>
 
       {loading ? (
         <View style={styles.socialState}>
-          <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+          <PlotStarLoader size="small" />
         </View>
       ) : null}
 
@@ -200,7 +197,7 @@ function SocialFeed({
             Sigue a otras personas para ver sus resenas, visionados y nuevas conexiones.
           </Text>
           <Pressable style={styles.primaryAction} onPress={onOpenSearch}>
-            <Text style={styles.primaryActionText}>Encontrar usuarios</Text>
+            <Text style={styles.primaryActionText}>{uiCopy.actions.findUsers}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -217,7 +214,7 @@ function SocialFeed({
             />
           ))}
           <View style={styles.socialFooter}>
-            {refreshing || loadingMore ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
+            {refreshing || loadingMore ? <PlotStarLoader size="small" /> : null}
             {!refreshing && !loadingMore ? (
               <Pressable style={styles.loadMoreButton} onPress={onLoadMore}>
                 <Text style={styles.loadMoreButtonText}>Cargar mas</Text>
@@ -263,7 +260,7 @@ function SocialActivityCard({
             <View style={[styles.socialMediaPoster, styles.posterFallback]} />
           )}
           <View style={styles.socialMediaCopy}>
-            <Text style={styles.socialMediaLabel}>{item.media_type === 'movie' ? 'Pelicula' : 'Serie'}</Text>
+            <Text style={styles.socialMediaLabel}>{getMediaTypeLabel(item.media_type)}</Text>
             <Text style={styles.socialMediaTitle} numberOfLines={2}>{item.title}</Text>
           </View>
         </Pressable>
@@ -273,7 +270,7 @@ function SocialActivityCard({
           <Text style={styles.socialCardBody}>
             ha publicado una resena sobre {item.media_type === 'movie' ? 'una pelicula' : 'una serie'} {item.title}.
           </Text>
-          <Text style={styles.socialCardAccent}>Nota: {(item.rating / 2).toFixed(1)} / 5</Text>
+          <Text style={styles.socialCardAccent}>Nota: {formatWatchLogScore(item.rating)}</Text>
           <Text style={styles.socialPreview} numberOfLines={4}>
             {item.body_preview}
           </Text>
@@ -284,7 +281,7 @@ function SocialActivityCard({
           <Text style={styles.socialCardBody}>
             ha registrado un visionado de {item.media_type === 'movie' ? 'pelicula' : 'serie'} {item.title}.
           </Text>
-          <Text style={styles.socialCardAccent}>{`${item.watched_at} - ${formatRating(item.rating)}`}</Text>
+          <Text style={styles.socialCardAccent}>{`${item.watched_at} - ${formatWatchLogScore(item.rating)}`}</Text>
         </>
       ) : null}
       {item.activity_type === 'follow' ? (
@@ -327,12 +324,9 @@ function FeaturedCard({ item }: { item: MediaItem }) {
         <View style={[styles.featuredPoster, styles.posterFallback]} />
       )}
       <View style={styles.featuredBody}>
-        <Text style={styles.featuredKicker}>Seleccion destacada</Text>
+        <Text style={styles.featuredKicker}>{uiCopy.labels.featured}</Text>
         <Text style={styles.featuredTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.featuredDescription}>
-          {item.media_type === 'movie' ? 'Pelicula' : 'Serie'} con nota {formatTmdbRating(item.vote_average)}
-          {item.release_date ? ` - ${item.release_date.slice(0, 4)}` : ''}
-        </Text>
+        <Text style={styles.featuredDescription}>{formatFeaturedDescription(item)}</Text>
         <View style={styles.featuredFooter}>
           <View style={styles.featuredPill}>
             <Text style={styles.featuredPillText}>Abrir ficha</Text>
@@ -396,7 +390,7 @@ function SearchModal({
 
         <View style={styles.searchTabs}>
           <View style={styles.searchTabActive}>
-            <Text style={styles.searchTabActiveText}>Films</Text>
+            <Text style={styles.searchTabActiveText}>{uiCopy.labels.titles}</Text>
           </View>
         </View>
 
@@ -457,7 +451,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.centered}>
         <StatusBar style="light" />
-        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="large" label="Cargando inicio..." />
       </View>
     );
   }
@@ -494,7 +488,7 @@ export default function HomeScreen() {
           <View style={styles.searchContainer}>
             <Text style={styles.searchPlaceholder}>Ej. Severance, Dune, The Bear</Text>
             <View style={styles.searchTriggerPill}>
-              <Text style={styles.searchTriggerPillText}>Buscar</Text>
+              <Ionicons name="search-outline" size={20} color={darkDesign.colors.accentSoft} />
             </View>
           </View>
         </Pressable>
@@ -681,18 +675,13 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
   searchTriggerPill: {
-    minWidth: 82,
+    minWidth: 56,
     minHeight: 44,
-    paddingHorizontal: 14,
+    paddingHorizontal: 18,
     borderLeftWidth: 1,
     borderLeftColor: darkDesign.colors.borderStrong,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  searchTriggerPillText: {
-    color: darkDesign.colors.accentSoft,
-    ...darkDesign.typography.micro,
-    fontWeight: '700',
   },
   searchModalScreen: {
     flex: 1,
@@ -1040,3 +1029,4 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
 });
+

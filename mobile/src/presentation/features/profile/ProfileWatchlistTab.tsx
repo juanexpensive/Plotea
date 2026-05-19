@@ -1,4 +1,6 @@
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
+import { uiCopy } from '../../shared/uiCopy';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { MediaStatusListItem } from './MediaStatusListViewModel';
@@ -23,7 +25,7 @@ export function ProfileWatchlistTab({
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+        <PlotStarLoader size="large" label="Cargando watchlist..." />
       </View>
     );
   }
@@ -39,8 +41,8 @@ export function ProfileWatchlistTab({
   return (
     <View style={styles.content}>
       <View style={styles.heroSection}>
-        <Text style={styles.eyebrow}>Watchlist</Text>
-        <Text style={styles.title}>{username} watchlist</Text>
+        <Text style={styles.eyebrow}>{uiCopy.tabs.watchlist}</Text>
+        <Text style={styles.title}>{`Pendientes de ${username}`}</Text>
         <Text style={styles.subtitle}>
           {items.length === 0 ? 'Tu proxima obsesion empieza aqui.' : `${items.length} titulos guardados`}
         </Text>
@@ -51,7 +53,7 @@ export function ProfileWatchlistTab({
       {items.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>Todavia no has guardado nada.</Text>
-          <Text style={styles.emptyText}>Marca peliculas o series para que tu watchlist empiece a tomar forma.</Text>
+          <Text style={styles.emptyText}>Marca peliculas o series para que tu lista de pendientes empiece a tomar forma.</Text>
         </View>
       ) : (
         <View style={styles.posterGrid}>

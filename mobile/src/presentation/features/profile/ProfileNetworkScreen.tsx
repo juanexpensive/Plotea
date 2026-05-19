@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PublicUserSummary } from '../../../domain/entities/social';
+import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { ProfileNetworkTab, useProfileNetworkViewModel } from './ProfileNetworkViewModel';
@@ -43,7 +44,7 @@ export default function ProfileNetworkScreen() {
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={darkDesign.colors.accent} />
+          <PlotStarLoader size="large" label="Cargando red..." />
         </View>
       ) : (
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>

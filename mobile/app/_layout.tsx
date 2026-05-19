@@ -59,6 +59,10 @@ export default function RootLayout() {
         name="list-detail"
         options={{ headerShown: true, title: 'Lista' }}
       />
+      <Stack.Screen
+        name="loader-preview"
+        options={{ headerShown: true, title: 'Preview del loader' }}
+      />
     </Stack>
   );
 }
