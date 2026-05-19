@@ -35,14 +35,14 @@ class ResendEmailSender(IEmailSender):
         settings = get_settings()
         if settings.password_reset_base_url:
             return (
-                "Hemos recibido una solicitud para restablecer tu contrasena en PlotSkip.\n\n"
+                "Hemos recibido una solicitud para restablecer tu contraseña en Plotea.\n\n"
                 f"Abre este enlace para continuar:\n{reset_url}\n\n"
                 f"Si el enlace no funciona, usa este token manualmente:\n{reset_token}\n\n"
                 "Si no has solicitado este cambio, puedes ignorar este correo."
             )
 
         return (
-            "Hemos recibido una solicitud para restablecer tu contrasena en PlotSkip.\n\n"
+            "Hemos recibido una solicitud para restablecer tu contraseña en Plotea.\n\n"
             f"Tu token de restablecimiento es:\n{reset_token}\n\n"
             "Si no has solicitado este cambio, puedes ignorar este correo."
         )
@@ -51,12 +51,12 @@ class ResendEmailSender(IEmailSender):
         settings = get_settings()
         if not settings.password_reset_base_url:
             return (
-                "<p>Hemos recibido una solicitud para restablecer tu contrasena en PlotSkip.</p>"
+                "<p>Hemos recibido una solicitud para restablecer tu contraseña en Plotea.</p>"
                 "<p>Revisa el token incluido en la version de texto del correo.</p>"
             )
 
         return (
-            "<p>Hemos recibido una solicitud para restablecer tu contrasena en PlotSkip.</p>"
+            "<p>Hemos recibido una solicitud para restablecer tu contraseña en Plotea.</p>"
             f'<p><a href="{reset_url}" '
             'style="display:inline-block;padding:12px 18px;background:#18181b;color:#ffffff;'
             'text-decoration:none;border-radius:8px;">Abrir recuperacion en la app</a></p>'

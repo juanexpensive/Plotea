@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { searchUsers } from '../../../data/repositories/SocialRepository';
+import { getCurrentUser } from '../../../data/repositories/AuthRepository';
 import { PublicUserSummary } from '../../../domain/entities/social';
 import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
 
@@ -9,7 +10,28 @@ export function useUserSearchViewModel() {
   const [results, setResults] = useState<PublicUserSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const searchRequestId = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+
+    getCurrentUser()
+      .then((user) => {
+        if (active) {
+          setCurrentUsername(user.username);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setCurrentUsername(null);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const trimmedQuery = query.trim();
@@ -30,7 +52,7 @@ export function useUserSearchViewModel() {
       searchUsers(trimmedQuery)
         .then((users) => {
           if (searchRequestId.current === requestId) {
-            setResults(users);
+            setResults(users.filter((user) => user.username !== currentUsername));
           }
         })
         .catch((error) => {
@@ -54,9 +76,14 @@ export function useUserSearchViewModel() {
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [query]);
+  }, [currentUsername, query]);
 
   function openProfile(username: string) {
+    if (username === currentUsername) {
+      router.push('/(tabs)/profile');
+      return;
+    }
+
     router.push({ pathname: '/user-profile', params: { username } });
   }
 

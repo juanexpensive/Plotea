@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Mejoras.md",
+                "file": "DOCUMENTACION_LEGACY_CLIENTECOAS.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Mejoras"
+              "title": "DOCUMENTACION_LEGACY_CLIENTECOAS"
             }
           }
         ]
@@ -183,21 +183,30 @@
       "bases:Crear nueva base": false
     }
   },
-  "active": "a176bca887674215",
+  "active": "665f5f29ed5ab022",
   "lastOpenFiles": [
-    "mobile/app/profile-network.tsx",
-    "mobile/src/presentation/features/profile/ProfileNetworkScreen.tsx",
-    "mobile/src/presentation/features/profile/ProfileNetworkViewModel.ts",
-    "backend/app/domain/usecases/social/__pycache__/list_following.cpython-312.pyc",
-    "backend/app/domain/usecases/social/__pycache__/list_followers.cpython-312.pyc",
-    "backend/app/domain/usecases/social/list_following.py",
-    "backend/app/domain/usecases/social/list_followers.py",
-    "backend/app/data/repositories/__pycache__/user_repository.cpython-312.pyc.2499505309296",
-    "mobile/src/presentation/features/lists/ListDetailScreen.tsx",
+    "backend/app/presentation/static/uploads/avatars/user-1-81391e71ce8c3bcf.png",
+    "mobile/app/loader-preview.tsx",
+    "mobile/src/presentation/features/profile/LoaderPreviewScreen.tsx",
+    "mobile/src/presentation/shared/PlotStarLoader.tsx",
+    "mobile/assets/plotea-star.png",
+    "backend/app/presentation/static/uploads/avatars/user-1-f93306a463966e8f.png",
+    "mobile/src/presentation/features/profile/RandomWatchlistPickModal.tsx",
+    "mobile/src/presentation/features/profile/randomPickSources.ts",
+    "mobile/src/presentation/shared/uiCopy.ts",
+    "mobile/src/presentation/shared/ProfileTopTab.tsx",
+    "mobile/src/presentation/shared/mediaPresentation.ts",
+    "mobile/src/presentation/shared/ProfileSummaryStatsBar.tsx",
+    "mobile/src/presentation/shared",
+    "INFORME_DEUDA_TECNICA_TFG.md",
+    "Paso a paso envio documentos para visado.md",
+    "DOCUMENTACION_LEGACY_CLIENTECOAS.md",
     "Mejoras.md",
+    "DEPLOY.md",
+    "backend/app/presentation/static/uploads/avatars/user-1-a26afbb320264af9.png",
+    "backend/app/presentation/static/uploads/avatars/user-1-2696a38ad235f075.png",
+    "backend/app/presentation/static/uploads/avatars/user-1-5385b44a23c8d5d1.png",
     "html view.md",
-    "mobile/src/presentation/features/profile/ProfileScreen.tsx",
-    "mobile/src/presentation/features/lists/MyListsScreen.tsx",
     "mobile/node_modules/expo-secure-store/CHANGELOG.md",
     "Plotea.png"
   ]

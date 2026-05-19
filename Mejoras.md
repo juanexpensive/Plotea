@@ -7,9 +7,9 @@
 - [ ] subir back a la nube
 - [ ] test en moviles
 - [ ] fcm
-- [ ] random
-- [ ] view de perfil
-- [ ] view de lista modo oscuro
+- [x] random
+- [x] view de perfil
+- [x] view de lista modo oscuro
 - [ ] iconos en vez de palabras en pelicula detalle para comentar o eliminar comentarios
 - [ ] social darle una vuelta de tuerca
 - [ ] ajustar imagen grande de destacado
@@ -17,7 +17,3 @@
 - [ ] token
 
 
-en esta view debe haber solo 3 botones, 
-1 con un cojo para indicar que la has visto, este boton esta diseñado para la gente que quiere marcar que ha visto una pelicula pero realmente no quiere poner una reseña
-1 para añadir a la watchlist, aqui no se debera poder añadir a otras listas
-ultimo para escribir reseña, cuando clickeas para añadir a la reseña deberia salirte un modal en el medio de la pantalla no que tengas que scrollear, con iconos de 5 estrellas y pudiendo votar la mitad de una estrella

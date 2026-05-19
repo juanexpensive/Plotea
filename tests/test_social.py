@@ -78,6 +78,26 @@ async def test_search_users_by_username_and_follow_state(async_client: AsyncClie
 
 
 @pytest.mark.asyncio
+async def test_search_users_excludes_authenticated_user(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "owner-search@example.com", "ownersearch")
+    await _register_and_login(async_client, "other-search@example.com", "ownersearchfan")
+
+    response = await async_client.get("/users/search?q=ownersearch", headers=_headers(owner))
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": 2,
+            "username": "ownersearchfan",
+            "display_name": None,
+            "avatar_url": None,
+            "is_following": False,
+            "follows_me": False,
+        }
+    ]
+
+
+@pytest.mark.asyncio
 async def test_get_my_followers_lists_users_with_follow_flags(async_client: AsyncClient):
     owner = await _register_and_login(async_client, "network-owner@example.com", "networkowner")
     follower_only = await _register_and_login(async_client, "follower-only@example.com", "followeronly")

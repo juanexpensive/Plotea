@@ -1,5 +1,7 @@
 from fastapi.responses import HTMLResponse
 
+from app.infrastructure.config import get_settings
+
 
 def render_forgot_password_page() -> HTMLResponse:
     return HTMLResponse(
@@ -69,6 +71,54 @@ def render_forgot_password_page() -> HTMLResponse:
 
 
 def render_reset_password_page(token: str) -> HTMLResponse:
+    settings = get_settings()
+    app_reset_url = settings.password_reset_app_url.rstrip("/")
+    app_reset_with_token = (
+        f"{app_reset_url}?token={token}"
+        if app_reset_url
+        else ""
+    )
+    launch_app_script = ""
+    launch_app_banner = ""
+
+    if app_reset_with_token:
+        launch_app_script = f"""
+      const appUrl = {app_reset_with_token!r};
+      const openAppButton = document.getElementById("open-in-app");
+      const fallbackCard = document.getElementById("app-fallback");
+
+      function openApp() {{
+        window.location.href = appUrl;
+      }}
+
+      if (openAppButton) {{
+        openAppButton.addEventListener("click", () => {{
+          openApp();
+        }});
+      }}
+
+      window.addEventListener("load", () => {{
+        window.setTimeout(() => {{
+          openApp();
+        }}, 180);
+
+        window.setTimeout(() => {{
+          if (fallbackCard) {{
+            fallbackCard.hidden = false;
+          }}
+        }}, 1400);
+      }});
+"""
+        launch_app_banner = """
+      <div class="stack">
+        <p class="muted">Vamos a intentar abrir la app automaticamente.</p>
+        <button id="open-in-app" type="button">Abrir en la app</button>
+      </div>
+      <div id="app-fallback" class="stack" hidden>
+        <p class="muted">Si la app no se ha abierto, puedes continuar aqui o copiar el token manualmente.</p>
+      </div>
+"""
+
     return HTMLResponse(
         f"""<!DOCTYPE html>
 <html lang="es">
@@ -81,7 +131,8 @@ def render_reset_password_page(token: str) -> HTMLResponse:
   <body>
     <main class="card">
       <h1>Nueva contrasena</h1>
-      <p class="muted">Usa esta pantalla minima para confirmar que el token del email funciona.</p>
+      <p class="muted">Este enlace puede abrir la app o servirte como fallback web.</p>
+      {launch_app_banner}
       <form id="reset-password-form" class="stack">
         <input id="token" name="token" type="hidden" value="{token}" />
         <label for="new-password">Nueva contrasena</label>
@@ -132,6 +183,7 @@ def render_reset_password_page(token: str) -> HTMLResponse:
           message.className = "message error";
         }}
       }});
+{launch_app_script}
     </script>
   </body>
 </html>"""

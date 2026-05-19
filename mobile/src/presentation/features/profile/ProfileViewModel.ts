@@ -201,7 +201,6 @@ export function useProfileViewModel() {
               return;
             }
             setProfileSummaryError(getApiErrorMessage(summaryError, 'No se pudo cargar tu red.'));
-            setProfileSummary(null);
           })
           .finally(() => {
             if (active) {
@@ -253,7 +252,6 @@ export function useProfileViewModel() {
               return;
             }
             setFavoritesError(getApiErrorMessage(favoritesError, 'No se pudieron cargar tus favoritas.'));
-            setFavorites([]);
           })
           .finally(() => {
             if (active) {
@@ -278,7 +276,6 @@ export function useProfileViewModel() {
               return;
             }
             setRecentWatchError(getApiErrorMessage(recentError, 'No se pudieron cargar tus visionados recientes.'));
-            setRecentWatch([]);
           })
           .finally(() => {
             if (active) {

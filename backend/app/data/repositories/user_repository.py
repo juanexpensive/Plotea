@@ -103,6 +103,7 @@ class UserRepository(IUserRepository):
                 is_following.label("is_following"),
                 follows_me.label("follows_me"),
             )
+            .where(UserModel.id != current_user_id)
             .where(func.lower(UserModel.username).contains(normalized_query))
             .order_by(UserModel.username.asc())
             .limit(limit)

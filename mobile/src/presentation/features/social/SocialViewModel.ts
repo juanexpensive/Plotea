@@ -42,7 +42,6 @@ export function useSocialViewModel() {
           return;
         }
         setVisualError(getApiErrorMessage(error, 'No se pudo cargar el resumen visual.'));
-        setVisualItems([]);
       })
       .finally(() => {
         if (active) {
@@ -66,8 +65,6 @@ export function useSocialViewModel() {
           return;
         }
         setFeedError(getApiErrorMessage(error, 'Error al cargar la actividad social.'));
-        setFeedItems([]);
-        setNextCursor(null);
       })
       .finally(() => {
         if (active) {

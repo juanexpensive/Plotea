@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
+import { getCurrentUser } from '../../../data/repositories/AuthRepository';
 import { followUser, getMyFollowers, getMyFollowing, unfollowUser } from '../../../data/repositories/SocialRepository';
 import { PublicUserSummary } from '../../../domain/entities/social';
 import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
@@ -32,6 +33,7 @@ export function useProfileNetworkViewModel(initialTab: string | undefined) {
   const [activeTab, setActiveTab] = useState<ProfileNetworkTab>(initialTab === 'following' ? 'following' : 'followers');
   const [followers, setFollowers] = useState<PublicUserSummary[]>([]);
   const [following, setFollowing] = useState<PublicUserSummary[]>([]);
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<number | null>(null);
@@ -42,12 +44,13 @@ export function useProfileNetworkViewModel(initialTab: string | undefined) {
       setLoading(true);
       setError(null);
 
-      Promise.all([getMyFollowers(), getMyFollowing()])
-        .then(([nextFollowers, nextFollowing]) => {
+      Promise.all([getCurrentUser(), getMyFollowers(), getMyFollowing()])
+        .then(([currentUser, nextFollowers, nextFollowing]) => {
           if (!active) {
             return;
           }
 
+          setCurrentUsername(currentUser.username);
           setFollowers(sortUsers(nextFollowers));
           setFollowing(sortUsers(nextFollowing));
         })
@@ -56,15 +59,13 @@ export function useProfileNetworkViewModel(initialTab: string | undefined) {
             return;
           }
 
-          if (isUnauthorizedError(nextError)) {
-            router.replace('/login');
-            return;
-          }
+        if (isUnauthorizedError(nextError)) {
+          router.replace('/login');
+          return;
+        }
 
-          setError(getApiErrorMessage(nextError, 'No se pudo cargar tu red.'));
-          setFollowers([]);
-          setFollowing([]);
-        })
+        setError(getApiErrorMessage(nextError, 'No se pudo cargar tu red.'));
+      })
         .finally(() => {
           if (active) {
             setLoading(false);
@@ -111,6 +112,11 @@ export function useProfileNetworkViewModel(initialTab: string | undefined) {
   }
 
   function openProfile(username: string) {
+    if (username === currentUsername) {
+      router.push('/(tabs)/profile');
+      return;
+    }
+
     router.push({ pathname: '/user-profile', params: { username } });
   }
 

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
+import { getCurrentUser } from '../../../data/repositories/AuthRepository';
 import { getMediaDetail } from '../../../data/repositories/MediaRepository';
 import {
   followUser,
@@ -25,6 +26,7 @@ export type PublicDiaryItem = WatchLogEntry & {
 
 export function usePublicProfileViewModel(username: string | undefined) {
   const [profile, setProfile] = useState<PublicUserProfile | null>(null);
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const [stats, setStats] = useState<PublicUserStats | null>(null);
   const [favorites, setFavorites] = useState<FavoriteMediaItem[]>([]);
   const [recentWatch, setRecentWatch] = useState<WatchLogEnrichedEntry[]>([]);
@@ -61,9 +63,15 @@ export function usePublicProfileViewModel(username: string | undefined) {
       setWatchlistError(null);
       setDiaryError(null);
 
-      getPublicProfile(username)
-        .then((data) => {
+      Promise.all([getCurrentUser(), getPublicProfile(username)])
+        .then(([currentUser, data]) => {
           if (!active) {
+            return;
+          }
+
+          setCurrentUsername(currentUser.username);
+          if (data.username === currentUser.username) {
+            router.replace('/(tabs)/profile');
             return;
           }
 
@@ -85,7 +93,6 @@ export function usePublicProfileViewModel(username: string | undefined) {
                 return;
               }
               setStatsError(getApiErrorMessage(statsError, 'No se pudieron cargar las estadisticas.'));
-              setStats(null);
             })
             .finally(() => {
               if (active) {
@@ -109,7 +116,6 @@ export function usePublicProfileViewModel(username: string | undefined) {
                 return;
               }
               setFavoritesError(getApiErrorMessage(favoritesError, 'No se pudieron cargar sus favoritas.'));
-              setFavorites([]);
             })
             .finally(() => {
               if (active) {
@@ -133,7 +139,6 @@ export function usePublicProfileViewModel(username: string | undefined) {
                 return;
               }
               setRecentWatchError(getApiErrorMessage(recentError, 'No se pudo cargar su actividad reciente.'));
-              setRecentWatch([]);
             })
             .finally(() => {
               if (active) {
@@ -168,7 +173,6 @@ export function usePublicProfileViewModel(username: string | undefined) {
                 return;
               }
               setWatchlistError(getApiErrorMessage(watchlistError, 'No se pudo cargar su watchlist.'));
-              setWatchlist([]);
             })
             .finally(() => {
               if (active) {
@@ -203,7 +207,6 @@ export function usePublicProfileViewModel(username: string | undefined) {
                 return;
               }
               setDiaryError(getApiErrorMessage(diaryError, 'No se pudo cargar su diario.'));
-              setDiary([]);
             })
             .finally(() => {
               if (active) {
@@ -272,6 +275,7 @@ export function usePublicProfileViewModel(username: string | undefined) {
 
   return {
     profile,
+    currentUsername,
     stats,
     favorites,
     recentWatch,

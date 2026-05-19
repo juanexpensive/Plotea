@@ -757,3 +757,48 @@
 - Validaciones ejecutadas:
 - `npx tsc --noEmit`
 - Riesgo residual aceptado: sigue pendiente validacion manual en Expo/dispositivo real para ajustar altura del modal secundario, scroll y tactilidad del cambio de fuente
+
+# Fase 18 - Hardening de sesion y social
+
+## Objetivo
+
+- Estabilizar auth/social/profile para que la app no expulse al usuario por fallos transitorios, no muestre al usuario autenticado en busquedas sociales y degrade los fallos parciales sin vaciar pantallas ya cargadas.
+
+## Alcance
+
+- En alcance:
+- distinguir `401` reales de timeouts o red caida durante refresh
+- excluir el usuario autenticado de `/users/search`
+- blindar mobile para no abrir el perfil publico propio desde busquedas o red
+- conservar datos previos en perfil, red social y perfil publico cuando falle una recarga parcial
+- ajustar copys de error para que no suenen a backend desconectado confirmado
+- Fuera de alcance:
+- cambios en contratos HTTP publicos
+- nueva infraestructura de tests frontend
+- persistencia extra de sesion mas alla del refresh token existente
+
+## Fases
+
+### Fase 1: Contrato backend y auth defensiva
+
+- Goal: fijar con test la exclusion del usuario propio y evitar borrado de tokens en errores transitorios
+- Expected files or systems: repositorio de usuarios backend, tests sociales, `AuthSessionManager`, `api.ts`, `AuthRepository`
+- Validation: `backend\.venv\Scripts\python.exe -m pytest tests/test_social.py -q`, `backend\.venv\Scripts\python.exe -m pytest tests/test_refresh_logout.py -q`, `backend\.venv\Scripts\python.exe -m pytest tests/test_login.py -q`
+- Review gate: la busqueda no devuelve al usuario autenticado y un refresh con fallo de red ya no fuerza vuelta a login
+- Estado: completada
+
+### Fase 2: Guardas de perfil propio y errores parciales
+
+- Goal: reforzar mobile para no navegar al perfil publico propio y mantener datos previos en cargas parciales
+- Expected files or systems: `UserSearchViewModel`, `PublicProfileViewModel`, `ProfileViewModel`, `ProfileNetworkViewModel`, `SocialViewModel`, pantallas de perfil
+- Validation: `npx tsc --noEmit`
+- Review gate: las pantallas ya cargadas no colapsan por un fallo parcial y el propio usuario nunca queda expuesto como perfil publico navegable
+- Estado: completada
+
+## Cierre
+
+- El refresh de sesion solo limpia tokens cuando el backend confirma invalidez real del refresh token
+- La apertura de la app mantiene sesion frente a fallos transitorios de red mientras existan credenciales recuperables
+- `/users/search` ya no devuelve al usuario autenticado y mobile ademas filtra y redirige al perfil propio como red de seguridad
+- Perfil propio, red y perfil publico conservan datos previos cuando una recarga parcial falla
+- Los mensajes de error de fallback ahora son neutros y orientados a reintento, sin afirmar una caida global del backend

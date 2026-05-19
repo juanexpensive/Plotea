@@ -1,7 +1,18 @@
-import { BACKEND_URL } from './backendUrl';
-
 export function isUnauthorizedError(error: unknown): boolean {
   return getStatusCode(error) === 401;
+}
+
+export function isNetworkError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const axiosLikeError = error as { code?: string; response?: unknown; request?: unknown };
+  if (axiosLikeError.response) {
+    return false;
+  }
+
+  return Boolean(axiosLikeError.request) || axiosLikeError.code === 'ECONNABORTED';
 }
 
 export function getErrorStatusCode(error: unknown): number | undefined {
@@ -20,7 +31,11 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
     return detail;
   }
 
-  return `${fallback} Backend actual: ${BACKEND_URL}`;
+  if (isNetworkError(error)) {
+    return `${fallback} Revisa tu conexion e intentalo de nuevo.`;
+  }
+
+  return `${fallback} Intentalo de nuevo en unos instantes.`;
 }
 
 function isTmdbUnavailable(status: number | undefined, detail: string | undefined): boolean {

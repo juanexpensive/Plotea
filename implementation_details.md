@@ -1540,3 +1540,101 @@
 - puede salir la duda de si la lista combinada deberia deduplicar titulos repetidos
 - Residual risks:
 - no se ha validado manualmente la experiencia en dispositivo real en esta sesion
+
+# Fase 18 - Hardening de sesion y social Details
+
+## Repository Context
+
+- Relevant files:
+- `backend/app/data/repositories/user_repository.py`
+- `tests/test_social.py`
+- `mobile/src/infrastructure/auth/AuthSessionManager.ts`
+- `mobile/src/infrastructure/http/api.ts`
+- `mobile/src/infrastructure/http/apiErrors.ts`
+- `mobile/src/data/repositories/AuthRepository.ts`
+- `mobile/src/presentation/features/social/UserSearchViewModel.ts`
+- `mobile/src/presentation/features/social/PublicProfileViewModel.ts`
+- `mobile/src/presentation/features/profile/ProfileViewModel.ts`
+- `mobile/src/presentation/features/profile/ProfileNetworkViewModel.ts`
+- `mobile/src/presentation/features/social/SocialViewModel.ts`
+- Existing patterns to follow:
+- manejo de `401` con redirect a `/login`
+- view models con `loading`, errores por seccion y `useFocusEffect`
+- skill `phased-dev-review` para dejar trazabilidad de fases, validacion y riesgos
+- Constraints:
+- no romper el contrato actual de `/auth/refresh`
+- convivir con worktree sucio sin revertir cambios previos del usuario
+- sin runner frontend dedicado en el repo
+
+## Decisions Locked
+
+- `AuthSessionManager` solo limpia sesion al faltar refresh token o al recibir `401` real del refresh
+- el interceptor devuelve el error del refresh y no el `401` original cuando el refresh falla por red, para no disparar logout falso
+- `hasValidSession()` trata errores de red como sesion recuperable y no como logout
+- backend y mobile aplican ambos la exclusion del usuario propio en busqueda social
+- las pantallas ya cargadas mantienen datos previos si una recarga parcial falla
+- los fallbacks de copy pasan a ser neutros y orientados a reintento
+
+## Phase Notes
+
+### Phase 1
+
+- Detailed tasks:
+- excluir `UserModel.id == current_user_id` en `search_public()`
+- anadir test de contrato para `/users/search`
+- endurecer refresh session, restore session e interceptor axios
+- Findings:
+- el bug principal de logout no estaba en `SecureStore`, sino en que el interceptor reenviaba un `401` original aunque el refresh hubiera fallado por timeout o red
+- la busqueda backend no reutilizaba la exclusion ya presente en followers/following
+- Tests:
+- `backend\.venv\Scripts\python.exe -m pytest tests/test_social.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest tests/test_refresh_logout.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest tests/test_login.py -q`
+- Review notes:
+- el arranque con solo refresh token y sin access token sigue dependiendo de poder refrescar; es un caso menos comun porque ambos tokens se guardan juntos
+- Status:
+- completed
+
+### Phase 2
+
+- Detailed tasks:
+- cachear el usuario actual en `AuthRepository` para reutilizar identidad en social/profile
+- filtrar el propio usuario en `UserSearchViewModel`
+- redirigir al perfil propio si se intenta abrir el perfil publico propio
+- conservar datos previos en `ProfileViewModel`, `PublicProfileViewModel`, `ProfileNetworkViewModel` y `SocialViewModel`
+- cambiar `ProfileScreen` y `PublicProfileScreen` para bloquear solo en primera carga, no ante errores posteriores
+- Findings:
+- `ProfileScreen` y `PublicProfileScreen` estaban usando `error || !user/profile` como condicion global, lo que convertia un error puntual en pantalla vacia
+- mantener datos previos exige no resetear colecciones en `catch`, incluso aunque siga habiendo copy de error
+- Tests:
+- `npx tsc --noEmit`
+- Review notes:
+- el CTA de follow propio queda doblemente blindado: redireccion por VM y boton deshabilitado si llegara a renderizarse un instante
+- Status:
+- completed
+
+## Review Findings
+
+- fixed: la sesion ya no se borra por fallos transitorios durante refresh
+- fixed: la busqueda social ya no devuelve al usuario autenticado
+- fixed: mobile evita navegar al perfil publico propio aunque el backend volviera a romper ese contrato
+- fixed: perfil propio, perfil publico y feed social conservan datos previos ante fallos parciales de recarga
+- fixed: el fallback de errores ya no afirma que el backend este caido cuando no hay evidencia de ello
+- accepted risk: no hay tests automatizados frontend para simular timeouts o foco/reentrada de pantallas
+- accepted risk: queda pendiente validacion manual en Expo/dispositivo real para confirmar la sensacion exacta del flujo con backend intermitente
+
+## Deferred Work
+
+- incorporar tests frontend o e2e para refresh fallido por red y recargas parciales por foco
+- evaluar un store global de identidad/autenticacion si el slice social sigue creciendo
+- revisar si interesa mostrar CTA explicito de reintento en mas secciones, no solo copy de error
+
+## Final Confidence Check
+
+- Confidence score:
+- 8.8/10
+- Likely code review callouts:
+- puede salir la conversacion de si `getCurrentUser()` merece una capa global mas formal que una cache de modulo
+- tambien pueden pedir una estrategia mas uniforme de `retry` visible entre todas las secciones de perfil/social
+- Residual risks:
+- no se ha validado manualmente en Expo/dispositivo real el caso de access token expirado con backend intermitente en esta sesion

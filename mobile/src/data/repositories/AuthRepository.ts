@@ -1,7 +1,10 @@
 import api from '../../infrastructure/http/api';
 import { TokenPair, User } from '../../domain/entities/auth';
-import { isUnauthorizedError } from '../../infrastructure/http/apiErrors';
+import { isNetworkError, isUnauthorizedError } from '../../infrastructure/http/apiErrors';
 import { authSessionManager } from '../../infrastructure/auth/AuthSessionManager';
+
+let cachedCurrentUser: User | null = null;
+let currentUserRequest: Promise<User> | null = null;
 
 export async function register(
   email: string,
@@ -19,12 +22,14 @@ export async function login(email: string, password: string): Promise<TokenPair>
 
 export async function getMe(): Promise<User> {
   const response = await api.get<User>('/auth/me');
+  cachedCurrentUser = response.data;
   return response.data;
 }
 
 export async function logout(): Promise<void> {
   const refreshToken = await authSessionManager.getRefreshToken();
   if (!refreshToken) {
+    cachedCurrentUser = null;
     await authSessionManager.clearSession();
     return;
   }
@@ -32,6 +37,8 @@ export async function logout(): Promise<void> {
   try {
     await api.post('/auth/logout', { refresh_token: refreshToken });
   } finally {
+    cachedCurrentUser = null;
+    currentUserRequest = null;
     await authSessionManager.clearSession();
   }
 }
@@ -52,6 +59,8 @@ export async function resetPassword(token: string, newPassword: string): Promise
 export async function hasValidSession(): Promise<boolean> {
   const hasRecoverableSession = await authSessionManager.restoreSession();
   if (!hasRecoverableSession) {
+    cachedCurrentUser = null;
+    currentUserRequest = null;
     return false;
   }
 
@@ -60,8 +69,35 @@ export async function hasValidSession(): Promise<boolean> {
     return true;
   } catch (error) {
     if (isUnauthorizedError(error)) {
+      cachedCurrentUser = null;
+      currentUserRequest = null;
       await authSessionManager.clearSession();
+      return false;
     }
-    return false;
+
+    if (isNetworkError(error)) {
+      return true;
+    }
+
+    return true;
   }
+}
+
+export async function getCurrentUser(): Promise<User> {
+  if (cachedCurrentUser) {
+    return cachedCurrentUser;
+  }
+
+  if (!currentUserRequest) {
+    currentUserRequest = getMe().finally(() => {
+      currentUserRequest = null;
+    });
+  }
+
+  return currentUserRequest;
+}
+
+export function clearCurrentUserCache() {
+  cachedCurrentUser = null;
+  currentUserRequest = null;
 }
