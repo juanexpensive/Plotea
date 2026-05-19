@@ -10,6 +10,7 @@ import {
   VisualFeedItem,
 } from '../../domain/entities/social';
 import { User } from '../../domain/entities/auth';
+import { SavedMediaStatus, WatchLogEnrichedEntry, WatchLogEntry } from '../../domain/entities/media';
 
 export async function searchUsers(query: string): Promise<PublicUserSummary[]> {
   const response = await api.get<PublicUserSummary[]>('/users/search', { params: { q: query } });
@@ -37,6 +38,26 @@ export async function updateMyProfile(payload: {
   avatar_url?: string | null;
 }): Promise<User> {
   const response = await api.put<User>('/users/me', payload);
+  return response.data;
+}
+
+export async function uploadMyAvatar(asset: {
+  uri: string;
+  name?: string | null;
+  mimeType?: string | null;
+}): Promise<User> {
+  const formData = new FormData();
+  formData.append('avatar', {
+    uri: asset.uri,
+    name: asset.name ?? 'avatar.jpg',
+    type: asset.mimeType ?? 'image/jpeg',
+  } as never);
+
+  const response = await api.post<User>('/users/me/avatar', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return response.data;
 }
 
@@ -72,5 +93,27 @@ export async function getMyFavoriteMedia(): Promise<FavoriteMediaItem[]> {
 
 export async function updateMyFavoriteMedia(items: FavoriteMediaWriteItem[]): Promise<FavoriteMediaItem[]> {
   const response = await api.put<FavoriteMediaItem[]>('/users/me/favorites', { items });
+  return response.data;
+}
+
+export async function getUserFavoriteMedia(username: string): Promise<FavoriteMediaItem[]> {
+  const response = await api.get<FavoriteMediaItem[]>(`/users/${encodeURIComponent(username)}/favorites`);
+  return response.data;
+}
+
+export async function getUserWatchlist(username: string): Promise<SavedMediaStatus[]> {
+  const response = await api.get<SavedMediaStatus[]>(`/users/${encodeURIComponent(username)}/watchlist`);
+  return response.data;
+}
+
+export async function getUserWatchLog(username: string): Promise<WatchLogEntry[]> {
+  const response = await api.get<WatchLogEntry[]>(`/users/${encodeURIComponent(username)}/watchlog`);
+  return response.data;
+}
+
+export async function getUserRecentWatchLog(username: string, limit = 10): Promise<WatchLogEnrichedEntry[]> {
+  const response = await api.get<WatchLogEnrichedEntry[]>(`/users/${encodeURIComponent(username)}/watchlog/recent`, {
+    params: { limit },
+  });
   return response.data;
 }

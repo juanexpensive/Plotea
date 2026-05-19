@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
 import { getMe, logout } from '../../../data/repositories/AuthRepository';
 import { searchMedia } from '../../../data/repositories/MediaRepository';
@@ -8,6 +9,7 @@ import {
   getUserStats,
   updateMyFavoriteMedia,
   updateMyProfile,
+  uploadMyAvatar,
 } from '../../../data/repositories/SocialRepository';
 import { getMyRecentWatchLog } from '../../../data/repositories/WatchLogRepository';
 import { User } from '../../../domain/entities/auth';
@@ -74,11 +76,12 @@ export function useProfileViewModel() {
   const [favoritesError, setFavoritesError] = useState<string | null>(null);
   const [recentWatchError, setRecentWatchError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [isEditingDisplayName, setIsEditingDisplayName] = useState(false);
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [displayNameDraft, setDisplayNameDraft] = useState('');
   const [bioDraft, setBioDraft] = useState('');
-  const [avatarUrlDraft, setAvatarUrlDraft] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [isEditingFavorites, setIsEditingFavorites] = useState(false);
   const [favoriteDrafts, setFavoriteDrafts] = useState<Array<MediaItem | null>>([null, null, null, null]);
   const [activeFavoriteSlot, setActiveFavoriteSlot] = useState(0);
@@ -126,6 +129,38 @@ export function useProfileViewModel() {
     return () => clearTimeout(timeoutId);
   }, [favoriteQuery, isEditingFavorites]);
 
+  const refreshProfileSideData = useCallback(async (nextUser: User) => {
+    setProfileSummaryLoading(true);
+    try {
+      const nextProfileSummary = await getPublicProfile(nextUser.username);
+      setProfileSummary(nextProfileSummary);
+      setProfileSummaryError(null);
+    } catch (summaryError) {
+      if (isUnauthorizedError(summaryError)) {
+        router.replace('/login');
+        return;
+      }
+      setProfileSummaryError(getApiErrorMessage(summaryError, 'No se pudo cargar tu red.'));
+    } finally {
+      setProfileSummaryLoading(false);
+    }
+
+    setStatsLoading(true);
+    try {
+      const nextStats = await getUserStats(nextUser.username);
+      setStats(nextStats);
+      setStatsError(null);
+    } catch (statsError) {
+      if (isUnauthorizedError(statsError)) {
+        router.replace('/login');
+        return;
+      }
+      setStatsError(getApiErrorMessage(statsError, 'No se pudieron cargar las estadisticas.'));
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
   const loadProfile = useCallback(() => {
     let active = true;
     setLoading(true);
@@ -142,6 +177,13 @@ export function useProfileViewModel() {
         }
 
         setUser(nextUser);
+        if (!isEditingDisplayName) {
+          setDisplayNameDraft(nextUser.display_name ?? '');
+        }
+        if (!isEditingBio) {
+          setBioDraft(nextUser.bio ?? '');
+        }
+
         setProfileSummaryLoading(true);
         getPublicProfile(nextUser.username)
           .then((nextProfileSummary) => {
@@ -166,12 +208,6 @@ export function useProfileViewModel() {
               setProfileSummaryLoading(false);
             }
           });
-
-        if (!isEditing) {
-          setDisplayNameDraft(nextUser.display_name ?? '');
-          setBioDraft(nextUser.bio ?? '');
-          setAvatarUrlDraft(nextUser.avatar_url ?? '');
-        }
 
         setStatsLoading(true);
         getUserStats(nextUser.username)
@@ -269,11 +305,12 @@ export function useProfileViewModel() {
     return () => {
       active = false;
     };
-  }, [isEditing, isEditingFavorites]);
+  }, [isEditingBio, isEditingDisplayName, isEditingFavorites]);
 
   useFocusEffect(loadProfile);
 
   async function handleLogout() {
+    setIsActionMenuOpen(false);
     setLoggingOut(true);
     setError(null);
 
@@ -287,7 +324,15 @@ export function useProfileViewModel() {
     }
   }
 
-  function startEditing() {
+  function openActionMenu() {
+    setIsActionMenuOpen(true);
+  }
+
+  function closeActionMenu() {
+    setIsActionMenuOpen(false);
+  }
+
+  function startDisplayNameEditing() {
     if (!user) {
       return;
     }
@@ -295,25 +340,30 @@ export function useProfileViewModel() {
     setSuccessMessage(null);
     setError(null);
     setDisplayNameDraft(user.display_name ?? '');
-    setBioDraft(user.bio ?? '');
-    setAvatarUrlDraft(user.avatar_url ?? '');
-    setIsEditing(true);
+    setIsEditingDisplayName(true);
   }
 
-  function cancelEditing() {
+  function cancelDisplayNameEditing() {
     if (!user) {
       return;
     }
 
     setDisplayNameDraft(user.display_name ?? '');
-    setBioDraft(user.bio ?? '');
-    setAvatarUrlDraft(user.avatar_url ?? '');
     setError(null);
-    setIsEditing(false);
+    setIsEditingDisplayName(false);
   }
 
-  async function saveProfile() {
+  async function saveDisplayNameInline() {
     if (!user || savingProfile) {
+      return;
+    }
+
+    const normalizedDisplayName = displayNameDraft.trim();
+    const currentDisplayName = (user.display_name ?? '').trim();
+
+    if (normalizedDisplayName === currentDisplayName) {
+      setIsEditingDisplayName(false);
+      setDisplayNameDraft(user.display_name ?? '');
       return;
     }
 
@@ -323,50 +373,19 @@ export function useProfileViewModel() {
 
     try {
       const updatedUser = await updateMyProfile({
-        display_name: displayNameDraft === '' ? null : displayNameDraft,
-        bio: bioDraft === '' ? null : bioDraft,
-        avatar_url: avatarUrlDraft === '' ? null : avatarUrlDraft,
+        display_name: normalizedDisplayName === '' ? null : normalizedDisplayName,
       });
       setUser(updatedUser);
       setDisplayNameDraft(updatedUser.display_name ?? '');
-      setBioDraft(updatedUser.bio ?? '');
-      setAvatarUrlDraft(updatedUser.avatar_url ?? '');
-      setIsEditing(false);
-      setSuccessMessage('Perfil actualizado.');
-      setProfileSummaryLoading(true);
-      try {
-        const nextProfileSummary = await getPublicProfile(updatedUser.username);
-        setProfileSummary(nextProfileSummary);
-        setProfileSummaryError(null);
-      } catch (summaryError) {
-        if (isUnauthorizedError(summaryError)) {
-          router.replace('/login');
-          return;
-        }
-        setProfileSummaryError(getApiErrorMessage(summaryError, 'No se pudo cargar tu red.'));
-      } finally {
-        setProfileSummaryLoading(false);
-      }
-      setStatsLoading(true);
-      try {
-        const nextStats = await getUserStats(updatedUser.username);
-        setStats(nextStats);
-        setStatsError(null);
-      } catch (statsError) {
-        if (isUnauthorizedError(statsError)) {
-          router.replace('/login');
-          return;
-        }
-        setStatsError(getApiErrorMessage(statsError, 'No se pudieron cargar las estadisticas.'));
-      } finally {
-        setStatsLoading(false);
-      }
+      setIsEditingDisplayName(false);
+      setSuccessMessage('Nombre actualizado.');
+      await refreshProfileSideData(updatedUser);
     } catch (saveError) {
       if (isUnauthorizedError(saveError)) {
         router.replace('/login');
         return;
       }
-      setError(getApiErrorMessage(saveError, 'No se pudo actualizar el perfil.'));
+      setError(getApiErrorMessage(saveError, 'No se pudo actualizar el nombre.'));
     } finally {
       setSavingProfile(false);
     }
@@ -397,6 +416,7 @@ export function useProfileViewModel() {
       setUser(updatedUser);
       setBioDraft(updatedUser.bio ?? '');
       setIsEditingBio(false);
+      setSuccessMessage('Bio actualizada.');
     } catch (saveError) {
       if (isUnauthorizedError(saveError)) {
         router.replace('/login');
@@ -496,6 +516,7 @@ export function useProfileViewModel() {
       return;
     }
 
+    setSuccessMessage(null);
     setError(null);
     setBioDraft(user.bio ?? '');
     setIsEditingBio(true);
@@ -525,6 +546,54 @@ export function useProfileViewModel() {
     });
   }
 
+  async function changeAvatarFromLibrary() {
+    if (!user || uploadingAvatar || savingProfile) {
+      return;
+    }
+
+    setSuccessMessage(null);
+    setError(null);
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError('Necesitamos permiso para acceder a tu galeria.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+
+    if (result.canceled || result.assets.length === 0) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    setUploadingAvatar(true);
+
+    try {
+      const updatedUser = await uploadMyAvatar({
+        uri: asset.uri,
+        name: asset.fileName,
+        mimeType: asset.mimeType,
+      });
+      setUser(updatedUser);
+      setSuccessMessage('Foto de perfil actualizada.');
+      await refreshProfileSideData(updatedUser);
+    } catch (uploadError) {
+      if (isUnauthorizedError(uploadError)) {
+        router.replace('/login');
+        return;
+      }
+      setError(getApiErrorMessage(uploadError, 'No se pudo actualizar la foto de perfil.'));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
   return {
     user,
     profileSummary,
@@ -534,6 +603,7 @@ export function useProfileViewModel() {
     loading,
     loggingOut,
     savingProfile,
+    uploadingAvatar,
     savingFavorites,
     profileSummaryLoading,
     statsLoading,
@@ -545,11 +615,11 @@ export function useProfileViewModel() {
     favoritesError,
     recentWatchError,
     successMessage,
-    isEditing,
+    isActionMenuOpen,
+    isEditingDisplayName,
     isEditingBio,
     displayNameDraft,
     bioDraft,
-    avatarUrlDraft,
     isEditingFavorites,
     favoriteDrafts,
     activeFavoriteSlot,
@@ -559,17 +629,19 @@ export function useProfileViewModel() {
     favoriteSearchError,
     setDisplayNameDraft,
     setBioDraft,
-    setAvatarUrlDraft,
     setActiveFavoriteSlot,
     setFavoriteQuery,
     handleLogout,
-    startEditing,
-    cancelEditing,
-    saveProfile,
+    openActionMenu,
+    closeActionMenu,
+    startDisplayNameEditing,
+    cancelDisplayNameEditing,
+    saveDisplayNameInline,
     saveBioInline,
     startFavoriteEditing,
     startBioEditing,
     cancelBioEditing,
+    changeAvatarFromLibrary,
     openFavoritePicker,
     cancelFavoriteEditing,
     selectFavoriteForActiveSlot,

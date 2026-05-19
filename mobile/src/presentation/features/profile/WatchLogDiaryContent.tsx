@@ -10,10 +10,10 @@ const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
 type WatchLogDiaryContentProps = {
   items: WatchLogListItem[];
   loading: boolean;
-  deletingId: number | null;
+  deletingId?: number | null;
   error: string | null;
   onOpenDetail: (item: WatchLogListItem) => void;
-  onDelete: (id: number) => void;
+  onDelete?: (id: number) => void;
   eyebrow?: string;
   title?: string;
   subtitle?: string;
@@ -107,7 +107,7 @@ export function WatchLogDiaryContent({
                     deleting={deletingId === item.id}
                     isLast={index === section.items.length - 1}
                     onPress={() => onOpenDetail(item)}
-                    onDelete={() => onDelete(item.id)}
+                    onDelete={onDelete ? () => onDelete(item.id) : undefined}
                   />
                 ))}
               </View>
@@ -130,7 +130,7 @@ function WatchLogCard({
   deleting: boolean;
   isLast: boolean;
   onPress: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
 }) {
   const title =
     item.detail?.title ?? `${item.media_type === 'movie' ? 'Pelicula' : 'Serie'} #${item.tmdb_id}`;
@@ -172,24 +172,26 @@ function WatchLogCard({
           <Text style={styles.cardMeta}>{item.media_type === 'movie' ? 'Pelicula' : 'Serie'}</Text>
         </View>
       </View>
-      <Pressable
-        style={({ pressed }) => [
-          styles.deleteButton,
-          pressed ? styles.pressed : null,
-          deleting ? styles.disabled : null,
-        ]}
-        onPress={(event) => {
-          event.stopPropagation();
-          onDelete();
-        }}
-        disabled={deleting}
-      >
-        <Ionicons
-          name={deleting ? 'hourglass-outline' : 'trash-outline'}
-          size={16}
-          color={darkDesign.colors.textMuted}
-        />
-      </Pressable>
+      {onDelete ? (
+        <Pressable
+          style={({ pressed }) => [
+            styles.deleteButton,
+            pressed ? styles.pressed : null,
+            deleting ? styles.disabled : null,
+          ]}
+          onPress={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
+          disabled={deleting}
+        >
+          <Ionicons
+            name={deleting ? 'hourglass-outline' : 'trash-outline'}
+            size={16}
+            color={darkDesign.colors.textMuted}
+          />
+        </Pressable>
+      ) : null}
     </Pressable>
   );
 }

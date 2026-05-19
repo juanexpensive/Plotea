@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from secrets import token_hex
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.repositories.activity_repository import ActivityRepository
 from app.data.repositories.follow_repository import FollowRepository
+from app.data.repositories.media_status_repository import MediaStatusRepository
 from app.data.repositories.user_repository import UserRepository
 from app.data.repositories.user_favorite_media_repository import UserFavoriteMediaRepository
 from app.data.repositories.watch_log_repository import WatchLogRepository
@@ -25,6 +28,7 @@ from app.domain.services.activity_publisher import ActivityPublisher
 from app.domain.services.i_tmdb_client import ITmdbClient
 from app.domain.services.user_stats_aggregator import UserStatsAggregator
 from app.domain.usecases.media.get_media_detail import GetMediaDetailUseCase
+from app.domain.usecases.media.list_media_statuses import ListMediaStatusesUseCase
 from app.domain.usecases.social.follow_user import FollowUserUseCase
 from app.domain.usecases.social.get_my_favorite_media import GetMyFavoriteMediaUseCase
 from app.domain.usecases.social.get_public_profile import GetPublicProfileUseCase
@@ -37,12 +41,15 @@ from app.domain.usecases.social.search_users import SearchUsersUseCase
 from app.domain.usecases.social.unfollow_user import UnfollowUserUseCase
 from app.domain.usecases.social.update_my_favorite_media import UpdateMyFavoriteMediaUseCase
 from app.domain.usecases.social.update_my_profile import UpdateMyProfileUseCase
+from app.domain.usecases.watchlog.list_recent_watch_log_enriched import ListRecentWatchLogEnrichedUseCase
+from app.domain.usecases.watchlog.list_watch_log import ListWatchLogUseCase
 from app.infrastructure.database import get_db
+from app.infrastructure.storage_paths import AVATAR_UPLOADS_DIR
 from app.presentation.dependencies import get_current_user
 from app.presentation.routers.media import get_tmdb_client
 from app.presentation.schemas.auth import MessageResponse
 from app.presentation.schemas.auth import UserResponse
-from app.presentation.schemas.media import MediaItemResponse
+from app.presentation.schemas.media import MediaItemResponse, MediaStatusItemResponse
 from app.presentation.schemas.social import (
     ActivityActorResponse,
     FeedResponse,
@@ -61,8 +68,15 @@ from app.presentation.schemas.social import (
     VisualFeedParticipantResponse,
     WatchLogActivityResponse,
 )
+from app.presentation.schemas.watch_log import WatchLogEnrichedResponse, WatchLogResponse
 
 router = APIRouter(tags=["social"])
+MAX_AVATAR_BYTES = 5 * 1024 * 1024
+ALLOWED_AVATAR_CONTENT_TYPES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
 
 
 def _to_summary_response(user: PublicUserSummary) -> PublicUserSummaryResponse:
@@ -124,8 +138,39 @@ def _to_media_item_response(item) -> MediaItemResponse:
     )
 
 
+def _status_to_item_response(status) -> MediaStatusItemResponse:
+    return MediaStatusItemResponse(
+        tmdb_id=status.tmdb_id,
+        media_type=status.media_type,
+        status=status.status,
+    )
+
+
 def _to_favorite_media_response(position: int, media) -> FavoriteMediaItemResponse:
     return FavoriteMediaItemResponse(position=position, media=_to_media_item_response(media))
+
+
+def _to_watch_log_response(watch_log) -> WatchLogResponse:
+    return WatchLogResponse(
+        id=watch_log.id,
+        tmdb_id=watch_log.tmdb_id,
+        media_type=watch_log.media_type,
+        watched_at=watch_log.watched_at,
+        rating=watch_log.rating,
+        created_at=watch_log.created_at,
+    )
+
+
+def _to_watch_log_enriched_response(item) -> WatchLogEnrichedResponse:
+    return WatchLogEnrichedResponse(
+        id=item.id,
+        tmdb_id=item.tmdb_id,
+        media_type=item.media_type,
+        watched_at=item.watched_at,
+        rating=item.rating,
+        created_at=item.created_at,
+        media=_to_media_item_response(item.media),
+    )
 
 
 def _to_actor_response(activity: BaseActivity) -> ActivityActorResponse:
@@ -259,6 +304,30 @@ def _to_visual_feed_item_response(item: VisualFeedItem) -> VisualFeedItemRespons
     )
 
 
+async def _store_avatar_upload(upload: UploadFile, user_id: int) -> str:
+    extension = ALLOWED_AVATAR_CONTENT_TYPES.get(upload.content_type or "")
+    if extension is None:
+        raise HTTPException(status_code=422, detail="Avatar must be a JPEG, PNG, or WebP image")
+
+    content = await upload.read()
+    if not content:
+        raise HTTPException(status_code=422, detail="Avatar image cannot be empty")
+    if len(content) > MAX_AVATAR_BYTES:
+        raise HTTPException(status_code=422, detail="Avatar image exceeds the 5 MB size limit")
+
+    file_name = f"user-{user_id}-{token_hex(8)}{extension}"
+    destination = AVATAR_UPLOADS_DIR / file_name
+    destination.write_bytes(content)
+    return file_name
+
+
+async def _require_target_user(username: str, session: AsyncSession) -> User:
+    user = await UserRepository(session).get_by_username(username)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
 @router.get("/users/search", response_model=list[PublicUserSummaryResponse])
 async def search_users(
     q: str = Query(min_length=1, max_length=50),
@@ -315,6 +384,24 @@ async def update_my_profile(
     return _to_user_response(updated)
 
 
+@router.post("/users/me/avatar", response_model=UserResponse)
+async def upload_my_avatar(
+    request: Request,
+    avatar: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    file_name = await _store_avatar_upload(avatar, current_user.id)
+    avatar_url = str(request.url_for("static", path=f"uploads/avatars/{file_name}"))
+    updated = await UpdateMyProfileUseCase(UserRepository(session)).execute(
+        current_user.id,
+        current_user.display_name,
+        current_user.bio,
+        avatar_url,
+    )
+    return _to_user_response(updated)
+
+
 @router.get("/users/me/favorites", response_model=list[FavoriteMediaItemResponse])
 async def get_my_favorite_media(
     current_user: User = Depends(get_current_user),
@@ -325,6 +412,22 @@ async def get_my_favorite_media(
         UserFavoriteMediaRepository(session),
         MediaSummaryLoader(GetMediaDetailUseCase(tmdb)),
     ).execute(current_user.id)
+    return [_to_favorite_media_response(position, media) for position, media in items]
+
+
+@router.get("/users/{username}/favorites", response_model=list[FavoriteMediaItemResponse])
+async def get_user_favorite_media(
+    username: str,
+    current_user: User = Depends(get_current_user),
+    tmdb: ITmdbClient = Depends(get_tmdb_client),
+    session: AsyncSession = Depends(get_db),
+) -> list[FavoriteMediaItemResponse]:
+    del current_user
+    target_user = await _require_target_user(username, session)
+    items = await GetMyFavoriteMediaUseCase(
+        UserFavoriteMediaRepository(session),
+        MediaSummaryLoader(GetMediaDetailUseCase(tmdb)),
+    ).execute(target_user.id)
     return [_to_favorite_media_response(position, media) for position, media in items]
 
 
@@ -352,6 +455,47 @@ async def update_my_favorite_media(
             )
         )
     return response_items
+
+
+@router.get("/users/{username}/watchlist", response_model=list[MediaStatusItemResponse])
+async def get_user_watchlist(
+    username: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[MediaStatusItemResponse]:
+    del current_user
+    target_user = await _require_target_user(username, session)
+    status_lists = await ListMediaStatusesUseCase(MediaStatusRepository(session)).execute(target_user.id)
+    return [_status_to_item_response(status) for status in status_lists.watchlist]
+
+
+@router.get("/users/{username}/watchlog", response_model=list[WatchLogResponse])
+async def get_user_watch_log(
+    username: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[WatchLogResponse]:
+    del current_user
+    target_user = await _require_target_user(username, session)
+    watch_logs = await ListWatchLogUseCase(WatchLogRepository(session)).execute(target_user.id)
+    return [_to_watch_log_response(watch_log) for watch_log in watch_logs]
+
+
+@router.get("/users/{username}/watchlog/recent", response_model=list[WatchLogEnrichedResponse])
+async def get_user_recent_watch_log(
+    username: str,
+    limit: int = Query(default=10, ge=1, le=20),
+    current_user: User = Depends(get_current_user),
+    tmdb: ITmdbClient = Depends(get_tmdb_client),
+    session: AsyncSession = Depends(get_db),
+) -> list[WatchLogEnrichedResponse]:
+    del current_user
+    target_user = await _require_target_user(username, session)
+    items = await ListRecentWatchLogEnrichedUseCase(
+        WatchLogRepository(session),
+        MediaSummaryLoader(GetMediaDetailUseCase(tmdb)),
+    ).execute(target_user.id, limit)
+    return [_to_watch_log_enriched_response(item) for item in items]
 
 
 @router.get("/users/{username}/stats", response_model=PublicUserStatsResponse)

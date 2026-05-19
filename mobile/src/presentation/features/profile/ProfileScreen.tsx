@@ -28,6 +28,7 @@ export default function ProfileScreen() {
     loading,
     loggingOut,
     savingProfile,
+    uploadingAvatar,
     savingFavorites,
     profileSummaryLoading,
     statsLoading,
@@ -39,11 +40,11 @@ export default function ProfileScreen() {
     favoritesError,
     recentWatchError,
     successMessage,
-    isEditing,
+    isActionMenuOpen,
+    isEditingDisplayName,
     isEditingBio,
     displayNameDraft,
     bioDraft,
-    avatarUrlDraft,
     isEditingFavorites,
     favoriteDrafts,
     activeFavoriteSlot,
@@ -53,14 +54,15 @@ export default function ProfileScreen() {
     favoriteSearchError,
     setDisplayNameDraft,
     setBioDraft,
-    setAvatarUrlDraft,
     setFavoriteQuery,
     handleLogout,
-    startEditing,
-    cancelEditing,
-    saveProfile,
+    openActionMenu,
+    closeActionMenu,
+    startDisplayNameEditing,
+    saveDisplayNameInline,
     saveBioInline,
     startBioEditing,
+    changeAvatarFromLibrary,
     openFavoritePicker,
     cancelFavoriteEditing,
     selectFavoriteForActiveSlot,
@@ -111,17 +113,17 @@ export default function ProfileScreen() {
         onClear={() => setFavoriteQuery('')}
         onPickItem={selectFavoriteForActiveSlot}
       />
+      <ProfileActionsMenu
+        visible={isActionMenuOpen}
+        loggingOut={loggingOut}
+        onClose={closeActionMenu}
+        onLogout={handleLogout}
+      />
 
       <View style={styles.header}>
-        {activeTab === 'profile' ? (
-          <Pressable style={styles.iconButton} onPress={isEditing ? cancelEditing : startEditing}>
-            <Ionicons name={isEditing ? 'close' : 'create-outline'} size={20} color={darkDesign.colors.text} />
-          </Pressable>
-        ) : (
-          <View style={styles.iconButtonPlaceholder} />
-        )}
+        <View style={styles.iconButtonPlaceholder} />
         <View style={styles.headerSpacer} />
-        <Pressable style={styles.iconButton} onPress={handleLogout} disabled={loggingOut}>
+        <Pressable style={styles.iconButton} onPress={openActionMenu} disabled={loggingOut}>
           <Ionicons
             name={loggingOut ? 'hourglass-outline' : 'ellipsis-vertical'}
             size={20}
@@ -151,35 +153,54 @@ export default function ProfileScreen() {
       {activeTab === 'profile' ? (
         <>
           <View style={styles.heroSection}>
-            {user.avatar_url ? (
-              <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
-            ) : (
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{initial}</Text>
+            <Pressable
+              style={styles.avatarPressable}
+              onPress={changeAvatarFromLibrary}
+              disabled={uploadingAvatar || savingProfile}
+            >
+              {user.avatar_url ? (
+                <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{initial}</Text>
+                </View>
+              )}
+              <View style={styles.avatarBadge}>
+                {uploadingAvatar ? (
+                  <ActivityIndicator size="small" color={darkDesign.colors.text} />
+                ) : (
+                  <Ionicons name="image-outline" size={16} color={darkDesign.colors.text} />
+                )}
               </View>
-            )}
+            </Pressable>
 
-            <Text style={styles.displayName}>{user.display_name ?? user.username}</Text>
-            <Text style={styles.usernameMeta}>@{user.username}</Text>
-
-            {profileSummaryLoading || statsLoading ? (
-              <ActivityIndicator size="small" color={darkDesign.colors.accent} />
-            ) : (
-              <ProfileStatsBar
-                profileSummary={profileSummary}
-                stats={stats}
-                error={profileSummaryError ?? statsError}
-                onOpenFollowers={() => openNetwork('followers')}
-                onOpenFollowing={() => openNetwork('following')}
+            {isEditingDisplayName ? (
+              <TextInput
+                style={styles.displayNameInput}
+                value={displayNameDraft}
+                onChangeText={setDisplayNameDraft}
+                onBlur={saveDisplayNameInline}
+                onSubmitEditing={saveDisplayNameInline}
+                placeholder="Como quieres mostrarte"
+                placeholderTextColor={darkDesign.colors.textFaint}
+                selectionColor={darkDesign.colors.accent}
+                autoFocus
+                returnKeyType="done"
+                maxLength={100}
               />
+            ) : (
+              <Pressable style={styles.displayNamePressable} onPress={startDisplayNameEditing}>
+                <Text style={styles.displayName}>{user.display_name ?? user.username}</Text>
+              </Pressable>
             )}
-
+            <Text style={styles.usernameMeta}>@{user.username}</Text>
             {isEditingBio ? (
               <TextInput
                 style={styles.bioInput}
                 value={bioDraft}
                 onChangeText={setBioDraft}
                 onBlur={saveBioInline}
+                onSubmitEditing={saveBioInline}
                 placeholder="Cuenta algo sobre ti"
                 placeholderTextColor={darkDesign.colors.textFaint}
                 multiline
@@ -196,51 +217,21 @@ export default function ProfileScreen() {
               </Pressable>
             )}
 
+            {profileSummaryLoading || statsLoading ? (
+              <ActivityIndicator size="small" color={darkDesign.colors.accent} />
+            ) : (
+              <ProfileStatsBar
+                profileSummary={profileSummary}
+                stats={stats}
+                error={profileSummaryError ?? statsError}
+                onOpenFollowers={() => openNetwork('followers')}
+                onOpenFollowing={() => openNetwork('following')}
+              />
+            )}
+
+
             {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
           </View>
-
-          {isEditing ? (
-            <View style={styles.editorCard}>
-              <Text style={styles.editorTitle}>Editar perfil</Text>
-              <Text style={styles.inputLabel}>Nombre visible</Text>
-              <TextInput
-                style={styles.input}
-                value={displayNameDraft}
-                onChangeText={setDisplayNameDraft}
-                placeholder="Como quieres mostrarte"
-                placeholderTextColor={darkDesign.colors.textFaint}
-                selectionColor={darkDesign.colors.accent}
-              />
-              <Text style={styles.inputLabel}>Avatar URL</Text>
-              <TextInput
-                style={styles.input}
-                value={avatarUrlDraft}
-                onChangeText={setAvatarUrlDraft}
-                placeholder="https://..."
-                placeholderTextColor={darkDesign.colors.textFaint}
-                autoCapitalize="none"
-                selectionColor={darkDesign.colors.accent}
-              />
-              <View style={styles.editorActions}>
-                <Pressable style={styles.secondaryButton} onPress={cancelEditing}>
-                  <Text style={styles.secondaryButtonText}>Cancelar</Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    styles.editorPrimaryButton,
-                    pressed ? styles.pressed : null,
-                    savingProfile ? styles.disabled : null,
-                  ]}
-                  onPress={saveProfile}
-                  disabled={savingProfile}
-                >
-                  <Text style={styles.primaryButtonText}>{savingProfile ? 'Guardando...' : 'Guardar cambios'}</Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : null}
-
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Favorites</Text>
             {favoritesLoading ? <ActivityIndicator size="small" color={darkDesign.colors.accent} /> : null}
@@ -405,6 +396,32 @@ function FavoritePosterCard({
         </Pressable>
       ) : null}
     </View>
+  );
+}
+
+function ProfileActionsMenu({
+  visible,
+  loggingOut,
+  onClose,
+  onLogout,
+}: {
+  visible: boolean;
+  loggingOut: boolean;
+  onClose: () => void;
+  onLogout: () => void | Promise<void>;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.actionMenuOverlay}>
+        <Pressable style={styles.actionMenuBackdrop} onPress={onClose} />
+        <View style={styles.actionMenuCard}>
+          <Pressable style={styles.actionMenuItem} onPress={onLogout} disabled={loggingOut}>
+            <Ionicons name="log-out-outline" size={18} color={darkDesign.colors.text} />
+            <Text style={styles.actionMenuText}>{loggingOut ? 'Cerrando sesion...' : 'Cerrar sesion'}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -666,6 +683,10 @@ const styles = StyleSheet.create({
     borderBottomColor: darkDesign.colors.borderStrong,
     gap: darkDesign.spacing.lg,
   },
+  avatarPressable: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatar: {
     width: 112,
     height: 112,
@@ -684,10 +705,31 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: darkDesign.colors.borderStrong,
   },
+  avatarBadge: {
+    position: 'absolute',
+    right: 2,
+    bottom: 2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: darkDesign.colors.canvas,
+    borderWidth: 1,
+    borderColor: darkDesign.colors.borderStrong,
+  },
   avatarText: {
     color: darkDesign.colors.text,
     fontSize: 40,
     fontWeight: '700',
+  },
+  avatarHint: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.caption,
+    marginTop: -10,
+  },
+  displayNamePressable: {
+    width: '100%',
   },
   displayName: {
     color: darkDesign.colors.text,
@@ -695,6 +737,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.8,
     textAlign: 'center',
+  },
+  displayNameInput: {
+    ...sharedStyles.input,
+    width: '100%',
+    color: darkDesign.colors.text,
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: '700',
   },
   usernameMeta: {
     color: darkDesign.colors.textMuted,
@@ -754,34 +804,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingTop: darkDesign.spacing.md,
   },
-  editorCard: {
-    ...sharedStyles.panel,
-    marginHorizontal: darkDesign.spacing.xl,
-    marginTop: darkDesign.spacing.lg,
+  actionMenuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.32)',
+    paddingTop: 74,
+    paddingHorizontal: darkDesign.spacing.xl,
+    alignItems: 'flex-end',
+  },
+  actionMenuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  actionMenuCard: {
+    minWidth: 200,
     borderRadius: darkDesign.radii.lg,
+    backgroundColor: darkDesign.colors.canvasRaised,
+    borderWidth: 1,
+    borderColor: darkDesign.colors.borderStrong,
+    overflow: 'hidden',
   },
-  editorTitle: {
-    color: darkDesign.colors.text,
-    ...darkDesign.typography.section,
-    textTransform: 'uppercase',
-    letterSpacing: 1.1,
-  },
-  inputLabel: sharedStyles.label,
-  input: sharedStyles.input,
-  editorActions: {
+  actionMenuItem: {
     flexDirection: 'row',
-    gap: darkDesign.spacing.sm,
+    alignItems: 'center',
+    gap: darkDesign.spacing.md,
+    paddingHorizontal: darkDesign.spacing.lg,
+    paddingVertical: darkDesign.spacing.md,
   },
-  primaryButton: sharedStyles.primaryButton,
-  editorPrimaryButton: {
-    flex: 1,
+  actionMenuText: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.body,
+    fontWeight: '600',
   },
-  primaryButtonText: sharedStyles.primaryButtonText,
-  secondaryButton: {
-    ...sharedStyles.secondaryButton,
-    flex: 1,
-  },
-  secondaryButtonText: sharedStyles.secondaryButtonText,
   section: {
     paddingHorizontal: darkDesign.spacing.xl,
     paddingTop: darkDesign.spacing.xxl,

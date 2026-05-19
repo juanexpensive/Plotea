@@ -118,6 +118,188 @@
 - fixed: el registro mobile exige confirmar contrasena antes de crear la cuenta
 - fixed: el formulario no llama al backend cuando las contrasenas divergen
 - fixed: el perfil propio deja de depender de una unica carga inicial y se sincroniza al recuperar foco
+
+# Fase 10 - Edicion inline del perfil y subida real de avatar Details
+
+## Repository Context
+
+- Relevant files:
+- `backend/app/main.py`
+- `backend/app/infrastructure/storage_paths.py`
+- `backend/app/presentation/routers/social.py`
+- `backend/requirements.txt`
+- `mobile/package.json`
+- `mobile/src/data/repositories/SocialRepository.ts`
+- `mobile/src/presentation/features/profile/ProfileViewModel.ts`
+- `mobile/src/presentation/features/profile/ProfileScreen.tsx`
+- `tests/test_social.py`
+- Existing patterns to follow:
+- Repositorios HTTP ligeros en mobile y coordinacion de estados en view model
+- Routers FastAPI finos apoyados en use cases existentes
+- `/static` ya montado como superficie publica para recursos servidos por backend
+- Constraints:
+- `avatar_url` sigue siendo una URL publica absoluta a nivel de contrato
+- No existe storage externo configurado en el proyecto
+- La pantalla de perfil no tiene tests UI automatizados
+
+## Decisions Locked
+
+- El boton de tres puntos abre un menu con una sola accion: `Cerrar sesion`
+- El boton izquierdo de editar desaparece por completo
+- `display_name` se edita inline con `TextInput` y guardado en blur o submit
+- `bio` mantiene su edicion inline existente
+- El avatar se selecciona desde galeria, con recorte cuadrado y sin usar camara
+- El backend guarda los avatares dentro de `backend/app/presentation/static/uploads/avatars`
+- El limite de avatar queda en 5 MB y los MIME admitidos son JPEG, PNG y WebP
+
+## Phase Notes
+
+### Phase 1
+
+- Detailed tasks:
+- Eliminar `isEditing` y el editor de perfil basado en URL
+- Introducir estado explicito para menu de acciones, edicion de nombre y subida de avatar
+- Hacer pulsable la foto y el nombre dentro de `ProfileScreen`
+- Findings:
+- El flujo anterior mezclaba varias responsabilidades en `savingProfile`
+- La bio inline existente servia como patron natural para el nombre
+- Tests:
+- `npm exec tsc -- --noEmit`
+- Review notes:
+- Se mantiene `successMessage` compartido, pero ahora con textos especificos por accion
+- Status:
+- completed
+
+### Phase 2
+
+- Detailed tasks:
+- Crear una ubicacion estable de storage local con `storage_paths.py`
+- Asegurar la existencia del directorio de uploads al arrancar la app
+- Anadir `POST /users/me/avatar` con validacion de tipo y tamano
+- Persistir la `avatar_url` final reutilizando `UpdateMyProfileUseCase`
+- Cubrir subida exitosa, rechazo de texto plano y rechazo por tamano
+- Findings:
+- Importar la ruta de uploads desde `main.py` creaba riesgo de ciclo; se extrajo a infraestructura comun
+- `request.url_for("static", ...)` permite devolver una URL absoluta sin configuracion extra
+- Tests:
+- `backend\\.venv\\Scripts\\python.exe -m pytest tests/test_social.py`
+- Review notes:
+- La suite backend pasa completa; queda un warning existente de `pytest-asyncio` no introducido por este cambio
+- Status:
+- completed
+
+### Phase 3
+
+- Detailed tasks:
+- Instalar `expo-image-picker`
+- Anadir `uploadMyAvatar` en `SocialRepository`
+- Pedir permiso de galeria, abrir picker y subir el asset elegido
+- Refrescar resumen y stats tras actualizar avatar o nombre
+- Findings:
+- Expo SDK 54 usa `mediaTypes: ['images']`, no hace falta la API deprecated
+- `FormData` en React Native necesita enviar `uri`, `name` y `type`
+- Tests:
+- `npm exec tsc -- --noEmit`
+- Review notes:
+- Falta validacion manual en un dispositivo/emulador para comprobar permisos y UX del picker
+- Status:
+- completed
+
+## Review Findings
+
+- fixed: el boton de tres puntos deja de cerrar sesion directamente
+- fixed: el editor de perfil por `avatar_url` desaparece en favor de interacciones inline
+- fixed: el backend admite subida real de avatar y devuelve `avatar_url` publica persistida
+- accepted risk: no se elimina automaticamente el avatar anterior del disco cuando el usuario sube uno nuevo
+
+# Fase 11 - Perfil publico con favoritas, actividad, watchlist y diario Details
+
+## Repository Context
+
+- Relevant files:
+- `backend/app/presentation/routers/social.py`
+- `tests/test_social.py`
+- `mobile/src/data/repositories/SocialRepository.ts`
+- `mobile/src/presentation/features/social/PublicProfileViewModel.ts`
+- `mobile/src/presentation/features/social/PublicProfileScreen.tsx`
+- `mobile/src/presentation/features/profile/ProfileWatchlistTab.tsx`
+- `mobile/src/presentation/features/profile/WatchLogDiaryContent.tsx`
+- Existing patterns to follow:
+- Endpoints publicos por `username` dentro del router social
+- Reutilizacion de componentes del perfil propio cuando la interaccion de solo lectura lo permite
+- Cargas parciales independientes para que un fallo no tumbe toda la pantalla
+- Constraints:
+- El backend no tenia estos endpoints publicos al inicio de la tarea
+- `WatchLogDiaryContent` estaba acoplado a borrado y hubo que relajarlo a modo opcional
+
+## Decisions Locked
+
+- El perfil publico replica la estructura del perfil propio: pestana principal, watchlist y diario
+- La pestana principal publica muestra hero, stats, boton follow, 4 favoritas y actividad reciente
+- Se eliminan de esta vista las listas publicas previas para mantener la paridad con el perfil propio
+- El follow es la unica accion mutable disponible en perfil ajeno
+- Los endpoints publicos nuevos requieren autenticacion, igual que el resto del area social
+
+## Phase Notes
+
+### Phase 1
+
+- Detailed tasks:
+- Exponer `GET /users/{username}/favorites`
+- Exponer `GET /users/{username}/watchlist`
+- Exponer `GET /users/{username}/watchlog`
+- Exponer `GET /users/{username}/watchlog/recent`
+- Reutilizar repositorios y use cases existentes con resolucion del usuario objetivo por `username`
+- Findings:
+- No hizo falta tocar dominio ni persistencia; basto con orquestar los casos de uso ya existentes
+- `watchlog/recent` podia reutilizar directamente el enriquecimiento TMDB existente del perfil propio
+- Tests:
+- `backend\\.venv\\Scripts\\python.exe -m pytest tests/test_social.py -q`
+- Review notes:
+- Se anadieron pruebas para favoritas publicas, watchlist publica y diario/actividad reciente publica
+- Status:
+- completed
+
+### Phase 2
+
+- Detailed tasks:
+- Extender `SocialRepository` mobile con lecturas publicas de favoritas, watchlist y diario
+- Rehacer `PublicProfileViewModel` con estados separados para `stats`, `favorites`, `recentWatch`, `watchlist` y `diary`
+- Enriquecer localmente watchlist y diario con `getMediaDetail`
+- Findings:
+- El diario completo sigue devolviendose crudo desde backend y se enriquece en mobile para reutilizar la UI existente
+- `recentWatch` ya viene enriquecido desde API y sirve para el rail de actividad
+- Tests:
+- `npm exec tsc -- --noEmit`
+- Review notes:
+- El tipado estructural permite reutilizar `ProfileWatchlistTab` y `WatchLogDiaryContent` sin crear modelos duplicados de UI
+- Status:
+- completed
+
+### Phase 3
+
+- Detailed tasks:
+- Rehacer `PublicProfileScreen` con tabs reales
+- Anadir boton visible `Seguir` / `Siguiendo`
+- Renderizar favoritas y actividad reciente como en el perfil propio
+- Reutilizar `ProfileWatchlistTab` y `WatchLogDiaryContent` en modo lectura
+- Hacer navegables posters, favoritas y entradas del diario hacia `/detail`
+- Findings:
+- El perfil publico quedaba incompleto porque el trabajo previo solo habia igualado la estetica basica, no las fuentes de datos ni las secciones
+- Se volvio necesario hacer `onDelete` opcional en `WatchLogDiaryContent` para uso readonly
+- Tests:
+- `npm exec tsc -- --noEmit`
+- `backend\\.venv\\Scripts\\python.exe -m pytest tests/test_social.py -q`
+- Review notes:
+- Falta validacion manual en dispositivo/emulador para confirmar sensacion final y scroll de tabs
+- Status:
+- completed
+
+## Review Findings
+
+- fixed: el perfil publico ya muestra sus 4 favoritas
+- fixed: el perfil publico ya muestra actividad reciente, watchlist y diario del usuario visitado
+- fixed: el boton de follow queda visible y coherente con el estado `Seguir` / `Siguiendo`
 - fixed: la recarga del perfil protege el estado frente a respuestas tardias
 - accepted risk: no hay test automatizado de UI que cubra el mismatch de contrasena
 - accepted risk: el refresco del perfil necesita validacion manual en Expo/dispositivo real para confirmar timing y UX

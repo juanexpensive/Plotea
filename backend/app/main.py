@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -9,6 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from app.infrastructure.config import get_settings
 from app.infrastructure.database import dispose_db, init_db
 from app.infrastructure.limiter import limiter
+from app.infrastructure.storage_paths import AVATAR_UPLOADS_DIR, STATIC_DIR
 from app.infrastructure.tmdb import close_tmdb_client, init_tmdb_client
 
 # Import models so Base.metadata registers all tables (needed by Alembic and tests)
@@ -39,6 +39,7 @@ from app.presentation.routers import watch_log as watch_log_router  # noqa: E402
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+    AVATAR_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     init_db(settings.database_url)
     init_tmdb_client(settings.tmdb_api_key)
     yield
@@ -58,7 +59,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="app/presentation/static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 app.include_router(auth_router.router)
 app.include_router(lists_router.router)

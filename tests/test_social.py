@@ -1,4 +1,6 @@
 from datetime import date, datetime, timezone
+from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 import pytest
@@ -7,6 +9,7 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models.activity import Activity as ActivityModel
+from app.infrastructure.storage_paths import STATIC_DIR
 from app.main import app
 from app.presentation.routers.media import get_tmdb_client
 
@@ -225,6 +228,67 @@ async def test_update_my_profile_rejects_blank_display_name(async_client: AsyncC
         "/users/me",
         json={"display_name": "   "},
         headers=_headers(owner),
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_upload_my_avatar_persists_public_url(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "avatar-upload@example.com", "avatarupload")
+    png_bytes = (
+        b"\x89PNG\r\n\x1a\n"
+        b"\x00\x00\x00\rIHDR"
+        b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+        b"\x00\x00\x00\rIDATx\x9cc`\x00\x00\x00\x02\x00\x01\xe5'\xd4\xa2"
+        b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+    response = await async_client.post(
+        "/users/me/avatar",
+        headers=_headers(owner),
+        files={"avatar": ("avatar.png", png_bytes, "image/png")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    parsed_avatar_url = urlparse(body["avatar_url"])
+    assert parsed_avatar_url.scheme == "http"
+    assert parsed_avatar_url.netloc == "test"
+    assert parsed_avatar_url.path.startswith("/static/uploads/avatars/user-1-")
+
+    avatar_path = Path(parsed_avatar_url.path.removeprefix("/static/"))
+    stored_file = STATIC_DIR / avatar_path
+    assert stored_file.exists()
+
+    file_response = await async_client.get(parsed_avatar_url.path, headers=_headers(owner))
+    assert file_response.status_code == 200
+    assert file_response.content == png_bytes
+
+    stored_file.unlink(missing_ok=True)
+
+
+@pytest.mark.asyncio
+async def test_upload_my_avatar_rejects_non_image(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "avatar-invalid@example.com", "avatarinvalid")
+
+    response = await async_client.post(
+        "/users/me/avatar",
+        headers=_headers(owner),
+        files={"avatar": ("avatar.txt", b"not-an-image", "text/plain")},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_upload_my_avatar_rejects_large_file(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "avatar-large@example.com", "avatarlimit")
+
+    response = await async_client.post(
+        "/users/me/avatar",
+        headers=_headers(owner),
+        files={"avatar": ("avatar.png", b"0" * (5 * 1024 * 1024 + 1), "image/png")},
     )
 
     assert response.status_code == 422
@@ -661,6 +725,157 @@ async def test_update_and_get_my_favorite_media(async_client: AsyncClient):
                 "release_date": "2011-04-17",
             },
         },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_public_profile_exposes_favorite_media(async_client: AsyncClient):
+    viewer = await _register_and_login(async_client, "public-favorites-viewer@example.com", "publicfavviewer")
+    owner = await _register_and_login(async_client, "public-favorites-owner@example.com", "publicfavowner")
+
+    fake_tmdb = FakeTmdbClient(
+        payloads={
+            ("movie", 550): {
+                "id": 550,
+                "title": "Fight Club",
+                "poster_path": "/fight.jpg",
+                "vote_average": 8.8,
+                "release_date": "1999-10-15",
+                "runtime": 139,
+                "genres": [{"name": "Drama"}],
+            },
+            ("tv", 1399): {
+                "id": 1399,
+                "name": "Game of Thrones",
+                "poster_path": "/got.jpg",
+                "vote_average": 8.4,
+                "first_air_date": "2011-04-17",
+                "episode_run_time": [60],
+                "genres": [{"name": "Fantasy"}],
+            },
+        }
+    )
+    app.dependency_overrides[get_tmdb_client] = lambda: fake_tmdb
+
+    update_response = await async_client.put(
+        "/users/me/favorites",
+        json={
+            "items": [
+                {"position": 0, "tmdb_id": 550, "media_type": "movie"},
+                {"position": 1, "tmdb_id": 1399, "media_type": "tv"},
+            ]
+        },
+        headers=_headers(owner),
+    )
+    fetch_response = await async_client.get("/users/publicfavowner/favorites", headers=_headers(viewer))
+
+    app.dependency_overrides.pop(get_tmdb_client, None)
+    assert update_response.status_code == 200
+    assert fetch_response.status_code == 200
+    assert fetch_response.json() == [
+        {
+            "position": 0,
+            "media": {
+                "tmdb_id": 550,
+                "media_type": "movie",
+                "title": "Fight Club",
+                "poster_path": "/fight.jpg",
+                "vote_average": 8.8,
+                "release_date": "1999-10-15",
+            },
+        },
+        {
+            "position": 1,
+            "media": {
+                "tmdb_id": 1399,
+                "media_type": "tv",
+                "title": "Game of Thrones",
+                "poster_path": "/got.jpg",
+                "vote_average": 8.4,
+                "release_date": "2011-04-17",
+            },
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_public_profile_exposes_watchlist(async_client: AsyncClient):
+    viewer = await _register_and_login(async_client, "public-watchlist-viewer@example.com", "publicwatchviewer")
+    owner = await _register_and_login(async_client, "public-watchlist-owner@example.com", "publicwatchowner")
+
+    await async_client.put("/media/movie/550/status", json={"status": "watched"}, headers=_headers(owner))
+    await async_client.put("/media/tv/1399/status", json={"status": "watchlist"}, headers=_headers(owner))
+
+    response = await async_client.get("/users/publicwatchowner/watchlist", headers=_headers(viewer))
+
+    assert response.status_code == 200
+    assert response.json() == [{"tmdb_id": 1399, "media_type": "tv", "status": "watchlist"}]
+
+
+@pytest.mark.asyncio
+async def test_public_profile_exposes_diary_and_recent_activity(async_client: AsyncClient):
+    viewer = await _register_and_login(async_client, "public-diary-viewer@example.com", "publicdiaryviewer")
+    owner = await _register_and_login(async_client, "public-diary-owner@example.com", "publicdiaryowner")
+
+    await async_client.post(
+        "/watchlog",
+        json={"tmdb_id": 550, "media_type": "movie", "watched_at": "2026-05-10", "rating": 8},
+        headers=_headers(owner),
+    )
+    await async_client.post(
+        "/watchlog",
+        json={"tmdb_id": 1399, "media_type": "tv", "watched_at": "2026-05-11"},
+        headers=_headers(owner),
+    )
+
+    fake_tmdb = FakeTmdbClient(
+        payloads={
+            ("movie", 550): {
+                "id": 550,
+                "title": "Fight Club",
+                "poster_path": "/fight.jpg",
+                "vote_average": 8.8,
+                "release_date": "1999-10-15",
+                "runtime": 139,
+                "genres": [{"name": "Drama"}],
+            },
+            ("tv", 1399): {
+                "id": 1399,
+                "name": "Game of Thrones",
+                "poster_path": "/got.jpg",
+                "vote_average": 8.4,
+                "first_air_date": "2011-04-17",
+                "episode_run_time": [60],
+                "genres": [{"name": "Fantasy"}],
+            },
+        }
+    )
+    app.dependency_overrides[get_tmdb_client] = lambda: fake_tmdb
+
+    diary_response = await async_client.get("/users/publicdiaryowner/watchlog", headers=_headers(viewer))
+    recent_response = await async_client.get("/users/publicdiaryowner/watchlog/recent?limit=1", headers=_headers(viewer))
+
+    app.dependency_overrides.pop(get_tmdb_client, None)
+    assert diary_response.status_code == 200
+    assert [item["tmdb_id"] for item in diary_response.json()] == [1399, 550]
+    assert recent_response.status_code == 200
+    assert recent_response.json() == [
+        {
+            "id": 2,
+            "tmdb_id": 1399,
+            "media_type": "tv",
+            "watched_at": "2026-05-11",
+            "rating": None,
+            "created_at": recent_response.json()[0]["created_at"],
+            "media": {
+                "tmdb_id": 1399,
+                "media_type": "tv",
+                "title": "Game of Thrones",
+                "poster_path": "/got.jpg",
+                "vote_average": 8.4,
+                "release_date": "2011-04-17",
+            },
+        }
     ]
 
 

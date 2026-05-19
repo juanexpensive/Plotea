@@ -100,6 +100,99 @@
 - Cambios en perfil publico
 - Nuevos tests E2E o infraestructura de testing frontend
 
+# Fase 10 - Edicion inline del perfil y subida real de avatar
+
+## Objetivo
+
+- Sustituir el logout accidental del boton de tres puntos por un menu de acciones y mover la edicion del perfil propio a un flujo inline con cambio real de avatar desde galeria.
+
+## Alcance
+
+- En alcance:
+- Mobile: menu contextual en perfil propio con accion de cerrar sesion
+- Mobile: eliminacion del editor grande de perfil
+- Mobile: edicion inline de `display_name` y `bio`
+- Mobile: seleccion de imagen desde galeria con `expo-image-picker`
+- Backend: `POST /users/me/avatar` con `multipart/form-data`
+- Backend: almacenamiento local del avatar en `/static/uploads/avatars`
+- Tests backend para subida valida, fichero invalido y limite de tamano
+- Fuera de alcance:
+- Camara nativa
+- Storage externo tipo S3 o Supabase
+- Edicion de email o username
+- Suite E2E mobile
+
+## Fases
+
+### Fase 1: UX del perfil propio
+
+- Goal: eliminar el editor modalizado y dejar nombre, bio y acciones de sesion en interacciones directas
+- Expected files or systems: `ProfileScreen`, `ProfileViewModel`
+- Validation: `npm exec tsc -- --noEmit`
+- Review gate: el menu de tres puntos ya no hace logout inmediato y la pantalla mantiene el resto del comportamiento
+- Estado: completada
+
+### Fase 2: Subida backend de avatar
+
+- Goal: aceptar una imagen de perfil real y publicarla en una URL servida por FastAPI
+- Expected files or systems: `backend/app/main.py`, `backend/app/presentation/routers/social.py`, `backend/app/infrastructure/storage_paths.py`, `tests/test_social.py`
+- Validation: `backend\\.venv\\Scripts\\python.exe -m pytest tests/test_social.py`
+- Review gate: el endpoint persiste la URL, expone el archivo y rechaza entradas invalidas
+- Estado: completada
+
+### Fase 3: Integracion mobile con galeria
+
+- Goal: conectar el tap en avatar con la seleccion de imagen y refrescar el perfil propio tras la subida
+- Expected files or systems: `mobile/package.json`, `SocialRepository`, `ProfileViewModel`, `ProfileScreen`
+- Validation: `npm exec tsc -- --noEmit`
+- Review gate: cancelar el picker o negar permisos no rompe la pantalla y la nueva foto se refleja al guardar
+- Estado: completada
+
+# Fase 11 - Perfil publico con favoritas, actividad, watchlist y diario
+
+## Objetivo
+
+- Igualar el perfil publico al perfil propio en estructura y capacidades de lectura, manteniendo como unica diferencia la ausencia de edicion y la presencia del boton de follow.
+
+## Alcance
+
+- En alcance:
+- Backend: endpoints publicos para favoritas, watchlist, diario y actividad reciente por `username`
+- Mobile: perfil publico con tabs `Perfil`, `Watchlist` y `Diario`
+- Mobile: bloque de 4 favoritas y actividad reciente en la pestana principal
+- Reutilizacion de componentes de watchlist y diario en modo solo lectura
+- Mobile: boton visible `Seguir` / `Siguiendo`
+- Fuera de alcance:
+- Edicion de datos en perfil publico
+- Permisos de privacidad por seccion
+- Nuevos endpoints para listas publicas dentro de esta vista
+
+## Fases
+
+### Fase 1: Datos publicos de perfil extendido
+
+- Goal: exponer desde backend los mismos datos de lectura que usa el perfil propio
+- Expected files or systems: `backend/app/presentation/routers/social.py`, `tests/test_social.py`
+- Validation: `backend\\.venv\\Scripts\\python.exe -m pytest tests/test_social.py -q`
+- Review gate: favoritos, watchlist y diario publico quedan consumibles por `username`
+- Estado: completada
+
+### Fase 2: ViewModel publico enriquecido
+
+- Goal: cargar favoritos, actividad reciente, watchlist y diario con errores y cargas parciales separadas
+- Expected files or systems: `SocialRepository`, `PublicProfileViewModel`
+- Validation: `npm exec tsc -- --noEmit`
+- Review gate: el follow sigue funcionando y los fallos parciales no bloquean toda la pantalla
+- Estado: completada
+
+### Fase 3: UI publica equivalente al perfil propio
+
+- Goal: renderizar la misma estructura visual y funcional del perfil propio en modo lectura
+- Expected files or systems: `PublicProfileScreen`, `WatchLogDiaryContent`
+- Validation: `npm exec tsc -- --noEmit`
+- Review gate: tabs, favoritas, actividad, watchlist y diario quedan navegables sin affordances de edicion
+- Estado: completada
+
 ## Fases
 
 ### Fase 1: Registro con confirmacion de contrasena
