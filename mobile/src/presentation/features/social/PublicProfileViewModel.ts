@@ -1,28 +1,27 @@
 import { useCallback, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { getCurrentUser } from '../../../data/repositories/AuthRepository';
-import { getMediaDetail } from '../../../data/repositories/MediaRepository';
 import {
   followUser,
   getPublicProfile,
   getUserFavoriteMedia,
   getUserRecentWatchLog,
   getUserStats,
-  getUserWatchLog,
-  getUserWatchlist,
+  getUserWatchLogEnriched,
+  getUserWatchlistEnriched,
   unfollowUser,
 } from '../../../data/repositories/SocialRepository';
 import { FavoriteMediaItem, PublicUserProfile, PublicUserStats } from '../../../domain/entities/social';
-import { SavedMediaStatus, WatchLogEnrichedEntry, WatchLogEntry } from '../../../domain/entities/media';
-import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
+import {
+  SavedMediaStatusEnriched,
+  WatchLogEnrichedEntry,
+  WatchLogEntryEnriched,
+} from '../../../domain/entities/media';
+import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
+import { redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
 
-export type PublicWatchlistItem = SavedMediaStatus & {
-  detail: Awaited<ReturnType<typeof getMediaDetail>> | null;
-};
-
-export type PublicDiaryItem = WatchLogEntry & {
-  detail: Awaited<ReturnType<typeof getMediaDetail>> | null;
-};
+export type PublicWatchlistItem = SavedMediaStatusEnriched;
+export type PublicDiaryItem = WatchLogEntryEnriched;
 
 export function usePublicProfileViewModel(username: string | undefined) {
   const [profile, setProfile] = useState<PublicUserProfile | null>(null);
@@ -88,8 +87,7 @@ export function usePublicProfileViewModel(username: string | undefined) {
               if (!active) {
                 return;
               }
-              if (isUnauthorizedError(statsError)) {
-                router.replace('/login');
+              if (redirectToLoginIfUnauthorized(statsError)) {
                 return;
               }
               setStatsError(getApiErrorMessage(statsError, 'No se pudieron cargar las estadisticas.'));
@@ -111,8 +109,7 @@ export function usePublicProfileViewModel(username: string | undefined) {
               if (!active) {
                 return;
               }
-              if (isUnauthorizedError(favoritesError)) {
-                router.replace('/login');
+              if (redirectToLoginIfUnauthorized(favoritesError)) {
                 return;
               }
               setFavoritesError(getApiErrorMessage(favoritesError, 'No se pudieron cargar sus favoritas.'));
@@ -134,8 +131,7 @@ export function usePublicProfileViewModel(username: string | undefined) {
               if (!active) {
                 return;
               }
-              if (isUnauthorizedError(recentError)) {
-                router.replace('/login');
+              if (redirectToLoginIfUnauthorized(recentError)) {
                 return;
               }
               setRecentWatchError(getApiErrorMessage(recentError, 'No se pudo cargar su actividad reciente.'));
@@ -147,29 +143,17 @@ export function usePublicProfileViewModel(username: string | undefined) {
             });
 
           setWatchlistLoading(true);
-          getUserWatchlist(username)
-            .then(async (items) => {
-              const itemsWithDetails = await Promise.all(
-                items.map(async (item) => {
-                  try {
-                    const detail = await getMediaDetail(item.media_type, item.tmdb_id);
-                    return { ...item, detail };
-                  } catch {
-                    return { ...item, detail: null };
-                  }
-                }),
-              );
-
+          getUserWatchlistEnriched(username)
+            .then((items) => {
               if (active) {
-                setWatchlist(itemsWithDetails);
+                setWatchlist(items);
               }
             })
             .catch((watchlistError) => {
               if (!active) {
                 return;
               }
-              if (isUnauthorizedError(watchlistError)) {
-                router.replace('/login');
+              if (redirectToLoginIfUnauthorized(watchlistError)) {
                 return;
               }
               setWatchlistError(getApiErrorMessage(watchlistError, 'No se pudo cargar su watchlist.'));
@@ -181,29 +165,17 @@ export function usePublicProfileViewModel(username: string | undefined) {
             });
 
           setDiaryLoading(true);
-          getUserWatchLog(username)
-            .then(async (items) => {
-              const itemsWithDetails = await Promise.all(
-                items.map(async (item) => {
-                  try {
-                    const detail = await getMediaDetail(item.media_type, item.tmdb_id);
-                    return { ...item, detail };
-                  } catch {
-                    return { ...item, detail: null };
-                  }
-                }),
-              );
-
+          getUserWatchLogEnriched(username)
+            .then((items) => {
               if (active) {
-                setDiary(itemsWithDetails);
+                setDiary(items);
               }
             })
             .catch((diaryError) => {
               if (!active) {
                 return;
               }
-              if (isUnauthorizedError(diaryError)) {
-                router.replace('/login');
+              if (redirectToLoginIfUnauthorized(diaryError)) {
                 return;
               }
               setDiaryError(getApiErrorMessage(diaryError, 'No se pudo cargar su diario.'));
@@ -218,8 +190,7 @@ export function usePublicProfileViewModel(username: string | undefined) {
           if (!active) {
             return;
           }
-          if (isUnauthorizedError(error)) {
-            router.replace('/login');
+          if (redirectToLoginIfUnauthorized(error)) {
             return;
           }
           setError(getApiErrorMessage(error, 'Error al cargar el perfil publico.'));
@@ -261,8 +232,7 @@ export function usePublicProfileViewModel(username: string | undefined) {
         await unfollowUser(profile.id);
       }
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return;
       }
 

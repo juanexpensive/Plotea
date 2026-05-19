@@ -4,7 +4,8 @@ import { useFocusEffect } from 'expo-router';
 import { getCurrentUser } from '../../../data/repositories/AuthRepository';
 import { followUser, getMyFollowers, getMyFollowing, unfollowUser } from '../../../data/repositories/SocialRepository';
 import { PublicUserSummary } from '../../../domain/entities/social';
-import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
+import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
+import { redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
 
 export type ProfileNetworkTab = 'followers' | 'following';
 
@@ -59,8 +60,7 @@ export function useProfileNetworkViewModel(initialTab: string | undefined) {
             return;
           }
 
-        if (isUnauthorizedError(nextError)) {
-          router.replace('/login');
+        if (redirectToLoginIfUnauthorized(nextError)) {
           return;
         }
 
@@ -98,8 +98,7 @@ export function useProfileNetworkViewModel(initialTab: string | undefined) {
         await unfollowUser(user.id);
       }
     } catch (nextError) {
-      if (isUnauthorizedError(nextError)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(nextError)) {
         return;
       }
 

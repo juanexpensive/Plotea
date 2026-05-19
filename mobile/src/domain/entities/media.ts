@@ -7,6 +7,8 @@ export interface MediaItem {
   release_date: string | null;
 }
 
+export type MediaSummary = MediaItem;
+
 export interface MediaDetail extends MediaItem {
   overview: string;
   genres: string[];
@@ -25,6 +27,10 @@ export interface SavedMediaStatus {
   tmdb_id: number;
   media_type: 'movie' | 'tv';
   status: Exclude<PersonalMediaStatus, null>;
+}
+
+export interface SavedMediaStatusEnriched extends SavedMediaStatus {
+  media: MediaSummary;
 }
 
 export interface MediaStatusLists {
@@ -50,6 +56,8 @@ export interface WatchLogEntry {
 export interface WatchLogEnrichedEntry extends WatchLogEntry {
   media: MediaItem;
 }
+
+export type WatchLogEntryEnriched = WatchLogEnrichedEntry;
 
 export interface CreateWatchLogRequest {
   tmdb_id: number;

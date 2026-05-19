@@ -832,6 +832,52 @@ async def test_public_profile_exposes_watchlist(async_client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_public_profile_exposes_enriched_watchlist(async_client: AsyncClient):
+    viewer = await _register_and_login(async_client, "public-watchlist-enriched-viewer@example.com", "publicwatchenrichedviewer")
+    owner = await _register_and_login(async_client, "public-watchlist-enriched-owner@example.com", "publicwatchenrichedowner")
+
+    await async_client.put("/media/tv/1399/status", json={"status": "watchlist"}, headers=_headers(owner))
+
+    fake_tmdb = FakeTmdbClient(
+        payloads={
+            ("tv", 1399): {
+                "id": 1399,
+                "name": "Game of Thrones",
+                "poster_path": "/got.jpg",
+                "vote_average": 8.4,
+                "first_air_date": "2011-04-17",
+                "episode_run_time": [60],
+                "genres": [{"name": "Fantasy"}],
+            },
+        }
+    )
+    app.dependency_overrides[get_tmdb_client] = lambda: fake_tmdb
+
+    response = await async_client.get(
+        "/users/publicwatchenrichedowner/watchlist/enriched",
+        headers=_headers(viewer),
+    )
+
+    app.dependency_overrides.pop(get_tmdb_client, None)
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "tmdb_id": 1399,
+            "media_type": "tv",
+            "status": "watchlist",
+            "media": {
+                "tmdb_id": 1399,
+                "media_type": "tv",
+                "title": "Game of Thrones",
+                "poster_path": "/got.jpg",
+                "vote_average": 8.4,
+                "release_date": "2011-04-17",
+            },
+        }
+    ]
+
+
+@pytest.mark.asyncio
 async def test_public_profile_exposes_diary_and_recent_activity(async_client: AsyncClient):
     viewer = await _register_and_login(async_client, "public-diary-viewer@example.com", "publicdiaryviewer")
     owner = await _register_and_login(async_client, "public-diary-owner@example.com", "publicdiaryowner")
@@ -893,6 +939,59 @@ async def test_public_profile_exposes_diary_and_recent_activity(async_client: As
                 "poster_path": "/got.jpg",
                 "vote_average": 8.4,
                 "release_date": "2011-04-17",
+            },
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_public_profile_exposes_enriched_diary(async_client: AsyncClient):
+    viewer = await _register_and_login(async_client, "public-diary-enriched-viewer@example.com", "publicdiaryenrichedviewer")
+    owner = await _register_and_login(async_client, "public-diary-enriched-owner@example.com", "publicdiaryenrichedowner")
+
+    await async_client.post(
+        "/watchlog",
+        json={"tmdb_id": 550, "media_type": "movie", "watched_at": "2026-05-10", "rating": 8},
+        headers=_headers(owner),
+    )
+
+    fake_tmdb = FakeTmdbClient(
+        payloads={
+            ("movie", 550): {
+                "id": 550,
+                "title": "Fight Club",
+                "poster_path": "/fight.jpg",
+                "vote_average": 8.8,
+                "release_date": "1999-10-15",
+                "runtime": 139,
+                "genres": [{"name": "Drama"}],
+            },
+        }
+    )
+    app.dependency_overrides[get_tmdb_client] = lambda: fake_tmdb
+
+    response = await async_client.get(
+        "/users/publicdiaryenrichedowner/watchlog/enriched",
+        headers=_headers(viewer),
+    )
+
+    app.dependency_overrides.pop(get_tmdb_client, None)
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": 1,
+            "tmdb_id": 550,
+            "media_type": "movie",
+            "watched_at": "2026-05-10",
+            "rating": 8,
+            "created_at": response.json()[0]["created_at"],
+            "media": {
+                "tmdb_id": 550,
+                "media_type": "movie",
+                "title": "Fight Club",
+                "poster_path": "/fight.jpg",
+                "vote_average": 8.8,
+                "release_date": "1999-10-15",
             },
         }
     ]

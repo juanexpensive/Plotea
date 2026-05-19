@@ -1,6 +1,9 @@
+import { WatchLogEntryEnriched } from '../../../domain/entities/media';
 import { WatchLogListItem } from './WatchLogListViewModel';
 
-export type DiarySectionItem = WatchLogListItem & {
+export type DiaryRenderableItem = WatchLogListItem | WatchLogEntryEnriched;
+
+export type DiarySectionItem = DiaryRenderableItem & {
   dayNumber: string;
 };
 
@@ -27,7 +30,7 @@ export function getDiarySectionTitle(date: Date) {
   return MONTH_HEADER_FORMATTER.format(date).toUpperCase();
 }
 
-export function buildDiarySections(items: WatchLogListItem[]): DiarySection[] {
+export function buildDiarySections(items: DiaryRenderableItem[]): DiarySection[] {
   const sortedItems = [...items].sort((left, right) => {
     const leftTime = parseWatchDate(left.watched_at).getTime();
     const rightTime = parseWatchDate(right.watched_at).getTime();

@@ -46,6 +46,10 @@ class MediaStatusItemResponse(BaseModel):
     status: Literal["watched", "watchlist"]
 
 
+class MediaStatusWithMediaResponse(MediaStatusItemResponse):
+    media: MediaItemResponse
+
+
 class MediaStatusListsResponse(BaseModel):
     watched: list[MediaStatusItemResponse]
     watchlist: list[MediaStatusItemResponse]

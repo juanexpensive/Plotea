@@ -1,10 +1,22 @@
+import { router } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { useWatchLogListViewModel } from './WatchLogListViewModel';
 import { WatchLogDiaryContent } from './WatchLogDiaryContent';
+import { DiaryRenderableItem } from './watchLogDiarySections';
 
 export default function WatchLogListScreen() {
-  const { items, loading, deletingId, error, openDetail, removeItem } = useWatchLogListViewModel();
+  const { items, loading, deletingId, error, removeItem } = useWatchLogListViewModel();
+
+  function openDiaryDetail(item: DiaryRenderableItem) {
+    router.push({
+      pathname: '/detail',
+      params: {
+        media_type: item.media_type,
+        tmdb_id: String(item.tmdb_id),
+      },
+    });
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -13,7 +25,7 @@ export default function WatchLogListScreen() {
         loading={loading}
         deletingId={deletingId}
         error={error}
-        onOpenDetail={openDetail}
+        onOpenDetail={openDiaryDetail}
         onDelete={removeItem}
         eyebrow="Tu historial"
       />

@@ -14,7 +14,8 @@ import {
 import { searchMedia } from '../../../data/repositories/MediaRepository';
 import { ListDetail, ListItem, ListOwner, ListWriteRequest } from '../../../domain/entities/lists';
 import { MediaItem } from '../../../domain/entities/media';
-import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
+import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
+import { redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
 
 export function useListDetailViewModel(listId: number | null) {
   const [detail, setDetail] = useState<ListDetail | null>(null);
@@ -66,8 +67,7 @@ export function useListDetailViewModel(listId: number | null) {
         if (!active) {
           return;
         }
-        if (isUnauthorizedError(error)) {
-          router.replace('/login');
+        if (redirectToLoginIfUnauthorized(error)) {
           return;
         }
         setError(getApiErrorMessage(error, 'No se pudo cargar la lista.'));
@@ -195,8 +195,7 @@ export function useListDetailViewModel(listId: number | null) {
       });
       setDetail((current) => (current ? { ...current, ...updated } : current));
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return;
       }
       setError(getApiErrorMessage(error, 'No se pudo guardar la lista.'));
@@ -218,8 +217,7 @@ export function useListDetailViewModel(listId: number | null) {
       await deleteList(listId);
       router.back();
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return;
       }
       setError(getApiErrorMessage(error, 'No se pudo borrar la lista.'));
@@ -243,8 +241,7 @@ export function useListDetailViewModel(listId: number | null) {
       setQuery('');
       setSearchResults([]);
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return;
       }
       setError(getApiErrorMessage(error, 'No se pudo anadir la obra.'));
@@ -266,8 +263,7 @@ export function useListDetailViewModel(listId: number | null) {
       const updated = await removeListItem(listId, item.tmdb_id, item.media_type);
       setDetail(updated);
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return;
       }
       setError(getApiErrorMessage(error, 'No se pudo eliminar la obra.'));
@@ -293,8 +289,7 @@ export function useListDetailViewModel(listId: number | null) {
       setDetail(updated);
       return true;
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return false;
       }
       setError(getApiErrorMessage(error, 'No se pudo intercambiar la posicion.'));
@@ -318,8 +313,7 @@ export function useListDetailViewModel(listId: number | null) {
       setInviteQuery('');
       setInviteResults([]);
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return;
       }
       setError(getApiErrorMessage(error, 'No se pudo enviar la invitacion.'));
@@ -345,8 +339,7 @@ export function useListDetailViewModel(listId: number | null) {
           : current,
       );
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return;
       }
       setError(getApiErrorMessage(error, 'No se pudo quitar el colaborador.'));

@@ -49,7 +49,11 @@ from app.presentation.dependencies import get_current_user
 from app.presentation.routers.media import get_tmdb_client
 from app.presentation.schemas.auth import MessageResponse
 from app.presentation.schemas.auth import UserResponse
-from app.presentation.schemas.media import MediaItemResponse, MediaStatusItemResponse
+from app.presentation.schemas.media import (
+    MediaItemResponse,
+    MediaStatusItemResponse,
+    MediaStatusWithMediaResponse,
+)
 from app.presentation.schemas.social import (
     ActivityActorResponse,
     FeedResponse,
@@ -143,6 +147,15 @@ def _status_to_item_response(status) -> MediaStatusItemResponse:
         tmdb_id=status.tmdb_id,
         media_type=status.media_type,
         status=status.status,
+    )
+
+
+def _status_to_enriched_item_response(status, media: MediaItem) -> MediaStatusWithMediaResponse:
+    return MediaStatusWithMediaResponse(
+        tmdb_id=status.tmdb_id,
+        media_type=status.media_type,
+        status=status.status,
+        media=_to_media_item_response(media),
     )
 
 
@@ -469,6 +482,26 @@ async def get_user_watchlist(
     return [_status_to_item_response(status) for status in status_lists.watchlist]
 
 
+@router.get("/users/{username}/watchlist/enriched", response_model=list[MediaStatusWithMediaResponse])
+async def get_user_watchlist_enriched(
+    username: str,
+    current_user: User = Depends(get_current_user),
+    tmdb: ITmdbClient = Depends(get_tmdb_client),
+    session: AsyncSession = Depends(get_db),
+) -> list[MediaStatusWithMediaResponse]:
+    del current_user
+    target_user = await _require_target_user(username, session)
+    status_lists = await ListMediaStatusesUseCase(MediaStatusRepository(session)).execute(target_user.id)
+    media_loader = MediaSummaryLoader(GetMediaDetailUseCase(tmdb))
+    response_items: list[MediaStatusWithMediaResponse] = []
+
+    for status in status_lists.watchlist:
+        media = await media_loader.load(status.media_type, status.tmdb_id)
+        response_items.append(_status_to_enriched_item_response(status, media))
+
+    return response_items
+
+
 @router.get("/users/{username}/watchlog", response_model=list[WatchLogResponse])
 async def get_user_watch_log(
     username: str,
@@ -479,6 +512,36 @@ async def get_user_watch_log(
     target_user = await _require_target_user(username, session)
     watch_logs = await ListWatchLogUseCase(WatchLogRepository(session)).execute(target_user.id)
     return [_to_watch_log_response(watch_log) for watch_log in watch_logs]
+
+
+@router.get("/users/{username}/watchlog/enriched", response_model=list[WatchLogEnrichedResponse])
+async def get_user_watch_log_enriched(
+    username: str,
+    current_user: User = Depends(get_current_user),
+    tmdb: ITmdbClient = Depends(get_tmdb_client),
+    session: AsyncSession = Depends(get_db),
+) -> list[WatchLogEnrichedResponse]:
+    del current_user
+    target_user = await _require_target_user(username, session)
+    watch_logs = await ListWatchLogUseCase(WatchLogRepository(session)).execute(target_user.id)
+    media_loader = MediaSummaryLoader(GetMediaDetailUseCase(tmdb))
+    response_items: list[WatchLogEnrichedResponse] = []
+
+    for watch_log in watch_logs:
+        media = await media_loader.load(watch_log.media_type, watch_log.tmdb_id)
+        response_items.append(
+            WatchLogEnrichedResponse(
+                id=watch_log.id,
+                tmdb_id=watch_log.tmdb_id,
+                media_type=watch_log.media_type,
+                watched_at=watch_log.watched_at,
+                rating=watch_log.rating,
+                created_at=watch_log.created_at,
+                media=_to_media_item_response(media),
+            )
+        )
+
+    return response_items
 
 
 @router.get("/users/{username}/watchlog/recent", response_model=list[WatchLogEnrichedResponse])

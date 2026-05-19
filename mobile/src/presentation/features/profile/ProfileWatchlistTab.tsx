@@ -3,16 +3,19 @@ import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { uiCopy } from '../../shared/uiCopy';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
+import { SavedMediaStatusEnriched } from '../../../domain/entities/media';
 import { MediaStatusListItem } from './MediaStatusListViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w300';
 
+export type WatchlistItem = MediaStatusListItem | SavedMediaStatusEnriched;
+
 type ProfileWatchlistTabProps = {
   username: string;
-  items: MediaStatusListItem[];
+  items: WatchlistItem[];
   loading: boolean;
   error: string | null;
-  onOpenDetail: (item: MediaStatusListItem) => void;
+  onOpenDetail: (item: WatchlistItem) => void;
 };
 
 export function ProfileWatchlistTab({
@@ -66,8 +69,8 @@ export function ProfileWatchlistTab({
                 style={({ pressed }) => [styles.posterTile, pressed ? styles.pressed : null]}
                 onPress={() => onOpenDetail(item)}
               >
-                {item.detail?.poster_path ? (
-                  <Image source={{ uri: `${TMDB_IMAGE}${item.detail.poster_path}` }} style={styles.posterImage} />
+                {getPosterPath(item) ? (
+                  <Image source={{ uri: `${TMDB_IMAGE}${getPosterPath(item)}` }} style={styles.posterImage} />
                 ) : (
                   <View style={[styles.posterImage, styles.posterFallback]} />
                 )}
@@ -78,6 +81,14 @@ export function ProfileWatchlistTab({
       )}
     </View>
   );
+}
+
+function getPosterPath(item: WatchlistItem) {
+  if ('media' in item) {
+    return item.media.poster_path;
+  }
+
+  return item.detail?.poster_path ?? null;
 }
 
 const styles = StyleSheet.create({

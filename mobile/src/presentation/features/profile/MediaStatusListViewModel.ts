@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { getMediaDetail, getMyMediaStatuses } from '../../../data/repositories/MediaRepository';
 import { MediaDetail, SavedMediaStatus } from '../../../domain/entities/media';
-import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
+import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
+import { redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
 
 export type MediaStatusListKind = 'watched' | 'watchlist';
 export type MediaStatusListItem = SavedMediaStatus & {
@@ -41,8 +42,7 @@ export function useMediaStatusListViewModel(status: string | undefined) {
         setItems(itemsWithDetails);
       })
       .catch((error) => {
-        if (isUnauthorizedError(error)) {
-          router.replace('/login');
+        if (redirectToLoginIfUnauthorized(error)) {
           return;
         }
 

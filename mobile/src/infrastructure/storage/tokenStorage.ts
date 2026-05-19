@@ -1,33 +1,42 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
+const memoryStore = new Map<string, string>();
+let secureStorageAvailable: boolean | null = null;
+
+async function canUseSecureStorage() {
+  if (secureStorageAvailable === null) {
+    secureStorageAvailable = await SecureStore.isAvailableAsync();
+  }
+
+  return secureStorageAvailable;
+}
 
 async function setItem(key: string, value: string) {
-  if (await SecureStore.isAvailableAsync()) {
+  if (await canUseSecureStorage()) {
     await SecureStore.setItemAsync(key, value);
     return;
   }
 
-  await AsyncStorage.setItem(key, value);
+  memoryStore.set(key, value);
 }
 
 async function getItem(key: string) {
-  if (await SecureStore.isAvailableAsync()) {
+  if (await canUseSecureStorage()) {
     return SecureStore.getItemAsync(key);
   }
 
-  return AsyncStorage.getItem(key);
+  return memoryStore.get(key) ?? null;
 }
 
 async function deleteItem(key: string) {
-  if (await SecureStore.isAvailableAsync()) {
+  if (await canUseSecureStorage()) {
     await SecureStore.deleteItemAsync(key);
     return;
   }
 
-  await AsyncStorage.removeItem(key);
+  memoryStore.delete(key);
 }
 
 export const tokenStorage = {

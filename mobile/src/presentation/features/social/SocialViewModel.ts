@@ -2,7 +2,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { getSocialFeed, getVisualSocialFeed } from '../../../data/repositories/SocialRepository';
 import { ActivityItem, VisualFeedItem } from '../../../domain/entities/social';
-import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
+import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
+import { redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
 
 export function useSocialViewModel() {
   const [visualItems, setVisualItems] = useState<VisualFeedItem[]>([]);
@@ -37,8 +38,7 @@ export function useSocialViewModel() {
         if (!active) {
           return;
         }
-        if (isUnauthorizedError(error)) {
-          router.replace('/login');
+        if (redirectToLoginIfUnauthorized(error)) {
           return;
         }
         setVisualError(getApiErrorMessage(error, 'No se pudo cargar el resumen visual.'));
@@ -60,8 +60,7 @@ export function useSocialViewModel() {
         if (!active) {
           return;
         }
-        if (isUnauthorizedError(error)) {
-          router.replace('/login');
+        if (redirectToLoginIfUnauthorized(error)) {
           return;
         }
         setFeedError(getApiErrorMessage(error, 'Error al cargar la actividad social.'));
@@ -95,8 +94,7 @@ export function useSocialViewModel() {
       });
       setNextCursor(page.next_cursor);
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return;
       }
       setFeedError(getApiErrorMessage(error, 'Error al cargar mas actividad.'));

@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { getMediaDetail } from '../../../data/repositories/MediaRepository';
 import { deleteWatchLog, getMyWatchLog } from '../../../data/repositories/WatchLogRepository';
 import { MediaDetail, WatchLogEntry } from '../../../domain/entities/media';
-import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
+import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
+import { redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
 
 export type WatchLogListItem = WatchLogEntry & {
   detail: MediaDetail | null;
@@ -38,8 +39,7 @@ export function useWatchLogListViewModel() {
 
       setItems(itemsWithDetails);
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return;
       }
 
@@ -56,6 +56,10 @@ export function useWatchLogListViewModel() {
       await deleteWatchLog(id);
       setItems((current) => current.filter((item) => item.id !== id));
     } catch (error) {
+      if (redirectToLoginIfUnauthorized(error)) {
+        return;
+      }
+
       setError(getApiErrorMessage(error, 'Error al borrar el visionado.'));
     } finally {
       setDeletingId(null);

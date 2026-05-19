@@ -10,7 +10,13 @@ import {
   VisualFeedItem,
 } from '../../domain/entities/social';
 import { User } from '../../domain/entities/auth';
-import { SavedMediaStatus, WatchLogEnrichedEntry, WatchLogEntry } from '../../domain/entities/media';
+import {
+  SavedMediaStatus,
+  SavedMediaStatusEnriched,
+  WatchLogEnrichedEntry,
+  WatchLogEntry,
+  WatchLogEntryEnriched,
+} from '../../domain/entities/media';
 
 export async function searchUsers(query: string): Promise<PublicUserSummary[]> {
   const response = await api.get<PublicUserSummary[]>('/users/search', { params: { q: query } });
@@ -106,8 +112,22 @@ export async function getUserWatchlist(username: string): Promise<SavedMediaStat
   return response.data;
 }
 
+export async function getUserWatchlistEnriched(username: string): Promise<SavedMediaStatusEnriched[]> {
+  const response = await api.get<SavedMediaStatusEnriched[]>(
+    `/users/${encodeURIComponent(username)}/watchlist/enriched`,
+  );
+  return response.data;
+}
+
 export async function getUserWatchLog(username: string): Promise<WatchLogEntry[]> {
   const response = await api.get<WatchLogEntry[]>(`/users/${encodeURIComponent(username)}/watchlog`);
+  return response.data;
+}
+
+export async function getUserWatchLogEnriched(username: string): Promise<WatchLogEntryEnriched[]> {
+  const response = await api.get<WatchLogEntryEnriched[]>(
+    `/users/${encodeURIComponent(username)}/watchlog/enriched`,
+  );
   return response.data;
 }
 

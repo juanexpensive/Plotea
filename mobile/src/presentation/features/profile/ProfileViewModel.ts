@@ -15,7 +15,8 @@ import { getMyRecentWatchLog } from '../../../data/repositories/WatchLogReposito
 import { User } from '../../../domain/entities/auth';
 import { MediaItem, WatchLogEnrichedEntry } from '../../../domain/entities/media';
 import { FavoriteMediaItem, PublicUserProfile, PublicUserStats } from '../../../domain/entities/social';
-import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
+import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
+import { redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
 
 function toFavoriteDrafts(items: FavoriteMediaItem[]): Array<MediaItem | null> {
   const drafts: Array<MediaItem | null> = [null, null, null, null];
@@ -136,8 +137,7 @@ export function useProfileViewModel() {
       setProfileSummary(nextProfileSummary);
       setProfileSummaryError(null);
     } catch (summaryError) {
-      if (isUnauthorizedError(summaryError)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(summaryError)) {
         return;
       }
       setProfileSummaryError(getApiErrorMessage(summaryError, 'No se pudo cargar tu red.'));
@@ -151,8 +151,7 @@ export function useProfileViewModel() {
       setStats(nextStats);
       setStatsError(null);
     } catch (statsError) {
-      if (isUnauthorizedError(statsError)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(statsError)) {
         return;
       }
       setStatsError(getApiErrorMessage(statsError, 'No se pudieron cargar las estadisticas.'));
@@ -196,8 +195,7 @@ export function useProfileViewModel() {
             if (!active) {
               return;
             }
-            if (isUnauthorizedError(summaryError)) {
-              router.replace('/login');
+            if (redirectToLoginIfUnauthorized(summaryError)) {
               return;
             }
             setProfileSummaryError(getApiErrorMessage(summaryError, 'No se pudo cargar tu red.'));
@@ -220,8 +218,7 @@ export function useProfileViewModel() {
             if (!active) {
               return;
             }
-            if (isUnauthorizedError(statsError)) {
-              router.replace('/login');
+            if (redirectToLoginIfUnauthorized(statsError)) {
               return;
             }
             setStatsError(getApiErrorMessage(statsError, 'No se pudieron cargar las estadisticas.'));
@@ -247,8 +244,7 @@ export function useProfileViewModel() {
             if (!active) {
               return;
             }
-            if (isUnauthorizedError(favoritesError)) {
-              router.replace('/login');
+            if (redirectToLoginIfUnauthorized(favoritesError)) {
               return;
             }
             setFavoritesError(getApiErrorMessage(favoritesError, 'No se pudieron cargar tus favoritas.'));
@@ -271,8 +267,7 @@ export function useProfileViewModel() {
             if (!active) {
               return;
             }
-            if (isUnauthorizedError(recentError)) {
-              router.replace('/login');
+            if (redirectToLoginIfUnauthorized(recentError)) {
               return;
             }
             setRecentWatchError(getApiErrorMessage(recentError, 'No se pudieron cargar tus visionados recientes.'));
@@ -287,8 +282,7 @@ export function useProfileViewModel() {
         if (!active) {
           return;
         }
-        if (isUnauthorizedError(nextError)) {
-          router.replace('/login');
+        if (redirectToLoginIfUnauthorized(nextError)) {
           return;
         }
         setError(getApiErrorMessage(nextError, 'Error al cargar el perfil.'));
@@ -378,8 +372,7 @@ export function useProfileViewModel() {
       setSuccessMessage('Nombre actualizado.');
       await refreshProfileSideData(updatedUser);
     } catch (saveError) {
-      if (isUnauthorizedError(saveError)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(saveError)) {
         return;
       }
       setError(getApiErrorMessage(saveError, 'No se pudo actualizar el nombre.'));
@@ -415,8 +408,7 @@ export function useProfileViewModel() {
       setIsEditingBio(false);
       setSuccessMessage('Bio actualizada.');
     } catch (saveError) {
-      if (isUnauthorizedError(saveError)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(saveError)) {
         return;
       }
       setError(getApiErrorMessage(saveError, 'No se pudo actualizar la bio.'));
@@ -474,8 +466,7 @@ export function useProfileViewModel() {
       setFavoriteSearchResults([]);
       setSuccessMessage('Favoritas actualizadas.');
     } catch (saveError) {
-      if (isUnauthorizedError(saveError)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(saveError)) {
         return;
       }
       setFavoritesError(getApiErrorMessage(saveError, 'No se pudieron guardar tus favoritas.'));
@@ -581,8 +572,7 @@ export function useProfileViewModel() {
       setSuccessMessage('Foto de perfil actualizada.');
       await refreshProfileSideData(updatedUser);
     } catch (uploadError) {
-      if (isUnauthorizedError(uploadError)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(uploadError)) {
         return;
       }
       setError(getApiErrorMessage(uploadError, 'No se pudo actualizar la foto de perfil.'));

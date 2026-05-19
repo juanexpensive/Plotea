@@ -13,10 +13,11 @@ import { uiCopy } from '../../shared/uiCopy';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { MediaStatusListItem, useMediaStatusListViewModel } from './MediaStatusListViewModel';
-import { ProfileWatchlistTab } from './ProfileWatchlistTab';
+import { ProfileWatchlistTab, WatchlistItem } from './ProfileWatchlistTab';
 import { useProfileViewModel } from './ProfileViewModel';
 import { WatchLogDiaryContent } from './WatchLogDiaryContent';
 import { useWatchLogListViewModel } from './WatchLogListViewModel';
+import { DiaryRenderableItem } from './watchLogDiarySections';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w300';
 const BIO_MAX_LENGTH = 160;
@@ -107,7 +108,11 @@ export default function ProfileScreen() {
     ? favoriteDrafts
     : Array.from({ length: 4 }, (_, index) => favorites.find((item) => item.position === index)?.media ?? null);
 
-  function openWatchlistDetail(item: MediaStatusListItem) {
+  function openWatchlistDetail(item: WatchlistItem) {
+    openDetail(item.media_type, item.tmdb_id);
+  }
+
+  function openDiaryDetail(item: DiaryRenderableItem) {
     openDetail(item.media_type, item.tmdb_id);
   }
 
@@ -306,7 +311,7 @@ export default function ProfileScreen() {
           loading={diary.loading}
           deletingId={diary.deletingId}
           error={diary.error}
-          onOpenDetail={diary.openDetail}
+          onOpenDetail={openDiaryDetail}
           onDelete={diary.removeItem}
           eyebrow="Diario"
           title="Tu historial"

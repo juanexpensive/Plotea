@@ -14,7 +14,8 @@ import { getListDetail, getMyLists } from '../../../data/repositories/ListsRepos
 import { getMediaDetail, getMyMediaStatuses } from '../../../data/repositories/MediaRepository';
 import { getMyFollowing, getUserWatchlist } from '../../../data/repositories/SocialRepository';
 import { MediaDetail, SavedMediaStatus } from '../../../domain/entities/media';
-import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
+import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
+import { redirectToLogin, redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
 import { formatTmdbScore, getMediaTypeLabel } from '../../shared/mediaPresentation';
 import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { darkDesign } from '../../theme/darkDesign';
@@ -108,7 +109,7 @@ export function RandomWatchlistPickModal({ visible, onClose }: RandomWatchlistPi
       });
 
       if (resolution.kind === 'unauthorized') {
-        router.replace('/login');
+        redirectToLogin();
         return;
       }
 
@@ -140,8 +141,7 @@ export function RandomWatchlistPickModal({ visible, onClose }: RandomWatchlistPi
 
       setPick({ ...selected, detail });
     } catch (nextError) {
-      if (isUnauthorizedError(nextError)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(nextError)) {
         return;
       }
 
@@ -179,8 +179,7 @@ export function RandomWatchlistPickModal({ visible, onClose }: RandomWatchlistPi
         })),
       );
     } catch (nextError) {
-      if (isUnauthorizedError(nextError)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(nextError)) {
         return;
       }
 

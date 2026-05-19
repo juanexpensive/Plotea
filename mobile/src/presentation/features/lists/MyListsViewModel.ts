@@ -2,7 +2,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { acceptListInvitation, createList, denyListInvitation, getListDetail, getMyLists } from '../../../data/repositories/ListsRepository';
 import { ListInvitation, ListSummary, ListWriteRequest } from '../../../domain/entities/lists';
-import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
+import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
+import { redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
 
 const EMPTY_FORM: ListWriteRequest = {
   name: '',
@@ -42,8 +43,7 @@ export function useMyListsViewModel() {
         if (!active) {
           return;
         }
-        if (isUnauthorizedError(error)) {
-          router.replace('/login');
+        if (redirectToLoginIfUnauthorized(error)) {
           return;
         }
         setError(getApiErrorMessage(error, 'No se pudieron cargar tus listas.'));
@@ -93,8 +93,7 @@ export function useMyListsViewModel() {
       router.push({ pathname: '/list-detail', params: { list_id: created.id } });
       return true;
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return false;
       }
       setError(getApiErrorMessage(error, 'No se pudo crear la lista.'));
@@ -127,8 +126,7 @@ export function useMyListsViewModel() {
       applyOverview(refreshed);
       setListPreviews(await loadListPreviews([...refreshed.owned_lists, ...refreshed.shared_lists]));
     } catch (error) {
-      if (isUnauthorizedError(error)) {
-        router.replace('/login');
+      if (redirectToLoginIfUnauthorized(error)) {
         return;
       }
       setError(getApiErrorMessage(error, 'No se pudo actualizar la invitacion.'));

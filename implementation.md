@@ -1,3 +1,83 @@
+# Fase 19 - Mitigacion de deuda tecnica estructural
+
+## Objetivo
+
+- Reducir acoplamiento entre capas, endurecer auth/session, eliminar N+1 en perfil publico y dejar el baseline operativo documentado y reproducible.
+
+## Alcance
+
+- En alcance:
+- composition root de auth en backend con dependencias inyectables
+- CORS por allowlist desde settings
+- configuracion explicita de `pytest-asyncio`
+- politica mobile de storage seguro sin persistencia insegura en fallback
+- redirect auth centralizado en mobile
+- endpoints publicos enriquecidos para watchlist y diario
+- eliminacion del enriquecimiento N+1 en `PublicProfileViewModel`
+- limpieza de deuda visible en `HomeScreen`
+- actualizacion de `SETUP.md`, `DEPLOY.md`, `implementation.md` e `implementation_details.md`
+- Fuera de alcance:
+- reescritura completa de `DetailScreen.tsx`
+- migracion a un contenedor DI externo
+- suite automatizada frontend nueva
+
+## Fases
+
+### Fase 1: baseline operativo reproducible
+
+- Goal: fijar comandos reales de validacion y eliminar drift entre docs y repo
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`, `npm exec tsc -- --noEmit`
+- Review gate: cualquier colaborador puede validar backend y mobile sin adivinar rutas ni cwd
+- Estado: completada
+
+### Fase 2: backend auth desacoplada
+
+- Goal: sacar dependencias concretas de infraestructura fuera de los use cases de auth
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
+- Review gate: los use cases de auth dependen de interfaces, no de helpers globales
+- Estado: completada
+
+### Fase 3: hardening de CORS y config
+
+- Goal: cerrar CORS abierto y dejar politica de entorno tipada
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
+- Review gate: la configuracion deja de usar `*` en origenes, metodos y cabeceras
+- Estado: completada
+
+### Fase 4: mobile auth/session centralizada
+
+- Goal: eliminar persistencia insegura y consolidar redirects auth
+- Validation: `npm exec tsc -- --noEmit`
+- Review gate: no se persisten credenciales en fallback inseguro y la navegacion auth se centraliza
+- Estado: completada
+
+### Fase 5: read models y perfil publico sin N+1
+
+- Goal: mover el enriquecimiento de watchlist/diario publico al backend y consumir contratos enriquecidos
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`, `npm exec tsc -- --noEmit`
+- Review gate: `PublicProfileViewModel` deja de hacer `getMediaDetail()` item a item
+- Estado: completada
+
+### Fase 6: QA y cierre
+
+- Goal: cerrar con tests verdes, typecheck verde y deuda residual documentada
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`, `npm exec tsc -- --noEmit`
+- Review gate: backend, mobile y docs reflejan el estado real del refactor
+- Estado: completada
+
+## Cierre
+
+- Backend auth ahora usa interfaces inyectables y factories en `presentation/dependencies.py`
+- CORS queda gobernado por settings con allowlist explicita
+- Mobile ya no cae a `AsyncStorage` para persistir tokens cuando `SecureStore` no existe
+- El redirect auth repetido se reemplaza por un helper comun
+- Perfil publico consume watchlist y diario enriquecidos desde backend y elimina el N+1 principal
+- `HomeScreen` deja de arrastrar codigo social muerto
+- Validaciones ejecutadas:
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
+- `npm exec tsc -- --noEmit`
+- Riesgo residual aceptado: la descomposicion profunda de `DetailScreen.tsx`, `ProfileScreen.tsx` y otros hotspots grandes sigue pendiente para una fase posterior
+
 # Fase 8 - Perfil, estadisticas y edicion de usuario
 
 ## Objetivo

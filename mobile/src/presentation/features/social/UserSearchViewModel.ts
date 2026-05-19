@@ -3,7 +3,8 @@ import { router } from 'expo-router';
 import { searchUsers } from '../../../data/repositories/SocialRepository';
 import { getCurrentUser } from '../../../data/repositories/AuthRepository';
 import { PublicUserSummary } from '../../../domain/entities/social';
-import { getApiErrorMessage, isUnauthorizedError } from '../../../infrastructure/http/apiErrors';
+import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
+import { redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
 
 export function useUserSearchViewModel() {
   const [query, setQuery] = useState('');
@@ -60,8 +61,7 @@ export function useUserSearchViewModel() {
             return;
           }
 
-          if (isUnauthorizedError(error)) {
-            router.replace('/login');
+          if (redirectToLoginIfUnauthorized(error)) {
             return;
           }
 

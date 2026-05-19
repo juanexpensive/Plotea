@@ -1,3 +1,68 @@
+# Fase 19 - Mitigacion de deuda tecnica estructural Details
+
+## Repository Context
+
+- Relevant files:
+- `backend/app/domain/usecases/auth/*.py`
+- `backend/app/domain/services/i_auth_policy.py`
+- `backend/app/domain/services/i_auth_token_service.py`
+- `backend/app/domain/services/i_password_hasher.py`
+- `backend/app/domain/services/i_clock.py`
+- `backend/app/infrastructure/security.py`
+- `backend/app/infrastructure/config.py`
+- `backend/app/presentation/dependencies.py`
+- `backend/app/presentation/routers/auth.py`
+- `backend/app/presentation/routers/social.py`
+- `backend/app/presentation/schemas/media.py`
+- `mobile/src/infrastructure/storage/tokenStorage.ts`
+- `mobile/src/infrastructure/auth/authRedirect.ts`
+- `mobile/src/data/repositories/SocialRepository.ts`
+- `mobile/src/presentation/features/social/PublicProfileViewModel.ts`
+- `mobile/src/presentation/features/profile/ProfileWatchlistTab.tsx`
+- `mobile/src/presentation/features/profile/WatchLogDiaryContent.tsx`
+- `mobile/src/presentation/features/home/HomeScreen.tsx`
+- `tests/test_app_config.py`
+- `tests/test_social.py`
+- `SETUP.md`
+- `DEPLOY.md`
+- Existing patterns to follow:
+- composition root ligero en `presentation/dependencies.py`
+- servicios de enrichment ya existentes como `MediaSummaryLoader`
+- mobile con repositorios HTTP finos y viewmodels por pantalla
+- Constraints:
+- no romper contratos HTTP actuales de auth
+- no introducir un contenedor DI de terceros
+- mantener el repo validable con la suite existente
+
+## Decisions Locked
+
+- Los use cases de auth dependen de interfaces (`IAuthTokenService`, `IPasswordHasher`, `IAuthPolicy`, `IClock`)
+- El composition root vive en `backend/app/presentation/dependencies.py`
+- CORS usa allowlist desde settings y deja de aceptar comodines
+- Si `SecureStore` no existe, los tokens viven solo en memoria y no se persisten
+- El redirect auth se centraliza con un helper de navegacion compartido
+- El N+1 del perfil publico se mitiga con endpoints enriquecidos aditivos:
+- `GET /users/{username}/watchlist/enriched`
+- `GET /users/{username}/watchlog/enriched`
+- `MediaItem` se reutiliza como resumen compartido; no se crea un contrato paralelo innecesario
+
+## Review Findings
+
+- fixed: el dominio auth ya no importa helpers concretos de infraestructura
+- fixed: los routers de auth dejan de actuar como composition root improvisado
+- fixed: CORS deja de usar `allow_origins=["*"]`, `allow_methods=["*"]` y `allow_headers=["*"]`
+- fixed: el warning de `pytest-asyncio` desaparece con `asyncio_default_fixture_loop_scope=function`
+- fixed: mobile deja de persistir tokens en `AsyncStorage` cuando no hay secure storage
+- fixed: el perfil publico ya no llama `getMediaDetail()` por cada item de watchlist/diario
+- fixed: `HomeScreen` deja de arrastrar codigo social muerto que ya no formaba parte de la experiencia actual
+- accepted risk: sigue pendiente una descomposicion mayor de `DetailScreen.tsx`, `ProfileScreen.tsx` y `ProfileViewModel.ts`
+- accepted risk: el helper de redirect auth centraliza navegacion, pero no sustituye todavia una capa global de estado auth
+
+## Validation
+
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests -q`
+- `npm exec tsc -- --noEmit`
+
 # Fase 8 - Perfil, estadisticas y edicion de usuario Details
 
 ## Repository Context

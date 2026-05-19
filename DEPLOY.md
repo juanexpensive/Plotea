@@ -56,3 +56,25 @@ Ese perfil esta pensado para generar el artefacto de produccion Android.
 - Ya no hace falta arrancar `uvicorn` para usar la app desplegada
 - Si cambias la API en local y quieres probar sin subir a Railway, entonces si puedes volver a usar `uvicorn`
 - Las imagenes subidas estan preparadas para persistencia con `UPLOADS_DIR=/app/uploads` en Railway
+
+## Validacion minima antes de desplegar
+
+Backend:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m pytest ..\tests -q
+```
+
+Mobile:
+
+```powershell
+cd mobile
+npm exec tsc -- --noEmit
+```
+
+Checklist:
+
+- backend verde antes de push
+- typecheck mobile verde antes de build
+- healthcheck verificado despues del despliegue

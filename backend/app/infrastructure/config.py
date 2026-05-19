@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     password_reset_token_expire_hours: int = 1
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 90
+    cors_allowed_origins: list[str] = ["http://localhost:8081", "http://127.0.0.1:8081"]
+    cors_allowed_methods: list[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    cors_allowed_headers: list[str] = ["Authorization", "Content-Type", "ngrok-skip-browser-warning"]
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env",

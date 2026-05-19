@@ -2,6 +2,26 @@
 
 Sigue estos pasos en orden al montar el proyecto en un PC nuevo.
 
+## Comandos de validacion oficiales
+
+Backend:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m pytest ..\tests -q
+```
+
+Mobile:
+
+```powershell
+cd mobile
+npm exec tsc -- --noEmit
+```
+
+Nota:
+
+- La suite backend esta preparada para ejecutarse desde `backend/`. Lanzarla desde la raiz sin ajustar el `cwd` puede fallar por resolucion del paquete `app`.
+
 ## Requisitos previos
 
 Instala estas herramientas:

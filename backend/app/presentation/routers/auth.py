@@ -1,22 +1,21 @@
 from fastapi import APIRouter, Depends, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.data.repositories.password_reset_repository import PasswordResetRepository
-from app.data.repositories.refresh_token_repository import RefreshTokenRepository
-from app.data.repositories.user_repository import UserRepository
 from app.domain.entities.user import User
-from app.domain.services.i_email_sender import IEmailSender
 from app.domain.usecases.auth.forgot_password import ForgotPasswordUseCase
 from app.domain.usecases.auth.login import LoginUseCase
 from app.domain.usecases.auth.logout import LogoutUseCase
 from app.domain.usecases.auth.refresh import RefreshUseCase
 from app.domain.usecases.auth.register import RegisterUseCase
 from app.domain.usecases.auth.reset_password import ResetPasswordUseCase
-from app.infrastructure.database import get_db
 from app.infrastructure.limiter import limiter
 from app.presentation.dependencies import (
     get_current_user,
-    get_password_reset_email_sender,
+    get_forgot_password_use_case,
+    get_login_use_case,
+    get_logout_use_case,
+    get_refresh_use_case,
+    get_register_use_case,
+    get_reset_password_use_case,
 )
 from app.presentation.schemas.auth import (
     ForgotPasswordRequest,
@@ -51,9 +50,8 @@ async def reset_password_view(token: str = ""):
 async def register(
     request: Request,
     data: RegisterRequest,
-    session: AsyncSession = Depends(get_db),
+    use_case: RegisterUseCase = Depends(get_register_use_case),
 ) -> UserResponse:
-    use_case = RegisterUseCase(UserRepository(session))
     user = await use_case.execute(
         email=str(data.email),
         username=data.username,
@@ -75,9 +73,8 @@ async def register(
 async def login(
     request: Request,
     data: LoginRequest,
-    session: AsyncSession = Depends(get_db),
+    use_case: LoginUseCase = Depends(get_login_use_case),
 ) -> TokenResponse:
-    use_case = LoginUseCase(UserRepository(session), RefreshTokenRepository(session))
     result = await use_case.execute(email=str(data.email), password=data.password)
     return TokenResponse(access_token=result.access_token, refresh_token=result.refresh_token)
 
@@ -85,9 +82,8 @@ async def login(
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(
     data: RefreshRequest,
-    session: AsyncSession = Depends(get_db),
+    use_case: RefreshUseCase = Depends(get_refresh_use_case),
 ) -> TokenResponse:
-    use_case = RefreshUseCase(RefreshTokenRepository(session))
     tokens = await use_case.execute(data.refresh_token)
     return TokenResponse(access_token=tokens.access_token, refresh_token=tokens.refresh_token)
 
@@ -95,10 +91,9 @@ async def refresh(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     data: RefreshRequest,
-    session: AsyncSession = Depends(get_db),
+    use_case: LogoutUseCase = Depends(get_logout_use_case),
     _current_user: User = Depends(get_current_user),
 ) -> None:
-    use_case = LogoutUseCase(RefreshTokenRepository(session))
     await use_case.execute(data.refresh_token)
 
 
@@ -120,14 +115,8 @@ async def me(current_user: User = Depends(get_current_user)) -> UserResponse:
 async def forgot_password(
     request: Request,
     data: ForgotPasswordRequest,
-    session: AsyncSession = Depends(get_db),
-    email_sender: IEmailSender = Depends(get_password_reset_email_sender),
+    use_case: ForgotPasswordUseCase = Depends(get_forgot_password_use_case),
 ) -> MessageResponse:
-    use_case = ForgotPasswordUseCase(
-        UserRepository(session),
-        PasswordResetRepository(session),
-        email_sender,
-    )
     await use_case.execute(str(data.email))
     return MessageResponse(
         message="Si el email existe, enviaremos instrucciones para restablecer la contraseña"
@@ -137,12 +126,7 @@ async def forgot_password(
 @router.post("/reset-password", response_model=MessageResponse)
 async def reset_password(
     data: ResetPasswordRequest,
-    session: AsyncSession = Depends(get_db),
+    use_case: ResetPasswordUseCase = Depends(get_reset_password_use_case),
 ) -> MessageResponse:
-    use_case = ResetPasswordUseCase(
-        UserRepository(session),
-        PasswordResetRepository(session),
-        RefreshTokenRepository(session),
-    )
     await use_case.execute(data.token, data.new_password)
     return MessageResponse(message="Contraseña restablecida correctamente")

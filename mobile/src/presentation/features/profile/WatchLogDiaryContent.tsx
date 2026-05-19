@@ -1,20 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { WatchLogEntryEnriched } from '../../../domain/entities/media';
 import { formatWatchLogScore, getMediaTypeLabel } from '../../shared/mediaPresentation';
 import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
-import { buildDiarySections, DiarySectionItem, getReleaseYear } from './watchLogDiarySections';
+import { buildDiarySections, DiaryRenderableItem, DiarySectionItem, getReleaseYear } from './watchLogDiarySections';
 import { WatchLogListItem } from './WatchLogListViewModel';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w200';
 
 type WatchLogDiaryContentProps = {
-  items: WatchLogListItem[];
+  items: Array<WatchLogListItem | WatchLogEntryEnriched>;
   loading: boolean;
   deletingId?: number | null;
   error: string | null;
-  onOpenDetail: (item: WatchLogListItem) => void;
+  onOpenDetail: (item: DiaryRenderableItem) => void;
   onDelete?: (id: number) => void;
   eyebrow?: string;
   title?: string;
@@ -134,8 +135,9 @@ function WatchLogCard({
   onPress: () => void;
   onDelete?: () => void;
 }) {
-  const title = item.detail?.title ?? `${getMediaTypeLabel(item.media_type)} #${item.tmdb_id}`;
-  const releaseYear = getReleaseYear(item.detail?.release_date);
+  const media = 'media' in item ? item.media : item.detail;
+  const title = media?.title ?? `${getMediaTypeLabel(item.media_type)} #${item.tmdb_id}`;
+  const releaseYear = getReleaseYear(media?.release_date);
   const starStates = getStarStates(item.rating);
 
   return (
@@ -143,8 +145,8 @@ function WatchLogCard({
       <View style={styles.dayBox}>
         <Text style={styles.dayNumber}>{item.dayNumber}</Text>
       </View>
-      {item.detail?.poster_path ? (
-        <Image source={{ uri: `${TMDB_IMAGE}${item.detail.poster_path}` }} style={styles.poster} />
+      {media?.poster_path ? (
+        <Image source={{ uri: `${TMDB_IMAGE}${media.poster_path}` }} style={styles.poster} />
       ) : (
         <View style={[styles.poster, styles.posterFallback, styles.posterPlaceholder]}>
           <Ionicons name="film-outline" size={20} color={darkDesign.colors.textFaint} />
