@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"
     password_reset_base_url: str = ""
+    uploads_dir: str = ""
     password_reset_token_expire_hours: int = 1
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 90

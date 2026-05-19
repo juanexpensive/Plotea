@@ -9,7 +9,7 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.models.activity import Activity as ActivityModel
-from app.infrastructure.storage_paths import STATIC_DIR
+from app.infrastructure.storage_paths import AVATAR_UPLOADS_DIR
 from app.main import app
 from app.presentation.routers.media import get_tmdb_client
 
@@ -255,10 +255,9 @@ async def test_upload_my_avatar_persists_public_url(async_client: AsyncClient):
     parsed_avatar_url = urlparse(body["avatar_url"])
     assert parsed_avatar_url.scheme == "http"
     assert parsed_avatar_url.netloc == "test"
-    assert parsed_avatar_url.path.startswith("/static/uploads/avatars/user-1-")
+    assert parsed_avatar_url.path.startswith("/uploads/avatars/user-1-")
 
-    avatar_path = Path(parsed_avatar_url.path.removeprefix("/static/"))
-    stored_file = STATIC_DIR / avatar_path
+    stored_file = AVATAR_UPLOADS_DIR / Path(parsed_avatar_url.path).name
     assert stored_file.exists()
 
     file_response = await async_client.get(parsed_avatar_url.path, headers=_headers(owner))

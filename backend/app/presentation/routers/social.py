@@ -392,7 +392,7 @@ async def upload_my_avatar(
     session: AsyncSession = Depends(get_db),
 ) -> UserResponse:
     file_name = await _store_avatar_upload(avatar, current_user.id)
-    avatar_url = str(request.url_for("static", path=f"uploads/avatars/{file_name}"))
+    avatar_url = str(request.url_for("uploads", path=f"avatars/{file_name}"))
     updated = await UpdateMyProfileUseCase(UserRepository(session)).execute(
         current_user.id,
         current_user.display_name,

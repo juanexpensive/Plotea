@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from app.infrastructure.config import get_settings
 from app.infrastructure.database import dispose_db, init_db
 from app.infrastructure.limiter import limiter
-from app.infrastructure.storage_paths import AVATAR_UPLOADS_DIR, STATIC_DIR
+from app.infrastructure.storage_paths import AVATAR_UPLOADS_DIR, STATIC_DIR, UPLOADS_DIR
 from app.infrastructure.tmdb import close_tmdb_client, init_tmdb_client
 
 # Import models so Base.metadata registers all tables (needed by Alembic and tests)
@@ -60,6 +60,7 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 app.include_router(auth_router.router)
 app.include_router(lists_router.router)
