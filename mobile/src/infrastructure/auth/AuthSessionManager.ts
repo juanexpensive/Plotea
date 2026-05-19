@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { TokenPair } from '../../domain/entities/auth';
 import { BACKEND_URL } from '../http/backendUrl';
+import { isUnauthorizedError } from '../http/apiErrors';
 import { tokenStorage } from '../storage/tokenStorage';
 
 type StoredTokens = {
@@ -48,9 +49,24 @@ class AuthSessionManager {
     try {
       await this.refreshSession();
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      return !isUnauthorizedError(error);
     }
+  }
+
+  async getValidAccessToken(): Promise<string | null> {
+    const accessToken = await this.getAccessToken();
+    if (accessToken) {
+      return accessToken;
+    }
+
+    const refreshToken = await this.getRefreshToken();
+    if (!refreshToken) {
+      return null;
+    }
+
+    const refreshed = await this.refreshSession();
+    return refreshed.accessToken;
   }
 
   async refreshSession(): Promise<StoredTokens> {
@@ -94,7 +110,9 @@ class AuthSessionManager {
       await this.saveTokens(nextTokens);
       return nextTokens;
     } catch (error) {
-      await this.clearSession();
+      if (isUnauthorizedError(error)) {
+        await this.clearSession();
+      }
       throw error;
     }
   }

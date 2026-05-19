@@ -18,7 +18,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
-  const token = await authSessionManager.getAccessToken();
+  const token = await authSessionManager.getValidAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -46,8 +46,8 @@ api.interceptors.response.use(
       const tokens = await authSessionManager.refreshSession();
       config.headers.Authorization = `Bearer ${tokens.accessToken}`;
       return api(config);
-    } catch {
-      return Promise.reject(error);
+    } catch (refreshError) {
+      return Promise.reject(refreshError);
     }
   },
 );
