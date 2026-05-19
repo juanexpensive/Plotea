@@ -35,11 +35,12 @@ from app.presentation.routers import reviews as reviews_router  # noqa: E402
 from app.presentation.routers import social as social_router  # noqa: E402
 from app.presentation.routers import watch_log as watch_log_router  # noqa: E402
 
+AVATAR_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    AVATAR_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     init_db(settings.database_url)
     init_tmdb_client(settings.tmdb_api_key)
     yield
