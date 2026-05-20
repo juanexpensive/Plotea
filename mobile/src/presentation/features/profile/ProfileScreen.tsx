@@ -246,6 +246,9 @@ export default function ProfileScreen() {
             <Pressable style={styles.loaderPreviewButton} onPress={() => router.push('/loader-preview')}>
               <Text style={styles.loaderPreviewButtonText}>Ver preview del loader</Text>
             </Pressable>
+            <Pressable style={styles.loaderPreviewButton} onPress={() => router.push('/notifications-lab')}>
+              <Text style={styles.loaderPreviewButtonText}>Abrir laboratorio push</Text>
+            </Pressable>
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
@@ -808,31 +811,35 @@ const styles = StyleSheet.create({
   actionMenuOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.32)',
-    paddingTop: 74,
-    paddingHorizontal: darkDesign.spacing.xl,
+    paddingTop: 56,
+    paddingLeft: darkDesign.spacing.xl,
+    paddingRight: darkDesign.spacing.xl,
     alignItems: 'flex-end',
   },
   actionMenuBackdrop: {
     ...StyleSheet.absoluteFillObject,
   },
   actionMenuCard: {
-    minWidth: 200,
+    width: 220,
     borderRadius: darkDesign.radii.lg,
-    backgroundColor: darkDesign.colors.canvasRaised,
     borderWidth: 1,
-    borderColor: darkDesign.colors.borderStrong,
+    borderColor: darkDesign.colors.border,
+    backgroundColor: darkDesign.colors.panel,
     overflow: 'hidden',
+    ...darkDesign.shadows.soft,
   },
   actionMenuItem: {
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: darkDesign.spacing.md,
-    paddingHorizontal: darkDesign.spacing.lg,
-    paddingVertical: darkDesign.spacing.md,
+    gap: darkDesign.spacing.sm,
+    paddingHorizontal: darkDesign.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: darkDesign.colors.border,
   },
   actionMenuText: {
     color: darkDesign.colors.text,
-    ...darkDesign.typography.body,
+    ...darkDesign.typography.caption,
     fontWeight: '600',
   },
   section: {

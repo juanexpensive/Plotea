@@ -1703,3 +1703,119 @@
 - tambien pueden pedir una estrategia mas uniforme de `retry` visible entre todas las secciones de perfil/social
 - Residual risks:
 - no se ha validado manualmente en Expo/dispositivo real el caso de access token expirado con backend intermitente en esta sesion
+# Fase 20 - Social: spoilers, reseñas de amigos y privacidad de listas Details
+
+## Repository Context
+
+- Relevant files:
+- `backend/app/domain/entities/social.py`
+- `backend/app/domain/usecases/social/list_visual_feed.py`
+- `backend/app/presentation/schemas/social.py`
+- `backend/app/presentation/routers/social.py`
+- `mobile/src/domain/entities/social.ts`
+- `mobile/src/presentation/features/social/SocialScreen.tsx`
+- `mobile/src/presentation/features/detail/DetailViewModel.ts`
+- `mobile/src/presentation/features/detail/DetailScreen.tsx`
+- `tests/test_social.py`
+- `tests/test_lists.py`
+- Existing patterns to follow:
+- enrichment de feed social en backend y repositorios HTTP finos en mobile
+- revelación de spoilers ya existente dentro de la ficha de detalle
+- filtros de visibilidad de listas ya presentes en creación y lectura del feed
+- Constraints:
+- sin endpoint nuevo de backend para `friend reviews`
+- el truncado de previews debe seguir saliendo del backend
+- sin runner frontend dedicado en el repo
+
+## Decisions Locked
+
+- `Reseñas de amigos` significa reseñas de usuarios seguidos por el usuario actual
+- el preview de reseña en Social se sigue truncando a 160 caracteres en backend
+- si una reseña tiene spoilers, Social muestra solo un aviso y dirige a la ficha para revelarla allí
+- la ficha reutiliza el listado de reseñas existente y clasifica localmente con `getMyFollowing()`
+- la reseña propia no debe duplicarse dentro de `Comunidad`
+
+## Phase Notes
+
+### Phase 1
+
+- Detailed tasks:
+- ampliar `VisualFeedParticipant` con `review_id`, `review_body_preview` y `review_contains_spoilers`
+- rellenar esos campos desde `ListVisualFeedUseCase`
+- exponerlos en schema/router social
+- cubrir con tests el preview truncado + spoiler flag y la ocultación de `list_created` al privatizar la lista
+- Findings:
+- el backend ya reutiliza `ReviewActivity.body_preview`, así que no hace falta una segunda regla de truncado
+- la privacidad de listas ya estaba parcialmente blindada: faltaba fijar la regresión de pública -> privada con test
+- Status:
+- completed
+
+### Phase 2
+
+- Detailed tasks:
+- actualizar tipos mobile para participantes del feed visual
+- mostrar texto de reseña o aviso de spoiler debajo de cada persona en Social
+- navegar a detalle al pulsar preview/aviso
+- pedir `getMyFollowing()` en la ficha y separar `friendReviews` vs `communityReviews`
+- Findings:
+- conviene conservar la navegación al perfil desde el nombre de la persona y reservar el tap del preview para abrir la obra
+- la ficha actual duplicaba implícitamente la reseña propia dentro de comunidad; el nuevo filtrado la corrige
+- Status:
+- completed
+
+## Review Findings
+
+- fixed: el feed visual ya entrega preview truncado y flag de spoiler por participante de reseña
+- fixed: Social ya oculta el texto de spoilers y deriva a la ficha para revelarlos allí
+- fixed: la ficha separa reseñas de amigos y comunidad sin duplicar la reseña propia
+- fixed: el feed deja de mostrar la actividad `list_created` cuando una lista pública pasa a privada
+
+## Validation
+
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `npm exec tsc -- --noEmit`
+# Fase 21 - Validacion tecnica de Expo Notifications Details
+
+## Repository Context
+
+- Relevant files:
+- `mobile/app.json`
+- `mobile/eas.json`
+- `mobile/app/_layout.tsx`
+- `mobile/app/notifications-lab.tsx`
+- `mobile/src/infrastructure/notifications/expoNotifications.ts`
+- `mobile/src/presentation/features/notifications/NotificationsRuntime.tsx`
+- `mobile/src/presentation/features/notifications/NotificationsLabScreen.tsx`
+- `mobile/src/presentation/features/profile/ProfileScreen.tsx`
+- `mobile/EXPO_NOTIFICATIONS_TESTING.md`
+- Existing patterns to follow:
+- Expo Router con `Stack` global y rutas puente finas en `mobile/app`
+- servicios de infraestructura en `src/infrastructure/*`
+- view/screens encapsulados por feature y acceso tecnico desde Perfil mientras no exista un caso de uso de negocio
+- Constraints:
+- no acoplar todavia almacenamiento de token a backend
+- no usar Expo Go como criterio de validacion para push remota
+- la push remota real sigue requiriendo dispositivos fisicos Android e iPhone
+
+## Decisions Locked
+
+- Se usa Expo Push Service y no FCM directo
+- La build objetivo para pruebas es `development` con `expo-dev-client`
+- El registro del `ExpoPushToken` es manual desde una pantalla tecnica para evitar prompts inesperados al abrir la app
+- La navegacion al tocar una notificacion se resuelve por `data.url` o `data.pathname`
+- La primera prueba remota se hace con la herramienta oficial de Expo, no con backend propio
+- Se asume `ios.bundleIdentifier = com.juanexpensive.plotea` para alinear iOS con el package Android ya existente
+
+## Review Findings
+
+- fixed: el runtime de notificaciones queda centralizado en un provider con listeners globales y estado observable
+- fixed: el laboratorio push permite validar permisos, token, notificacion local y tap sin acoplar la feature a un flujo de negocio real
+- fixed: EAS ya tiene un perfil `development` explicito para salir de Expo Go y probar con development build
+- fixed: el repo documenta la secuencia para build y validacion manual con la herramienta oficial de Expo
+- accepted risk: la entrega remota real depende de credenciales push configuradas correctamente en EAS/Apple/FCM y no puede validarse solo con typecheck
+- accepted risk: el `ExpoPushToken` no se persiste todavia en backend porque el caso de uso final aun no esta decidido
+
+## Validation
+
+- `npm exec tsc -- --noEmit`

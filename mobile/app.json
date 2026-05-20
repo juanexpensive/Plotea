@@ -13,7 +13,8 @@
       "backgroundColor": "#090c14"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.juanexpensive.plotea"
     },
     "android": {
       "package": "com.juanexpensive.plotea",
@@ -25,7 +26,8 @@
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-notifications"
     ],
     "platforms": [
       "ios",

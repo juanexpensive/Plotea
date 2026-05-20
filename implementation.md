@@ -1,3 +1,46 @@
+# Fase 20 - Social: spoilers, reseñas de amigos y privacidad de listas
+
+## Objetivo
+
+- Mejorar la lectura del feed social y de la ficha de detalle para respetar spoilers, destacar reseñas de amigos y blindar que las listas privadas no aparezcan como actividad pública.
+
+## Alcance
+
+- En alcance:
+- feed visual social con preview de reseña por participante
+- aviso de spoiler en Social en lugar de exponer el texto
+- navegación desde preview/aviso de reseña a la ficha de la obra
+- sección `Reseñas de amigos` antes de `Comunidad` en la ficha
+- clasificación de amigos como usuarios seguidos por el usuario actual
+- tests backend para preview truncado/spoilers y ocultación de listas privadas en feed
+- Fuera de alcance:
+- nuevo endpoint backend específico para reseñas de amigos
+- suite automatizada frontend nueva
+- revelación de spoilers directamente dentro del radar social
+
+## Fases
+
+### Fase 1: contrato backend y regresiones de feed
+
+- Goal: propagar metadatos de reseña al feed visual y fijar con tests el comportamiento de spoilers y listas privadas
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- Review gate: el feed visual expone preview/spoiler por participante y el feed no muestra listas privadas ni aunque antes fueran públicas
+- Estado: completada
+
+### Fase 2: mobile Social y detalle
+
+- Goal: renderizar previews/spoilers en Social y separar reseñas de amigos/comunidad en detalle
+- Validation: `npm exec tsc -- --noEmit`
+- Review gate: tocar una reseña en Social abre la ficha y la ficha muestra primero reseñas de amigos sin duplicar la reseña propia
+- Estado: completada
+
+### Fase 3: QA y cierre
+
+- Goal: ejecutar checks, revisar diff y documentar riesgos residuales
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`, `npm exec tsc -- --noEmit`
+- Review gate: quedan explicitados los límites de validación frontend y cualquier riesgo visual pendiente
+- Estado: completada
+
 # Fase 19 - Mitigacion de deuda tecnica estructural
 
 ## Objetivo
@@ -882,3 +925,47 @@
 - `/users/search` ya no devuelve al usuario autenticado y mobile ademas filtra y redirige al perfil propio como red de seguridad
 - Perfil propio, red y perfil publico conservan datos previos cuando una recarga parcial falla
 - Los mensajes de error de fallback ahora son neutros y orientados a reintento, sin afirmar una caida global del backend
+# Fase 21 - Validacion tecnica de Expo Notifications
+
+## Objetivo
+
+- Preparar la app mobile para validar Expo Notifications end-to-end con Expo Push Service antes de acoplarla a un evento real de producto.
+
+## Alcance
+
+- En alcance:
+- integracion mobile con `expo-notifications`, `expo-device` y `expo-dev-client`
+- configuracion Expo/EAS para development build Android+iOS
+- servicio de registro de permisos y `ExpoPushToken`
+- listeners globales para recepcion y respuesta de notificaciones
+- pantalla tecnica `Laboratorio push` accesible desde Perfil
+- disparo de notificacion local para validar foreground/background/tap
+- guia de prueba manual para Android e iPhone fisicos con la herramienta oficial de Expo
+- Fuera de alcance:
+- persistencia del token en backend
+- envio productivo desde FastAPI
+- seleccion del caso de uso final de negocio
+- automatizacion E2E mobile para push
+
+## Fases
+
+### Fase 1: Configuracion nativa y runtime comun
+
+- Goal: dejar Expo y EAS listos para development build y registro de notificaciones
+- Validation: `npm exec tsc -- --noEmit`
+- Review gate: la app compila con `expo-notifications`, `expo-dev-client` y el runtime expone permisos, token y listeners sin tocar backend
+- Estado: completada
+
+### Fase 2: Laboratorio push y validacion local
+
+- Goal: ofrecer una superficie tecnica dentro de la app para pedir permisos, obtener token y lanzar una notificacion local
+- Validation: `npm exec tsc -- --noEmit`
+- Review gate: el laboratorio muestra el estado de permisos, el `ExpoPushToken`, la ultima notificacion recibida y la ultima respuesta del usuario
+- Estado: completada
+
+### Fase 3: Documentacion operativa y cierre
+
+- Goal: dejar documentado como construir la development build y como validar push real en Android+iPhone fisicos
+- Validation: `npm exec tsc -- --noEmit`
+- Review gate: el repo ya explica la secuencia de build, credenciales y uso de la herramienta oficial de Expo sin depender de memoria tribal
+- Estado: completada
