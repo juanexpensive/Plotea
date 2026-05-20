@@ -7,8 +7,14 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
+import { Platform } from 'react-native';
+import {
+  registerExpoPushToken,
+  unregisterExpoPushToken,
+} from '../../../data/repositories/NotificationsRepository';
 import {
   buildNotificationNavigationTarget,
   ensureNotificationChannelAsync,
@@ -33,8 +39,13 @@ type NotificationsContextValue = {
   lastNotificationResponse: NotificationResponseSnapshot | null;
   isRegistering: boolean;
   isRefreshing: boolean;
+  isSyncingWithBackend: boolean;
+  backendSyncError: string | null;
+  lastSyncedToken: string | null;
   requestPermissions: () => Promise<void>;
   registerForPush: () => Promise<void>;
+  syncPushTokenWithBackend: (options?: { requestPermissions?: boolean }) => Promise<void>;
+  unregisterCurrentPushTokenFromBackend: () => Promise<void>;
   scheduleLocalTestNotification: () => Promise<void>;
   refreshState: () => Promise<void>;
   clearDebugState: () => void;
@@ -53,6 +64,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [lastNotificationResponse, setLastNotificationResponse] = useState<NotificationResponseSnapshot | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(true);
+  const [isSyncingWithBackend, setIsSyncingWithBackend] = useState(false);
+  const [backendSyncError, setBackendSyncError] = useState<string | null>(null);
+  const [lastSyncedToken, setLastSyncedToken] = useState<string | null>(null);
+  const currentTokenRef = useRef<string | null>(null);
 
   const applyNotificationResponse = useCallback((response: Notifications.NotificationResponse | null) => {
     const serializedResponse = serializeNotificationResponse(response);
@@ -79,6 +94,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       setIsPhysicalDevice(snapshot.isPhysicalDevice);
       setProjectId(snapshot.projectId);
       setRegistrationError(null);
+      currentTokenRef.current = snapshot.expoPushToken;
+      setExpoPushToken(snapshot.expoPushToken);
 
       const initialResponse = await Notifications.getLastNotificationResponseAsync();
       if (initialResponse) {
@@ -143,13 +160,74 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       }
 
       const nextToken = await getExpoPushTokenOrThrowAsync();
+      currentTokenRef.current = nextToken;
       setExpoPushToken(nextToken);
       setRegistrationError(null);
     } catch (error) {
+      currentTokenRef.current = null;
       setExpoPushToken(null);
       setRegistrationError(getErrorMessage(error, 'No se pudo registrar el ExpoPushToken.'));
     } finally {
       setIsRegistering(false);
+    }
+  }
+
+  async function syncPushTokenWithBackend(options?: { requestPermissions?: boolean }) {
+    setIsSyncingWithBackend(true);
+
+    try {
+      const currentPermissions = await Notifications.getPermissionsAsync();
+      let nextStatus = currentPermissions.status;
+      let nextCanAskAgain = currentPermissions.canAskAgain;
+
+      if (nextStatus !== 'granted' && options?.requestPermissions) {
+        const requestedPermissions = await requestPushPermissionsAsync();
+        nextStatus = requestedPermissions.status;
+        nextCanAskAgain = requestedPermissions.canAskAgain;
+      }
+
+      setPermissionStatus(nextStatus);
+      setCanAskAgain(nextCanAskAgain);
+
+      if (nextStatus !== 'granted') {
+        setBackendSyncError('Permiso no concedido. No se sincronizo el token con el backend.');
+        return;
+      }
+
+      const nextToken = await getExpoPushTokenOrThrowAsync();
+      currentTokenRef.current = nextToken;
+      setExpoPushToken(nextToken);
+
+      await registerExpoPushToken(nextToken, getCurrentPlatform());
+      setLastSyncedToken(nextToken);
+      setBackendSyncError(null);
+      setRegistrationError(null);
+    } catch (error) {
+      setBackendSyncError(getErrorMessage(error, 'No se pudo sincronizar el token push con el backend.'));
+    } finally {
+      setIsSyncingWithBackend(false);
+    }
+  }
+
+  async function unregisterCurrentPushTokenFromBackend() {
+    const token = currentTokenRef.current ?? expoPushToken ?? lastSyncedToken;
+    if (!token) {
+      setLastSyncedToken(null);
+      setBackendSyncError(null);
+      return;
+    }
+
+    setIsSyncingWithBackend(true);
+
+    try {
+      await unregisterExpoPushToken(token);
+      setLastSyncedToken(null);
+      setBackendSyncError(null);
+    } catch (error) {
+      setBackendSyncError(getErrorMessage(error, 'No se pudo desregistrar el token push del backend.'));
+      throw error;
+    } finally {
+      setIsSyncingWithBackend(false);
     }
   }
 
@@ -167,6 +245,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     setRegistrationError(null);
     setLastNotification(null);
     setLastNotificationResponse(null);
+    setBackendSyncError(null);
   }
 
   const value = useMemo<NotificationsContextValue>(
@@ -181,8 +260,13 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       lastNotificationResponse,
       isRegistering,
       isRefreshing,
+      isSyncingWithBackend,
+      backendSyncError,
+      lastSyncedToken,
       requestPermissions,
       registerForPush,
+      syncPushTokenWithBackend,
+      unregisterCurrentPushTokenFromBackend,
       scheduleLocalTestNotification,
       refreshState,
       clearDebugState,
@@ -198,6 +282,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       lastNotificationResponse,
       isRegistering,
       isRefreshing,
+      isSyncingWithBackend,
+      backendSyncError,
+      lastSyncedToken,
       refreshState,
     ],
   );
@@ -220,4 +307,8 @@ function getErrorMessage(error: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function getCurrentPlatform(): 'android' | 'ios' {
+  return Platform.OS === 'ios' ? 'ios' : 'android';
 }

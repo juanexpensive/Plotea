@@ -4,6 +4,7 @@ from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.repositories.password_reset_repository import PasswordResetRepository
+from app.data.repositories.push_device_repository import PushDeviceRepository
 from app.data.repositories.refresh_token_repository import RefreshTokenRepository
 from app.data.repositories.user_repository import UserRepository
 from app.domain.entities.user import User
@@ -12,6 +13,8 @@ from app.domain.services.i_auth_token_service import IAuthTokenService
 from app.domain.services.i_clock import IClock
 from app.domain.services.i_email_sender import IEmailSender
 from app.domain.services.i_password_hasher import IPasswordHasher
+from app.domain.services.i_push_notification_gateway import IPushNotificationGateway
+from app.domain.services.push_notifications_service import PushNotificationsService
 from app.domain.usecases.auth.forgot_password import ForgotPasswordUseCase
 from app.domain.usecases.auth.login import LoginUseCase
 from app.domain.usecases.auth.logout import LogoutUseCase
@@ -21,6 +24,7 @@ from app.domain.usecases.auth.reset_password import ResetPasswordUseCase
 from app.infrastructure.config import Settings, get_settings
 from app.infrastructure.database import get_db
 from app.infrastructure.email import ResendEmailSender
+from app.infrastructure.expo_push_gateway import ExpoPushGateway
 from app.infrastructure.security import (
     BcryptPasswordHasher,
     JwtAuthTokenService,
@@ -91,6 +95,19 @@ async def get_optional_current_user(
 
 def get_password_reset_email_sender() -> IEmailSender:
     return ResendEmailSender()
+
+
+def get_push_delivery_gateway(
+    settings: Settings = Depends(get_app_settings),
+) -> IPushNotificationGateway:
+    return ExpoPushGateway(settings.expo_push_api_url)
+
+
+def get_push_notifications_service(
+    session: AsyncSession = Depends(get_db),
+    push_gateway: IPushNotificationGateway = Depends(get_push_delivery_gateway),
+) -> PushNotificationsService:
+    return PushNotificationsService(PushDeviceRepository(session), push_gateway)
 
 
 def get_register_use_case(

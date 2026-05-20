@@ -19,8 +19,10 @@ from app.domain.entities.lists import (
 from app.domain.entities.user import User
 from app.domain.services.activity_publisher import ActivityPublisher
 from app.domain.services.i_tmdb_client import ITmdbClient
+from app.domain.services.push_notifications_service import PushNotificationsService
 from app.domain.usecases.lists.add_list_item import AddListItemUseCase
 from app.domain.usecases.lists.create_list import CreateListUseCase
+from app.domain.usecases.lists.create_list_invitation import CreateListInvitationUseCase
 from app.domain.usecases.lists.delete_list import DeleteListUseCase
 from app.domain.usecases.lists.get_list_detail import GetListDetailUseCase
 from app.domain.usecases.lists.leave_list import LeaveListUseCase
@@ -31,7 +33,7 @@ from app.domain.usecases.lists.swap_list_items import SwapListItemsUseCase
 from app.domain.usecases.lists.update_list import UpdateListUseCase
 from app.domain.usecases.media.get_media_detail import GetMediaDetailUseCase
 from app.infrastructure.database import get_db
-from app.presentation.dependencies import get_current_user
+from app.presentation.dependencies import get_current_user, get_push_notifications_service
 from app.presentation.routers.media import get_tmdb_client
 from app.presentation.schemas.auth import MessageResponse
 from app.presentation.schemas.lists import (
@@ -304,29 +306,18 @@ async def create_list_invitation(
     data: CreateListInvitationRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
+    push_notifications_service: PushNotificationsService = Depends(get_push_notifications_service),
 ) -> ListInvitationResponse:
-    user_repo = UserRepository(session)
-    follow_repo = FollowRepository(session)
-    list_repo = ListRepository(session)
-
-    if data.invitee_user_id == current_user.id:
-        raise HTTPException(status_code=400, detail="You cannot invite yourself")
-
-    invitee = await user_repo.get_by_id(data.invitee_user_id)
-    if invitee is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    if not await list_repo.is_owner(list_id, current_user.id):
-        raise HTTPException(status_code=404, detail="List not found")
-    if await list_repo.is_collaborator(list_id, data.invitee_user_id):
-        raise HTTPException(status_code=409, detail="User is already a collaborator")
-    if await list_repo.has_pending_invitation(list_id, data.invitee_user_id):
-        raise HTTPException(status_code=409, detail="Pending invitation already exists")
-    if not await follow_repo.are_mutual_followers(current_user.id, data.invitee_user_id):
-        raise HTTPException(status_code=400, detail="Mutual follow is required to invite collaborators")
-
-    invitation = await list_repo.create_invitation(list_id, current_user.id, data.invitee_user_id)
-    if invitation is None:
-        raise HTTPException(status_code=400, detail="Could not create invitation")
+    invitation = await CreateListInvitationUseCase(
+        UserRepository(session),
+        FollowRepository(session),
+        ListRepository(session),
+        push_notifications_service,
+    ).execute(
+        list_id=list_id,
+        inviter_user_id=current_user.id,
+        invitee_user_id=data.invitee_user_id,
+    )
     return _to_invitation_response(invitation)
 
 

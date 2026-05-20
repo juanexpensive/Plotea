@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     database_url: str
     secret_key: str
     tmdb_api_key: str = ""
+    expo_push_api_url: str = "https://exp.host/--/api/v2/push/send"
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"
     password_reset_base_url: str = ""

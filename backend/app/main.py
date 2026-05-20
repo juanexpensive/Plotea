@@ -15,6 +15,7 @@ from app.infrastructure.tmdb import close_tmdb_client, init_tmdb_client
 import app.data.models.user  # noqa: F401, E402
 import app.data.models.refresh_token  # noqa: F401, E402
 import app.data.models.password_reset_token  # noqa: F401, E402
+import app.data.models.push_device  # noqa: F401, E402
 import app.data.models.comment  # noqa: F401, E402
 import app.data.models.follow  # noqa: F401, E402
 import app.data.models.activity  # noqa: F401, E402
@@ -31,6 +32,7 @@ import app.data.models.user_favorite_media  # noqa: F401, E402
 from app.presentation.routers import auth as auth_router  # noqa: E402
 from app.presentation.routers import lists as lists_router  # noqa: E402
 from app.presentation.routers import media as media_router  # noqa: E402
+from app.presentation.routers import notifications as notifications_router  # noqa: E402
 from app.presentation.routers import reviews as reviews_router  # noqa: E402
 from app.presentation.routers import social as social_router  # noqa: E402
 from app.presentation.routers import watch_log as watch_log_router  # noqa: E402
@@ -67,6 +69,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 app.include_router(auth_router.router)
 app.include_router(lists_router.router)
 app.include_router(media_router.router)
+app.include_router(notifications_router.router)
 app.include_router(reviews_router.router)
 app.include_router(social_router.router)
 app.include_router(watch_log_router.router)

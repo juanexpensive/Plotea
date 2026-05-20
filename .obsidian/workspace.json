@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "DOCUMENTACION_LEGACY_CLIENTECOAS.md",
+                "file": "Mejoras.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "DOCUMENTACION_LEGACY_CLIENTECOAS"
+              "title": "Mejoras"
             }
           }
         ]
@@ -185,17 +185,23 @@
   },
   "active": "665f5f29ed5ab022",
   "lastOpenFiles": [
-    "mobile/node_modules/expo-notifications/plugin/src/withNotificationsAndroid.ts",
-    "mobile/node_modules/expo-notifications/plugin/src/withNotificationsIOS.ts",
-    "mobile/node_modules/expo-notifications/plugin/src/withNotifications.ts",
-    "mobile/node_modules/expo-notifications/plugin/build/withNotificationsIOS.js",
-    "mobile/node_modules/expo-notifications/plugin/build/withNotificationsIOS.d.ts",
-    "mobile/node_modules/expo-notifications/plugin/build/withNotifications.js",
-    "mobile/node_modules/expo-notifications/plugin/build/withNotificationsAndroid.js",
-    "mobile/node_modules/expo-notifications/plugin/build/withNotificationsAndroid.d.ts",
-    "mobile/node_modules/expo-notifications/plugin/build/withNotifications.d.ts",
-    "mobile/node_modules/expo-notifications/plugin/tsconfig.json",
-    "mobile/node_modules/expo-notifications/plugin/src",
+    "implementation_details.md",
+    "DEPLOY.md",
+    "DESIGN.md",
+    "Plotea.png",
+    "DOCUMENTACION_LEGACY_CLIENTECOAS.md",
+    "backend/app/presentation/static/uploads/avatars/user-1-7d5d4f7ffd654e41.png",
+    "tests/__pycache__/test_notifications.cpython-312-pytest-8.3.3.pyc",
+    "backend/app/presentation/schemas/__pycache__/notifications.cpython-312.pyc",
+    "backend/app/presentation/routers/__pycache__/notifications.cpython-312.pyc",
+    "backend/app/domain/usecases/lists/__pycache__/create_list_invitation.cpython-312.pyc",
+    "backend/app/infrastructure/__pycache__/expo_push_gateway.cpython-312.pyc",
+    "backend/app/domain/services/__pycache__/push_notifications_service.cpython-312.pyc",
+    "backend/app/domain/services/__pycache__/i_push_notification_gateway.cpython-312.pyc",
+    "backend/app/domain/repositories/__pycache__/i_push_device_repository.cpython-312.pyc",
+    "backend/app/domain/entities/__pycache__/push_notification.cpython-312.pyc",
+    "backend/app/data/repositories/__pycache__/push_device_repository.cpython-312.pyc",
+    "mobile/node_modules/expo-dev-launcher/android/README.md",
     "mobile/EXPO_NOTIFICATIONS_TESTING.md",
     "mobile/node_modules/expo-dev-launcher/README.md",
     "mobile/node_modules/expo-dev-menu/android/src/main/res/drawable-xxhdpi/refresh_round_icon.png",
@@ -206,8 +212,6 @@
     "mobile/node_modules/expo-dev-menu/android/src/main/res/drawable-xhdpi/dev_menu_fab_icon.png",
     "mobile/node_modules/expo-dev-menu/android/src/main/res/drawable-mdpi/refresh_round_icon.png",
     "mobile/node_modules/expo-dev-menu/android/src/main/res/drawable-mdpi/ellipsis_horizontal.png",
-    "mobile/node_modules/expo-dev-menu/android/src/main/res/drawable-mdpi/dev_menu_fab_icon.png",
-    "mobile/node_modules/expo-dev-menu/ios/assets/_expo-dev-client-components/assets/x-icon@3x.png",
     "mobile/node_modules/expo-dev-client/CHANGELOG.md",
     "mobile/node_modules/expo-notifications/README.md",
     "mobile/node_modules/expo-notifications/CHANGELOG.md",
@@ -216,9 +220,7 @@
     "mobile/node_modules/is-nan/README.md",
     "INFORME_DEUDA_TECNICA_TFG.md",
     "Paso a paso envio documentos para visado.md",
-    "DOCUMENTACION_LEGACY_CLIENTECOAS.md",
     "Mejoras.md",
-    "DEPLOY.md",
     "html view.md",
     "mobile/node_modules/expo-secure-store/CHANGELOG.md"
   ]

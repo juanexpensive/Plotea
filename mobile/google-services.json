@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "575091055431",
+    "project_id": "plotea",
+    "storage_bucket": "plotea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:575091055431:android:ac3a782b3ce0d434988a62",
+        "android_client_info": {
+          "package_name": "com.juanexpensive.plotea"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAg3fjKZ9cuq3ZB_hIQ71G3OXxpb2V2qq8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { hasValidSession } from '../../src/data/repositories/AuthRepository';
+import { useNotificationsRuntime } from '../../src/presentation/features/notifications/NotificationsRuntime';
 import { RandomWatchlistPickModal } from '../../src/presentation/features/profile/RandomWatchlistPickModal';
 import { PlotStarLoader } from '../../src/presentation/shared/PlotStarLoader';
 import { darkDesign } from '../../src/presentation/theme/darkDesign';
@@ -11,6 +12,8 @@ export default function TabsLayout() {
   const [ready, setReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isRandomPickVisible, setIsRandomPickVisible] = useState(false);
+  const syncStartedRef = useRef(false);
+  const { syncPushTokenWithBackend } = useNotificationsRuntime();
 
   useEffect(() => {
     hasValidSession()
@@ -22,6 +25,15 @@ export default function TabsLayout() {
       });
   }, []);
 
+  useEffect(() => {
+    if (!ready || !isAuthenticated || syncStartedRef.current) {
+      return;
+    }
+
+    syncStartedRef.current = true;
+    void syncPushTokenWithBackend({ requestPermissions: true });
+  }, [isAuthenticated, ready, syncPushTokenWithBackend]);
+
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: darkDesign.colors.canvas, justifyContent: 'center', alignItems: 'center' }}>
@@ -31,6 +43,7 @@ export default function TabsLayout() {
   }
 
   if (!isAuthenticated) {
+    syncStartedRef.current = false;
     return <Redirect href="/login" />;
   }
 

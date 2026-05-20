@@ -11,12 +11,16 @@ export default function NotificationsLabScreen() {
     projectId,
     expoPushToken,
     registrationError,
+    backendSyncError,
     lastNotification,
     lastNotificationResponse,
     isRegistering,
     isRefreshing,
+    isSyncingWithBackend,
+    lastSyncedToken,
     requestPermissions,
     registerForPush,
+    syncPushTokenWithBackend,
     scheduleLocalTestNotification,
     refreshState,
     clearDebugState,
@@ -48,7 +52,13 @@ export default function NotificationsLabScreen() {
           value={remotePushReady ? 'Si' : 'No'}
           tone={remotePushReady ? 'ok' : 'warn'}
         />
+        <StatusRow
+          label="Token sincronizado con backend"
+          value={lastSyncedToken ? 'Si' : 'No'}
+          tone={lastSyncedToken ? 'ok' : 'warn'}
+        />
         {registrationError ? <Text style={sharedStyles.errorText}>{registrationError}</Text> : null}
+        {backendSyncError ? <Text style={sharedStyles.errorText}>{backendSyncError}</Text> : null}
       </View>
 
       <View style={sharedStyles.panel}>
@@ -60,6 +70,11 @@ export default function NotificationsLabScreen() {
           onPress={registerForPush}
           disabled={isRegistering}
           variant="primary"
+        />
+        <ActionButton
+          label={isSyncingWithBackend ? 'Sincronizando con backend...' : 'Sincronizar token con backend'}
+          onPress={() => syncPushTokenWithBackend({ requestPermissions: true })}
+          disabled={isSyncingWithBackend}
         />
         <ActionButton label="Programar notificacion local" onPress={scheduleLocalTestNotification} />
         <ActionButton label="Abrir ajustes del sistema" onPress={() => Linking.openSettings()} />

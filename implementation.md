@@ -925,6 +925,53 @@
 - `/users/search` ya no devuelve al usuario autenticado y mobile ademas filtra y redirige al perfil propio como red de seguridad
 - Perfil propio, red y perfil publico conservan datos previos cuando una recarga parcial falla
 - Los mensajes de error de fallback ahora son neutros y orientados a reintento, sin afirmar una caida global del backend
+# Fase 22 - Push notifications de producto para follow, likes e invitaciones
+
+## Objetivo
+
+- Convertir la infraestructura validada de Expo Notifications en notificaciones reales de producto para tres eventos: nuevo seguidor, like en reseña e invitación a lista compartida.
+
+## Alcance
+
+- En alcance:
+- persistencia backend de `ExpoPushToken` por usuario/dispositivo
+- endpoint autenticado para registrar y eliminar tokens push
+- servicio backend de envío mediante Expo Push Service
+- envío de push al seguir a un usuario
+- envío de push al dar like a una reseña ajena
+- envío de push al invitar a alguien a una lista
+- navegación mobile desde la notificación a perfil público del actor o a la tab de listas
+- auto-registro del token en mobile al entrar autenticado y cleanup en logout
+- tests backend para follow, likes, invitaciones y registro de token
+- Fuera de alcance:
+- centro de notificaciones dentro de la app
+- persistencia histórica de notificaciones leídas/no leídas
+- preferencias granulares de silenciamiento por tipo
+- envío de email o notificaciones web
+
+## Fases
+
+### Fase 1: contrato backend y persistencia de tokens
+
+- Goal: introducir el modelo de dispositivo push, el endpoint de registro y un servicio de envío desacoplado
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_notifications.py -q`
+- Review gate: el backend puede registrar/desregistrar `ExpoPushToken` por usuario y los tests demuestran entrega lógica sin red real
+- Estado: completada
+
+### Fase 2: disparadores de negocio
+
+- Goal: emitir push reales al seguir, dar like y crear invitaciones de lista
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_notifications.py -q`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_reviews.py -q`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- Review gate: cada evento envía al destinatario correcto con payload de navegación estable y sin duplicar notificaciones en operaciones idempotentes
+- Estado: completada
+
+### Fase 3: integración mobile y QA
+
+- Goal: sincronizar automáticamente el token push con backend y consumir la navegación desde la notificación en app real
+- Validation: `npm exec tsc -- --noEmit`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_notifications.py -q`
+- Review gate: la sesión autenticada registra el token, el logout lo limpia y la app queda lista para recibir follow/like/invite sin depender del laboratorio manual
+- Estado: completada
+
 # Fase 21 - Validacion tecnica de Expo Notifications
 
 ## Objetivo

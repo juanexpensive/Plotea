@@ -17,6 +17,7 @@ import { MediaItem, WatchLogEnrichedEntry } from '../../../domain/entities/media
 import { FavoriteMediaItem, PublicUserProfile, PublicUserStats } from '../../../domain/entities/social';
 import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
 import { redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
+import { useNotificationsRuntime } from '../notifications/NotificationsRuntime';
 
 function toFavoriteDrafts(items: FavoriteMediaItem[]): Array<MediaItem | null> {
   const drafts: Array<MediaItem | null> = [null, null, null, null];
@@ -58,6 +59,7 @@ function toFavoritePayload(drafts: Array<MediaItem | null>) {
 }
 
 export function useProfileViewModel() {
+  const { unregisterCurrentPushTokenFromBackend } = useNotificationsRuntime();
   const [user, setUser] = useState<User | null>(null);
   const [profileSummary, setProfileSummary] = useState<PublicUserProfile | null>(null);
   const [stats, setStats] = useState<PublicUserStats | null>(null);
@@ -306,6 +308,11 @@ export function useProfileViewModel() {
     setError(null);
 
     try {
+      try {
+        await unregisterCurrentPushTokenFromBackend();
+      } catch {
+        // El logout no debe quedar bloqueado por un fallo de red al desregistrar push.
+      }
       await logout();
       router.replace('/login');
     } catch (nextError) {

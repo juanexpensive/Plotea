@@ -26,6 +26,7 @@ from app.domain.services.media_summary_loader import MediaSummaryLoader
 from app.domain.entities.user import User
 from app.domain.services.activity_publisher import ActivityPublisher
 from app.domain.services.i_tmdb_client import ITmdbClient
+from app.domain.services.push_notifications_service import PushNotificationsService
 from app.domain.services.user_stats_aggregator import UserStatsAggregator
 from app.domain.usecases.media.get_media_detail import GetMediaDetailUseCase
 from app.domain.usecases.media.list_media_statuses import ListMediaStatusesUseCase
@@ -45,7 +46,7 @@ from app.domain.usecases.watchlog.list_recent_watch_log_enriched import ListRece
 from app.domain.usecases.watchlog.list_watch_log import ListWatchLogUseCase
 from app.infrastructure.database import get_db
 from app.infrastructure.storage_paths import AVATAR_UPLOADS_DIR
-from app.presentation.dependencies import get_current_user
+from app.presentation.dependencies import get_current_user, get_push_notifications_service
 from app.presentation.routers.media import get_tmdb_client
 from app.presentation.schemas.auth import MessageResponse
 from app.presentation.schemas.auth import UserResponse
@@ -585,11 +586,13 @@ async def follow_user(
     user_id: int,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
+    push_notifications_service: PushNotificationsService = Depends(get_push_notifications_service),
 ) -> MessageResponse:
     await FollowUserUseCase(
         UserRepository(session),
         FollowRepository(session),
         ActivityPublisher(ActivityRepository(session)),
+        push_notifications_service,
     ).execute(current_user.id, user_id)
     return MessageResponse(message="Follow state updated")
 

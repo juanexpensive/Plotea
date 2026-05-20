@@ -14,10 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.juanexpensive.plotea"
+      "bundleIdentifier": "com.juanexpensive.plotea",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "package": "com.juanexpensive.plotea",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#090c14"

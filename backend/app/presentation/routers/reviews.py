@@ -6,10 +6,12 @@ from app.data.repositories.comment_repository import CommentRepository
 from app.data.repositories.media_status_repository import MediaStatusRepository
 from app.data.repositories.review_repository import ReviewRepository
 from app.data.repositories.review_vote_repository import ReviewVoteRepository
+from app.data.repositories.user_repository import UserRepository
 from app.domain.entities.comment import Comment
 from app.domain.entities.review import Review
 from app.domain.entities.user import User
 from app.domain.services.activity_publisher import ActivityPublisher
+from app.domain.services.push_notifications_service import PushNotificationsService
 from app.domain.usecases.reviews.add_review_vote import AddReviewVoteUseCase
 from app.domain.usecases.reviews.create_review_comment import CreateReviewCommentUseCase
 from app.domain.usecases.reviews.create_review import CreateReviewUseCase
@@ -21,7 +23,11 @@ from app.domain.usecases.reviews.list_review_comments import ListReviewCommentsU
 from app.domain.usecases.reviews.remove_review_vote import RemoveReviewVoteUseCase
 from app.domain.usecases.reviews.update_review import UpdateReviewUseCase
 from app.infrastructure.database import get_db
-from app.presentation.dependencies import get_current_user, get_optional_current_user
+from app.presentation.dependencies import (
+    get_current_user,
+    get_optional_current_user,
+    get_push_notifications_service,
+)
 from app.presentation.schemas.review import (
     CommentResponse,
     CommentWriteRequest,
@@ -200,10 +206,13 @@ async def add_review_vote(
     review_id: int,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
+    push_notifications_service: PushNotificationsService = Depends(get_push_notifications_service),
 ) -> ReviewVoteResponse:
     summary = await AddReviewVoteUseCase(
         ReviewRepository(session),
         ReviewVoteRepository(session),
+        UserRepository(session),
+        push_notifications_service,
     ).execute(current_user.id, review_id)
     return ReviewVoteResponse(
         review_id=summary.review_id,

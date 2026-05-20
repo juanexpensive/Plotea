@@ -1775,6 +1775,61 @@
 - `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
 - `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
 - `npm exec tsc -- --noEmit`
+# Fase 22 - Push notifications de producto para follow, likes e invitaciones Details
+
+## Repository Context
+
+- Relevant files:
+- `backend/app/data/models/push_device.py`
+- `backend/app/data/repositories/push_device_repository.py`
+- `backend/app/domain/services/push_notifications_service.py`
+- `backend/app/infrastructure/expo_push_gateway.py`
+- `backend/app/presentation/routers/notifications.py`
+- `backend/app/domain/usecases/social/follow_user.py`
+- `backend/app/domain/usecases/reviews/add_review_vote.py`
+- `backend/app/domain/usecases/lists/create_list_invitation.py`
+- `mobile/src/data/repositories/NotificationsRepository.ts`
+- `mobile/src/presentation/features/notifications/NotificationsRuntime.tsx`
+- `mobile/app/(tabs)/_layout.tsx`
+- `mobile/src/presentation/features/profile/ProfileViewModel.ts`
+- `tests/test_notifications.py`
+- Existing patterns to follow:
+- use cases y repositorios del backend ya encapsulan follow/reviews/listas
+- `ActivityPublisher` marca el patrón de side effects de dominio desacoplados de routers
+- mobile ya tiene runtime global de notificaciones y navegación por `pathname`
+- Constraints:
+- no introducir FCM directo ni backend propio de mensajería fuera de Expo Push Service
+- no romper contratos actuales de follow, vote o listas
+- mantener el laboratorio push operativo como herramienta de depuración
+
+## Decisions Locked
+
+- El token a persistir es `ExpoPushToken`, no device token nativo
+- El backend envía mediante Expo Push Service y no directamente a FCM/APNs
+- Las rutas de navegación serán:
+- follow -> `/user-profile?username=<actor_username>`
+- like review -> `/user-profile?username=<actor_username>`
+- invitación lista -> `/(tabs)/lists`
+- El registro del token se hará automáticamente cuando haya sesión autenticada
+- El logout intentará desregistrar el token actual para no dejar dispositivos huérfanos asociados al usuario
+- La creación de invitaciones sale del router y pasa a un use case propio para mantener limpia la capa HTTP
+
+## Review Findings
+
+- fixed: el backend gana un slice explícito de push sin mezclar envío HTTP con routers ni repositorios de negocio
+- fixed: follow, like e invitación notifican al destinatario correcto usando payloads de navegación compatibles con Expo Router
+- fixed: mobile deja de depender del laboratorio manual para sincronizar tokens con backend
+- fixed: el logout limpia la asociación del token actual con el usuario autenticado
+- accepted risk: todavía no existe inbox persistente dentro de la app, así que una push descartada por el usuario no deja rastro funcional
+- accepted risk: el envío Expo no elimina automáticamente tokens inválidos devueltos por receipts en esta fase
+
+## Validation
+
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_notifications.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_reviews.py -q`
+- `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_lists.py -q`
+- `npm exec tsc -- --noEmit`
+
 # Fase 21 - Validacion tecnica de Expo Notifications Details
 
 ## Repository Context
