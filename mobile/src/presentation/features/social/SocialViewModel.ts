@@ -5,6 +5,9 @@ import { ActivityItem, VisualFeedItem } from '../../../domain/entities/social';
 import { getApiErrorMessage } from '../../../infrastructure/http/apiErrors';
 import { redirectToLoginIfUnauthorized } from '../../../infrastructure/auth/authRedirect';
 
+const INITIAL_FEED_LIMIT = 5;
+const LOAD_MORE_FEED_LIMIT = 20;
+
 export function useSocialViewModel() {
   const [visualItems, setVisualItems] = useState<VisualFeedItem[]>([]);
   const [visualLoading, setVisualLoading] = useState(true);
@@ -49,7 +52,7 @@ export function useSocialViewModel() {
         }
       });
 
-    getSocialFeed()
+    getSocialFeed(null, INITIAL_FEED_LIMIT)
       .then((page) => {
         if (active) {
           setFeedItems(page.items);
@@ -87,7 +90,7 @@ export function useSocialViewModel() {
 
     setFeedLoadingMore(true);
     try {
-      const page = await getSocialFeed(nextCursor);
+      const page = await getSocialFeed(nextCursor, LOAD_MORE_FEED_LIMIT);
       setFeedItems((current) => {
         const seen = new Set(current.map((item) => item.id));
         return [...current, ...page.items.filter((item) => !seen.has(item.id))];

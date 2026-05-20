@@ -43,6 +43,9 @@ class ListVisualFeedUseCase:
                         activity_type=activity.activity_type,
                         rating=activity.rating if hasattr(activity, "rating") else None,
                         created_at=activity.created_at,
+                        review_id=activity.review_id if isinstance(activity, ReviewActivity) else None,
+                        review_body_preview=activity.body_preview if isinstance(activity, ReviewActivity) else None,
+                        review_contains_spoilers=activity.contains_spoilers if isinstance(activity, ReviewActivity) else None,
                     )
                 )
 

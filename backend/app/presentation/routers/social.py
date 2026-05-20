@@ -309,6 +309,9 @@ def _to_visual_feed_item_response(item: VisualFeedItem) -> VisualFeedItemRespons
                 activity_type=participant.activity_type,
                 rating=participant.rating,
                 created_at=participant.created_at,
+                review_id=participant.review_id,
+                review_body_preview=participant.review_body_preview,
+                review_contains_spoilers=participant.review_contains_spoilers,
             )
             for participant in item.participants
         ],

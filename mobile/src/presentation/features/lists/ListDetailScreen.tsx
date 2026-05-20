@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Image,
   LayoutAnimation,
@@ -38,6 +39,7 @@ export default function ListDetailScreen() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isActionMenuVisible, setIsActionMenuVisible] = useState(false);
   const [isEditingHero, setIsEditingHero] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [hasLongDescription, setHasLongDescription] = useState(false);
@@ -59,17 +61,18 @@ export default function ListDetailScreen() {
     inviteError,
     canEdit,
     canDelete,
+    canLeave,
     canManageCollaborators,
     setQuery,
     setInviteQuery,
     updateForm,
     saveMetadata,
     handleDeleteList,
+    handleLeaveList,
     handleAddItem,
     handleRemoveItem,
     swapItems,
     inviteCollaborator,
-    removeCollaborator,
     openOwnerProfile,
     openCollaboratorProfile,
   } = useListDetailViewModel(listId);
@@ -170,6 +173,54 @@ export default function ListDetailScreen() {
     setIsInviteModalVisible(false);
   }
 
+  function openActionMenu() {
+    if (isEditingHero) {
+      return;
+    }
+    setIsActionMenuVisible(true);
+  }
+
+  function closeActionMenu() {
+    setIsActionMenuVisible(false);
+  }
+
+  function confirmDeleteList() {
+    closeActionMenu();
+    Alert.alert('Eliminar lista', 'Esta lista se borrara para siempre.', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          void handleDeleteList();
+        },
+      },
+    ]);
+  }
+
+  function confirmLeaveList() {
+    closeActionMenu();
+    Alert.alert(
+      'Salir de la lista',
+      'La lista dejara de aparecerte. Si otras personas siguen dentro, continuara para ellas.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Salir',
+          style: 'destructive',
+          onPress: () => {
+            void handleLeaveList();
+          },
+        },
+      ],
+    );
+  }
+
+  function openInviteModal() {
+    closeActionMenu();
+    setIsInviteModalVisible(true);
+  }
+
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
@@ -202,6 +253,18 @@ export default function ListDetailScreen() {
               onAdd={onAddItem}
             />
 
+            <ListActionsMenu
+              visible={isActionMenuVisible}
+              canInvite={canManageCollaborators}
+              canDelete={canDelete}
+              canLeave={canLeave && !canDelete}
+              busy={saving || deleting}
+              onClose={closeActionMenu}
+              onInvite={openInviteModal}
+              onDelete={confirmDeleteList}
+              onLeave={confirmLeaveList}
+            />
+
             <View style={styles.heroSection}>
               {canEdit && isEditingHero ? (
                 <View style={styles.topRow}>
@@ -216,10 +279,14 @@ export default function ListDetailScreen() {
                     <Ionicons name="close" size={20} color={darkDesign.colors.text} />
                   </Pressable>
                 </View>
-              ) : null}
-
-
-
+              ) : (
+                <View style={styles.topRow}>
+                  <View style={styles.iconSpacer} />
+                  <Pressable style={styles.iconButton} onPress={openActionMenu} disabled={saving || deleting}>
+                    <Ionicons name="ellipsis-horizontal" size={20} color={darkDesign.colors.text} />
+                  </Pressable>
+                </View>
+              )}
               <Pressable
                 disabled={!canEdit || isEditingHero}
                 onPress={() => canEdit ? setIsEditingHero(true) : undefined}
@@ -299,26 +366,35 @@ export default function ListDetailScreen() {
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {canEdit ? <Text style={styles.helper}>Toca una obra y luego otra para intercambiar su posicion.</Text> : null}
-            <View style={styles.membersCard}>
-              <View style={styles.memberInfo}>
-                <AvatarStack users={participants} />
-                <View style={styles.memberCopy}>
-                  <Pressable onPress={openOwnerProfile}>
-                    <Text style={styles.ownerText}>@{detail.owner.username}</Text>
-                  </Pressable>
-                  <Text style={styles.memberMeta}>
-                    {participants.length} personas · {detail.is_public ? 'Lista publica' : 'Lista privada'}
-                  </Text>
+            {participants.length > 1 ? (
+              <>
+                <View style={styles.membersCard}>
+                  <View style={styles.membersHeader}>
+                    <View style={styles.memberInfo}>
+                      <AvatarStack users={participants} />
+                      <View style={styles.memberCopy}>
+                        <Text style={styles.ownerText}>Participan</Text>
+                        <Text style={styles.memberMeta}>
+                          {participants.length} personas - {detail.is_public ? 'Lista publica' : 'Lista privada'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
                 </View>
-              </View>
 
-              {canManageCollaborators ? (
-                <Pressable style={styles.inviteButton} onPress={() => setIsInviteModalVisible(true)}>
-                  <Ionicons name="person-add-outline" size={16} color={darkDesign.colors.text} />
-                  <Text style={styles.inviteButtonText}>Invite</Text>
-                </Pressable>
-              ) : null}
-            </View>
+                <View style={styles.participantsList}>
+                  <ParticipantRow user={detail.owner} roleLabel="Creador" onPress={openOwnerProfile} />
+                  {detail.collaborators.map((user) => (
+                    <ParticipantRow
+                      key={user.id}
+                      user={user}
+                      roleLabel="Participa"
+                      onPress={() => openCollaboratorProfile(user.username)}
+                    />
+                  ))}
+                </View>
+              </>
+            ) : null}
 
             <View style={styles.posterGrid}>
               {detail.items.map((item, index) => (
@@ -341,27 +417,6 @@ export default function ListDetailScreen() {
                 </View>
               ) : null}
             </View>
-
-            {detail.collaborators.length > 0 ? (
-              <View style={styles.collaboratorsPanel}>
-                <Text style={styles.panelTitle}>Collaborators</Text>
-                <View style={styles.collaboratorsList}>
-                  {detail.collaborators.map((user) => (
-                    <View key={user.id} style={styles.collaboratorRow}>
-                      <Pressable style={styles.collaboratorBody} onPress={() => openCollaboratorProfile(user.username)}>
-                        <Text style={styles.collaboratorName}>@{user.username}</Text>
-                        <Text style={styles.collaboratorMeta}>{user.display_name ?? 'Colaborador activo'}</Text>
-                      </Pressable>
-                      {canManageCollaborators ? (
-                        <Pressable style={({ pressed }) => [styles.removeChip, pressed ? styles.pressed : null]} onPress={() => void removeCollaborator(user)}>
-                          <Text style={styles.removeChipText}>Quitar</Text>
-                        </Pressable>
-                      ) : null}
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
           </>
         ) : null}
       </ScrollView>
@@ -372,6 +427,77 @@ export default function ListDetailScreen() {
         </Pressable>
       ) : null}
     </View>
+  );
+}
+
+function ListActionsMenu({
+  visible,
+  canInvite,
+  canDelete,
+  canLeave,
+  busy,
+  onClose,
+  onInvite,
+  onDelete,
+  onLeave,
+}: {
+  visible: boolean;
+  canInvite: boolean;
+  canDelete: boolean;
+  canLeave: boolean;
+  busy: boolean;
+  onClose: () => void;
+  onInvite: () => void;
+  onDelete: () => void;
+  onLeave: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.actionMenuOverlay}>
+        <Pressable style={styles.actionMenuBackdrop} onPress={onClose} />
+        <View style={styles.listActionMenuCard}>
+          {canInvite ? (
+            <Pressable style={styles.actionMenuItem} onPress={onInvite} disabled={busy}>
+              <Ionicons name="person-add-outline" size={18} color={darkDesign.colors.text} />
+              <Text style={styles.actionMenuText}>Invitar</Text>
+            </Pressable>
+          ) : null}
+          {canLeave ? (
+            <Pressable style={styles.actionMenuItem} onPress={onLeave} disabled={busy}>
+              <Ionicons name="exit-outline" size={18} color={darkDesign.colors.text} />
+              <Text style={styles.actionMenuText}>Salir de la lista</Text>
+            </Pressable>
+          ) : null}
+          {canDelete ? (
+            <Pressable style={styles.actionMenuItem} onPress={onDelete} disabled={busy}>
+              <Ionicons name="trash-outline" size={18} color="#ffb0b0" />
+              <Text style={styles.actionMenuDangerText}>Eliminar lista</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function ParticipantRow({
+  user,
+  roleLabel,
+  onPress,
+}: {
+  user: ListOwner;
+  roleLabel: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.participantRow} onPress={onPress}>
+      <MiniAvatar user={user} />
+      <View style={styles.participantCopy}>
+        <Text style={styles.participantName}>@{user.username}</Text>
+        <Text style={styles.participantMeta}>{user.display_name ?? roleLabel}</Text>
+      </View>
+      <Text style={styles.participantRole}>{roleLabel}</Text>
+    </Pressable>
   );
 }
 
@@ -742,15 +868,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   membersCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     gap: darkDesign.spacing.md,
     padding: darkDesign.spacing.md,
     borderRadius: darkDesign.radii.lg,
     backgroundColor: darkDesign.colors.panel,
     borderWidth: 1,
     borderColor: darkDesign.colors.border,
+  },
+  membersHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkDesign.spacing.md,
+    justifyContent: 'space-between',
   },
   memberInfo: {
     flexDirection: 'row',
@@ -770,6 +899,34 @@ const styles = StyleSheet.create({
   memberMeta: {
     color: darkDesign.colors.textMuted,
     ...darkDesign.typography.micro,
+  },
+  participantsList: {
+    gap: darkDesign.spacing.sm,
+  },
+  participantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkDesign.spacing.md,
+    paddingVertical: darkDesign.spacing.xs,
+  },
+  participantCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  participantName: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.caption,
+    fontWeight: '700',
+  },
+  participantMeta: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.micro,
+  },
+  participantRole: {
+    color: darkDesign.colors.textFaint,
+    ...darkDesign.typography.micro,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   inviteButton: {
     minHeight: 38,
@@ -970,6 +1127,45 @@ const styles = StyleSheet.create({
     color: '#ffb0b0',
     ...darkDesign.typography.micro,
     fontWeight: '700',
+  },
+  actionMenuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.32)',
+    paddingTop: 72,
+    paddingLeft: darkDesign.spacing.xl,
+    paddingRight: darkDesign.spacing.xl,
+    alignItems: 'flex-end',
+  },
+  actionMenuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  listActionMenuCard: {
+    width: 220,
+    borderRadius: darkDesign.radii.lg,
+    borderWidth: 1,
+    borderColor: darkDesign.colors.border,
+    backgroundColor: darkDesign.colors.panel,
+    overflow: 'hidden',
+    ...darkDesign.shadows.soft,
+  },
+  actionMenuItem: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkDesign.spacing.sm,
+    paddingHorizontal: darkDesign.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: darkDesign.colors.border,
+  },
+  actionMenuText: {
+    color: darkDesign.colors.text,
+    ...darkDesign.typography.caption,
+    fontWeight: '600',
+  },
+  actionMenuDangerText: {
+    color: '#ffb0b0',
+    ...darkDesign.typography.caption,
+    fontWeight: '600',
   },
   modalScreen: {
     flex: 1,

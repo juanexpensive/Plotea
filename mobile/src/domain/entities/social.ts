@@ -116,6 +116,9 @@ export interface VisualFeedParticipant {
   activity_type: 'review' | 'watch_log';
   rating: number | null;
   created_at: string;
+  review_id: number | null;
+  review_body_preview: string | null;
+  review_contains_spoilers: boolean | null;
 }
 
 export interface VisualFeedItem {

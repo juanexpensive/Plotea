@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getMe } from '../../../data/repositories/AuthRepository';
 import { getMediaDetail, getMediaStatus, setMediaStatus } from '../../../data/repositories/MediaRepository';
+import { getMyFollowing } from '../../../data/repositories/SocialRepository';
 import {
   addReviewVote,
   createReview,
@@ -92,6 +93,7 @@ export function useDetailViewModel(mediaType: string, tmdbId: number) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [myReview, setMyReview] = useState<Review | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [followingUserIds, setFollowingUserIds] = useState<Set<number>>(new Set());
   const [reviewThreads, setReviewThreads] = useState<Record<number, ReviewThreadState>>({});
   const [votingReviewIds, setVotingReviewIds] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -110,26 +112,62 @@ export function useDetailViewModel(mediaType: string, tmdbId: number) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
     setError(null);
-    Promise.all([
+    Promise.allSettled([
       getMediaDetail(mediaType, tmdbId),
       getMediaStatus(mediaType, tmdbId),
       getMediaReviews(mediaType, tmdbId),
       getMyReviewForMedia(mediaType, tmdbId),
       getMe(),
+      getMyFollowing(),
     ])
-      .then(([detailResponse, statusResponse, reviewsResponse, myReviewResponse, currentUser]) => {
-        setDetail(detailResponse);
-        setStatus(statusResponse.status);
-        setReviews(sortReviewsByCreatedAt(reviewsResponse));
-        setMyReview(myReviewResponse);
-        setCurrentUserId(currentUser.id);
+      .then((results) => {
+        if (!active) {
+          return;
+        }
+
+        const [detailResult, statusResult, reviewsResult, myReviewResult, currentUserResult, followingResult] = results;
+        if (
+          detailResult.status !== 'fulfilled' ||
+          statusResult.status !== 'fulfilled' ||
+          reviewsResult.status !== 'fulfilled' ||
+          myReviewResult.status !== 'fulfilled' ||
+          currentUserResult.status !== 'fulfilled'
+        ) {
+          const rejectedResult = [detailResult, statusResult, reviewsResult, myReviewResult, currentUserResult].find(
+            (result) => result.status === 'rejected',
+          );
+          throw rejectedResult?.reason ?? new Error('Failed to load required detail dependencies');
+        }
+
+        setDetail(detailResult.value);
+        setStatus(statusResult.value.status);
+        setReviews(sortReviewsByCreatedAt(reviewsResult.value));
+        setMyReview(myReviewResult.value);
+        setCurrentUserId(currentUserResult.value.id);
+        setFollowingUserIds(
+          followingResult.status === 'fulfilled'
+            ? new Set(followingResult.value.map((user) => user.id))
+            : new Set(),
+        );
       })
-      .catch((nextError) =>
-        setError(getApiErrorMessage(nextError, 'Error al cargar el contenido.')),
-      )
-      .finally(() => setLoading(false));
+      .catch((nextError) => {
+        if (!active) {
+          return;
+        }
+        setError(getApiErrorMessage(nextError, 'Error al cargar el contenido.'));
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, [mediaType, tmdbId]);
 
   function getThreadState(reviewId: number): ReviewThreadState {
@@ -432,10 +470,17 @@ export function useDetailViewModel(mediaType: string, tmdbId: number) {
     loadReviewDraft(null);
   }
 
+  const visibleReviews =
+    currentUserId === null ? reviews : reviews.filter((review) => review.user_id !== currentUserId);
+  const friendReviews = visibleReviews.filter((review) => followingUserIds.has(review.user_id));
+  const communityReviews = visibleReviews.filter((review) => !followingUserIds.has(review.user_id));
+
   return {
     detail,
     status,
     reviews,
+    friendReviews,
+    communityReviews,
     myReview,
     currentUserId,
     reviewThreads,

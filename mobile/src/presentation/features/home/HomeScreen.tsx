@@ -310,10 +310,7 @@ export default function HomeScreen() {
 
         <Pressable style={({ pressed }) => [styles.searchShell, pressed ? styles.cardPressed : null]} onPress={openSearchModal}>
           <View style={styles.searchContainer}>
-            <Text style={styles.searchPlaceholder}>Ej. Severance, Dune, The Bear</Text>
-            <View style={styles.searchTriggerPill}>
-              <Ionicons name="search-outline" size={20} color={darkDesign.colors.accentSoft} />
-            </View>
+            <Text style={styles.searchPlaceholder}>¿Que quieres buscar?</Text>
           </View>
         </Pressable>
 

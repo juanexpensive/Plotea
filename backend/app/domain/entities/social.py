@@ -121,6 +121,9 @@ class VisualFeedParticipant:
     activity_type: str
     rating: int | None
     created_at: datetime
+    review_id: int | None = None
+    review_body_preview: str | None = None
+    review_contains_spoilers: bool | None = None
 
 
 @dataclass

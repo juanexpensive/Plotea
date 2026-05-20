@@ -41,7 +41,8 @@ export default function DetailScreen() {
   const {
     detail,
     status,
-    reviews,
+    friendReviews,
+    communityReviews,
     myReview,
     currentUserId,
     votingReviewIds,
@@ -174,7 +175,8 @@ export default function DetailScreen() {
 
           <ReviewSection
             myReview={myReview}
-            reviews={reviews}
+            friendReviews={friendReviews}
+            communityReviews={communityReviews}
             currentUserId={currentUserId}
             votingReviewIds={votingReviewIds}
             getThreadState={getThreadState}
@@ -344,7 +346,8 @@ function ActionIconButton({
 
 function ReviewSection({
   myReview,
-  reviews,
+  friendReviews,
+  communityReviews,
   currentUserId,
   votingReviewIds,
   getThreadState,
@@ -358,7 +361,8 @@ function ReviewSection({
   onToggleVote,
 }: {
   myReview: Review | null;
-  reviews: Review[];
+  friendReviews: Review[];
+  communityReviews: Review[];
   currentUserId: number | null;
   votingReviewIds: Record<number, boolean>;
   getThreadState: (reviewId: number) => {
@@ -411,13 +415,40 @@ function ReviewSection({
       )}
 
       <View style={styles.communitySectionHeader}>
-        <Text style={styles.sectionTitle}>Comunidad</Text>
-        <Text style={styles.sectionCount}>{reviews.length} reseñas</Text>
+        <Text style={styles.sectionTitle}>Reseñas de amigos</Text>
+        <Text style={styles.sectionCount}>{friendReviews.length} reseñas</Text>
       </View>
-      {reviews.length === 0 ? (
+      {friendReviews.length === 0 ? (
+        <Text style={styles.emptyText}>Nadie a quien sigues ha publicado una reseña todavía.</Text>
+      ) : (
+        friendReviews.map((review) => (
+          <ReviewCard
+            key={review.id}
+            review={review}
+            currentUserId={currentUserId}
+            threadState={getThreadState(review.id)}
+            allowSpoilerToggle={review.contains_spoilers}
+            showSocialActions
+            voting={Boolean(votingReviewIds[review.id])}
+            onToggleComments={onToggleComments}
+            onOpenCommentComposer={onOpenCommentComposer}
+            onCloseCommentComposer={onCloseCommentComposer}
+            onCommentDraftChange={onCommentDraftChange}
+            onSaveComment={onSaveComment}
+            onDeleteComment={onDeleteComment}
+            onToggleVote={onToggleVote}
+          />
+        ))
+      )}
+
+      <View style={styles.communitySectionHeader}>
+        <Text style={styles.sectionTitle}>Comunidad</Text>
+        <Text style={styles.sectionCount}>{communityReviews.length} reseñas</Text>
+      </View>
+      {communityReviews.length === 0 ? (
         <Text style={styles.emptyText}>Todavía no hay reseñas para esta obra.</Text>
       ) : (
-        reviews.map((review) => (
+        communityReviews.map((review) => (
           <ReviewCard
             key={review.id}
             review={review}

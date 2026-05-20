@@ -47,7 +47,6 @@ export default function SocialScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{uiCopy.sections.visualRadar}</Text>
-          <Text style={styles.sectionCaption}>Agrupado por obra</Text>
         </View>
         {!visualLoading && visualError ? <Text style={styles.errorText}>{visualError}</Text> : null}
         {!visualLoading && !visualError && visualItems.length === 0 ? (
@@ -77,7 +76,6 @@ export default function SocialScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{uiCopy.sections.detailedActivity}</Text>
-          <Text style={styles.sectionCaption}>Feed completo</Text>
         </View>
         {!feedLoading && feedError ? <Text style={styles.errorText}>{feedError}</Text> : null}
         {!feedLoading && !feedError && feedItems.length === 0 ? (
@@ -130,27 +128,56 @@ function VisualCard({
       )}
       <View style={styles.visualBody}>
         <Text style={styles.visualTitle} numberOfLines={2}>{item.media.title}</Text>
-        <Text style={styles.visualMeta}>{getMediaTypeLabel(item.media.media_type)} · {item.recent_activity_count} movimientos</Text>
         <View style={styles.peopleStack}>
-          {item.participants.map((participant) => (
-            <Pressable
-              key={`${participant.id}-${participant.activity_type}`}
-              style={({ pressed }) => [styles.personRow, pressed ? styles.pressed : null]}
-              onPress={() => onOpenUser(participant.username)}
-            >
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarText}>
-                  {(participant.display_name ?? participant.username).charAt(0).toUpperCase()}
-                </Text>
+          {item.participants.map((participant) => {
+            const hasSpoilerWarning =
+              participant.activity_type === 'review' && participant.review_contains_spoilers;
+            const hasReviewPreview =
+              participant.activity_type === 'review' &&
+              !participant.review_contains_spoilers &&
+              Boolean(participant.review_body_preview);
+
+            return (
+              <View key={`${participant.id}-${participant.activity_type}`} style={styles.personRow}>
+                <View style={styles.avatarCircle}>
+                  <Text style={styles.avatarText}>
+                    {(participant.display_name ?? participant.username).charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.personBody}>
+                  <Pressable
+                    style={({ pressed }) => [styles.inlinePressable, pressed ? styles.pressed : null]}
+                    onPress={() => onOpenUser(participant.username)}
+                  >
+                    <Text style={styles.personName} numberOfLines={1}>
+                      {participant.display_name ?? participant.username}
+                    </Text>
+                  </Pressable>
+                  <Text style={styles.personMeta}>
+                    {participant.activity_type === 'review' ? 'Resena' : 'Visionado'} - {formatWatchLogScore(participant.rating)}
+                  </Text>
+                  {hasSpoilerWarning ? (
+                    <Pressable
+                      style={({ pressed }) => [styles.spoilerPreviewBox, pressed ? styles.pressed : null]}
+                      onPress={onOpenMedia}
+                    >
+                      <Text style={styles.spoilerPreviewText}>Contiene spoilers</Text>
+                    </Pressable>
+                  ) : null}
+                  {hasReviewPreview ? (
+                    <Pressable
+                      style={({ pressed }) => [styles.inlinePressable, pressed ? styles.pressed : null]}
+                      onPress={onOpenMedia}
+                    >
+                      <Text style={styles.personPreview} numberOfLines={3}>
+                        {participant.review_body_preview}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
-              <View style={styles.personBody}>
-                <Text style={styles.personName} numberOfLines={1}>{participant.display_name ?? participant.username}</Text>
-                <Text style={styles.personMeta}>
-                  {participant.activity_type === 'review' ? 'Resena' : 'Visionado'} · {formatWatchLogScore(participant.rating)}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
+            );
+          })}
         </View>
       </View>
     </Pressable>
@@ -201,9 +228,13 @@ function SocialActivityCard({
             ha publicado una resena sobre {item.media_type === 'movie' ? 'una pelicula' : 'una serie'} {item.title}.
           </Text>
           <Text style={styles.activityAccent}>Nota: {formatWatchLogScore(item.rating)}</Text>
-          <Text style={styles.activityPreview} numberOfLines={4}>
-            {item.body_preview}
-          </Text>
+          {item.contains_spoilers ? (
+            <Text style={styles.activityPreviewSpoiler}>Contiene spoilers</Text>
+          ) : (
+            <Text style={styles.activityPreview} numberOfLines={4}>
+              {item.body_preview}
+            </Text>
+          )}
         </>
       ) : null}
       {item.activity_type === 'watch_log' ? (
@@ -342,12 +373,35 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  inlinePressable: {
+    alignSelf: 'flex-start',
+  },
   personName: {
     color: darkDesign.colors.textSoft,
     ...darkDesign.typography.caption,
     fontWeight: '700',
   },
   personMeta: sharedStyles.captionMuted,
+  personPreview: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.caption,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  spoilerPreviewBox: {
+    marginTop: 4,
+    borderRadius: darkDesign.radii.md,
+    borderWidth: 1,
+    borderColor: darkDesign.colors.accentDeep,
+    backgroundColor: darkDesign.colors.canvasRaised,
+    paddingHorizontal: darkDesign.spacing.sm,
+    paddingVertical: darkDesign.spacing.xs,
+  },
+  spoilerPreviewText: {
+    color: darkDesign.colors.accentSoft,
+    ...darkDesign.typography.caption,
+    fontWeight: '600',
+  },
   feedList: {
     gap: darkDesign.spacing.md,
   },
@@ -397,13 +451,18 @@ const styles = StyleSheet.create({
     ...darkDesign.typography.body,
   },
   activityAccent: {
-    color: darkDesign.colors.warning,
+    color: darkDesign.colors.accentSoft,
     ...darkDesign.typography.caption,
     fontWeight: '700',
   },
   activityPreview: {
     color: darkDesign.colors.textMuted,
     ...darkDesign.typography.caption,
+  },
+  activityPreviewSpoiler: {
+    color: darkDesign.colors.accentSoft,
+    ...darkDesign.typography.caption,
+    fontWeight: '600',
   },
   inlineLink: {
     color: darkDesign.colors.accentSoft,

@@ -9,8 +9,8 @@ export const uiCopy = {
     favorites: 'Favoritas',
     recentActivity: 'Actividad reciente',
     socialActivity: 'Actividad social',
-    visualRadar: 'Radar visual',
-    detailedActivity: 'Actividad detallada',
+    visualRadar: 'Actividad de amigos',
+    detailedActivity: 'Actividad',
     community: 'Comunidad',
   },
   actions: {

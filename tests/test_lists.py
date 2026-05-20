@@ -263,16 +263,16 @@ async def test_accepted_collaborator_can_edit_metadata_and_items(async_client: A
 
 
 @pytest.mark.asyncio
-async def test_owner_can_remove_collaborator(async_client: AsyncClient):
-    owner = await _register_and_login(async_client, "remove-owner@example.com", "removeowner")
-    collaborator = await _register_and_login(async_client, "remove-collab@example.com", "removecollab")
+async def test_owner_of_shared_list_cannot_delete_but_can_leave_and_transfer_ownership(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "leave-owner@example.com", "leaveowner")
+    collaborator = await _register_and_login(async_client, "leave-collab@example.com", "leavecollab")
 
     await async_client.post("/users/2/follow", headers=_headers(owner))
     await async_client.post("/users/1/follow", headers=_headers(collaborator))
 
     create_response = await async_client.post(
         "/lists",
-        json={"name": "Con equipo", "description": None, "is_public": False},
+        json={"name": "Compartida", "description": None, "is_public": False},
         headers=_headers(owner),
     )
     list_id = create_response.json()["id"]
@@ -287,14 +287,58 @@ async def test_owner_can_remove_collaborator(async_client: AsyncClient):
         headers=_headers(collaborator),
     )
 
-    remove_response = await async_client.delete(
-        f"/lists/{list_id}/collaborators/2",
+    owner_detail_before = await async_client.get(f"/lists/{list_id}", headers=_headers(owner))
+    delete_response = await async_client.delete(f"/lists/{list_id}", headers=_headers(owner))
+    leave_response = await async_client.post(f"/lists/{list_id}/leave", headers=_headers(owner))
+    owner_lists_after = await async_client.get("/lists/me", headers=_headers(owner))
+    collaborator_detail_after = await async_client.get(f"/lists/{list_id}", headers=_headers(collaborator))
+
+    assert owner_detail_before.status_code == 200
+    assert owner_detail_before.json()["permissions"]["can_delete"] is False
+    assert delete_response.status_code == 404
+    assert leave_response.status_code == 200
+    assert owner_lists_after.json()["owned_lists"] == []
+    assert owner_lists_after.json()["shared_lists"] == []
+    assert collaborator_detail_after.status_code == 200
+    assert collaborator_detail_after.json()["owner"]["username"] == "leavecollab"
+    assert collaborator_detail_after.json()["relationship"] == "owner"
+
+
+@pytest.mark.asyncio
+async def test_collaborator_can_leave_shared_list_without_deleting_it(async_client: AsyncClient):
+    owner = await _register_and_login(async_client, "leave2-owner@example.com", "leave2owner")
+    collaborator = await _register_and_login(async_client, "leave2-collab@example.com", "leave2collab")
+
+    await async_client.post("/users/2/follow", headers=_headers(owner))
+    await async_client.post("/users/1/follow", headers=_headers(collaborator))
+
+    create_response = await async_client.post(
+        "/lists",
+        json={"name": "Club", "description": None, "is_public": False},
         headers=_headers(owner),
     )
-    collaborator_detail = await async_client.get(f"/lists/{list_id}", headers=_headers(collaborator))
+    list_id = create_response.json()["id"]
 
-    assert remove_response.status_code == 200
-    assert collaborator_detail.status_code == 404
+    invite_response = await async_client.post(
+        f"/lists/{list_id}/invites",
+        json={"invitee_user_id": 2},
+        headers=_headers(owner),
+    )
+    await async_client.post(
+        f"/lists/invites/{invite_response.json()['id']}/accept",
+        headers=_headers(collaborator),
+    )
+
+    leave_response = await async_client.post(f"/lists/{list_id}/leave", headers=_headers(collaborator))
+    collaborator_lists_after = await async_client.get("/lists/me", headers=_headers(collaborator))
+    collaborator_detail_after = await async_client.get(f"/lists/{list_id}", headers=_headers(collaborator))
+    owner_detail_after = await async_client.get(f"/lists/{list_id}", headers=_headers(owner))
+
+    assert leave_response.status_code == 200
+    assert collaborator_lists_after.json()["shared_lists"] == []
+    assert collaborator_detail_after.status_code == 404
+    assert owner_detail_after.status_code == 200
+    assert owner_detail_after.json()["collaborators"] == []
 
 
 @pytest.mark.asyncio
@@ -360,3 +404,32 @@ async def test_public_list_creation_appears_in_feed_for_followers(async_client: 
     assert items[0]["list_name"] == "Publica"
     assert items[0]["items_count"] == 0
     assert items[0]["is_public"] is True
+
+
+@pytest.mark.asyncio
+async def test_list_created_activity_is_hidden_after_list_becomes_private(async_client: AsyncClient):
+    follower = await _register_and_login(async_client, "lists-private-feed-follower@example.com", "listprivatefeedfollower")
+    owner = await _register_and_login(async_client, "lists-private-feed-owner@example.com", "listprivatefeedowner")
+
+    await async_client.post("/users/2/follow", headers=_headers(follower))
+    create_response = await async_client.post(
+        "/lists",
+        json={"name": "Temporalmente publica", "description": "Se ocultara.", "is_public": True},
+        headers=_headers(owner),
+    )
+    list_id = create_response.json()["id"]
+
+    visible_feed = await async_client.get("/feed", headers=_headers(follower))
+    update_response = await async_client.put(
+        f"/lists/{list_id}",
+        json={"name": "Temporalmente publica", "description": "Se ocultara.", "is_public": False},
+        headers=_headers(owner),
+    )
+    hidden_feed = await async_client.get("/feed", headers=_headers(follower))
+
+    assert visible_feed.status_code == 200
+    assert len(visible_feed.json()["items"]) == 1
+    assert update_response.status_code == 200
+    assert update_response.json()["is_public"] is False
+    assert hidden_feed.status_code == 200
+    assert hidden_feed.json()["items"] == []

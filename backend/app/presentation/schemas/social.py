@@ -155,6 +155,9 @@ class VisualFeedParticipantResponse(BaseModel):
     activity_type: Literal["review", "watch_log"]
     rating: int | None
     created_at: datetime
+    review_id: int | None = None
+    review_body_preview: str | None = None
+    review_contains_spoilers: bool | None = None
 
 
 class VisualFeedItemResponse(BaseModel):

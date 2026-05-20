@@ -23,6 +23,7 @@ from app.domain.usecases.lists.add_list_item import AddListItemUseCase
 from app.domain.usecases.lists.create_list import CreateListUseCase
 from app.domain.usecases.lists.delete_list import DeleteListUseCase
 from app.domain.usecases.lists.get_list_detail import GetListDetailUseCase
+from app.domain.usecases.lists.leave_list import LeaveListUseCase
 from app.domain.usecases.lists.list_my_lists import ListMyListsUseCase
 from app.domain.usecases.lists.list_public_lists import ListPublicListsUseCase
 from app.domain.usecases.lists.remove_list_item import RemoveListItemUseCase
@@ -225,6 +226,16 @@ async def delete_list(
     return MessageResponse(message="List deleted")
 
 
+@router.post("/lists/{list_id}/leave", response_model=MessageResponse)
+async def leave_list(
+    list_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    await LeaveListUseCase(ListRepository(session)).execute(list_id, current_user.id)
+    return MessageResponse(message="List left")
+
+
 @router.get("/users/{username}/lists", response_model=list[ListSummaryResponse])
 async def list_public_lists(
     username: str,
@@ -341,19 +352,6 @@ async def deny_list_invitation(
     if not denied:
         raise HTTPException(status_code=404, detail="Invitation not found")
     return MessageResponse(message="Invitation denied")
-
-
-@router.delete("/lists/{list_id}/collaborators/{collaborator_user_id}", response_model=MessageResponse)
-async def remove_list_collaborator(
-    list_id: int,
-    collaborator_user_id: int,
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-) -> MessageResponse:
-    removed = await ListRepository(session).remove_collaborator(list_id, current_user.id, collaborator_user_id)
-    if not removed:
-        raise HTTPException(status_code=404, detail="Collaborator not found")
-    return MessageResponse(message="Collaborator removed")
 
 
 @router.get("/lists/{list_id}/invitees/search", response_model=list[ListUserResponse])

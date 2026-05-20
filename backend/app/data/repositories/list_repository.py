@@ -87,11 +87,58 @@ class ListRepository(IListRepository):
         return await self._get_summary_by_id(list_id, relationship=relationship)
 
     async def delete(self, list_id: int, user_id: int) -> bool:
+        if not await self.is_owner(list_id, user_id):
+            return False
+        if await self._count_collaborators(list_id) > 0:
+            return False
+
         result = await self._session.execute(
             delete(ListModel).where(ListModel.id == list_id, ListModel.user_id == user_id)
         )
         await self._session.commit()
         return bool(result.rowcount)
+
+    async def leave(self, list_id: int, user_id: int) -> bool:
+        list_model = await self._session.scalar(select(ListModel).where(ListModel.id == list_id))
+        if list_model is None:
+            return False
+
+        if list_model.user_id == user_id:
+            successor = await self._session.scalar(
+                select(ListCollaboratorModel)
+                .where(ListCollaboratorModel.list_id == list_id)
+                .order_by(ListCollaboratorModel.id.asc())
+            )
+            if successor is None:
+                await self._session.execute(delete(ListModel).where(ListModel.id == list_id))
+                await self._session.commit()
+                return True
+
+            list_model.user_id = successor.user_id
+            list_model.updated_at = _utcnow()
+            await self._session.delete(successor)
+            await self._session.execute(
+                delete(ListInvitationModel).where(
+                    ListInvitationModel.list_id == list_id,
+                    ListInvitationModel.status == "pending",
+                )
+            )
+            await self._session.commit()
+            return True
+
+        membership = await self._session.scalar(
+            select(ListCollaboratorModel).where(
+                ListCollaboratorModel.list_id == list_id,
+                ListCollaboratorModel.user_id == user_id,
+            )
+        )
+        if membership is None:
+            return False
+
+        await self._session.delete(membership)
+        await self._touch_list(list_id)
+        await self._session.commit()
+        return True
 
     async def add_item(
         self,
@@ -296,19 +343,6 @@ class ListRepository(IListRepository):
         await self._session.commit()
         return True
 
-    async def remove_collaborator(self, list_id: int, owner_id: int, collaborator_user_id: int) -> bool:
-        if not await self.is_owner(list_id, owner_id):
-            return False
-
-        result = await self._session.execute(
-            delete(ListCollaboratorModel).where(
-                ListCollaboratorModel.list_id == list_id,
-                ListCollaboratorModel.user_id == collaborator_user_id,
-            )
-        )
-        await self._session.commit()
-        return bool(result.rowcount)
-
     async def is_owner(self, list_id: int, user_id: int) -> bool:
         result = await self._session.execute(
             select(ListModel.id).where(ListModel.id == list_id, ListModel.user_id == user_id)
@@ -407,9 +441,15 @@ class ListRepository(IListRepository):
         relationship = "viewer"
         permissions = ListPermissions(can_edit=False, can_delete=False, can_manage_collaborators=False)
 
+        collaborators_count = await self._count_collaborators(list_id)
+
         if list_model.user_id == viewer_id:
             relationship = "owner"
-            permissions = ListPermissions(can_edit=True, can_delete=True, can_manage_collaborators=True)
+            permissions = ListPermissions(
+                can_edit=True,
+                can_delete=collaborators_count == 0,
+                can_manage_collaborators=True,
+            )
         elif await self.is_collaborator(list_id, viewer_id):
             relationship = "collaborator"
             permissions = ListPermissions(can_edit=True, can_delete=False, can_manage_collaborators=False)
@@ -456,6 +496,14 @@ class ListRepository(IListRepository):
         await self._session.execute(
             update(ListModel).where(ListModel.id == list_id).values(updated_at=_utcnow())
         )
+
+    async def _count_collaborators(self, list_id: int) -> int:
+        count = await self._session.scalar(
+            select(func.count())
+            .select_from(ListCollaboratorModel)
+            .where(ListCollaboratorModel.list_id == list_id)
+        )
+        return int(count or 0)
 
     def _items_count_subquery(self):
         return (

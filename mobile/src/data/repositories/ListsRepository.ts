@@ -35,6 +35,10 @@ export async function deleteList(listId: number): Promise<void> {
   await api.delete(`/lists/${listId}`);
 }
 
+export async function leaveList(listId: number): Promise<void> {
+  await api.post(`/lists/${listId}/leave`);
+}
+
 export async function getUserPublicLists(username: string): Promise<ListSummary[]> {
   const response = await api.get<ListSummary[]>(`/users/${encodeURIComponent(username)}/lists`);
   return response.data.map((item) => normalizeListSummary(item, 'viewer'));
@@ -71,10 +75,6 @@ export async function acceptListInvitation(invitationId: number): Promise<void> 
 
 export async function denyListInvitation(invitationId: number): Promise<void> {
   await api.post(`/lists/invites/${invitationId}/deny`);
-}
-
-export async function removeListCollaborator(listId: number, collaboratorUserId: number): Promise<void> {
-  await api.delete(`/lists/${listId}/collaborators/${collaboratorUserId}`);
 }
 
 export async function searchInvitableUsers(listId: number, query: string): Promise<ListOwner[]> {

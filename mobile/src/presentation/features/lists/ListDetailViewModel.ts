@@ -5,7 +5,7 @@ import {
   createListInvitation,
   deleteList,
   getListDetail,
-  removeListCollaborator,
+  leaveList,
   removeListItem,
   reorderListItems,
   searchInvitableUsers,
@@ -39,6 +39,7 @@ export function useListDetailViewModel(listId: number | null) {
   const canEdit = detail?.permissions.can_edit ?? false;
   const canDelete = detail?.permissions.can_delete ?? false;
   const canManageCollaborators = detail?.permissions.can_manage_collaborators ?? false;
+  const canLeave = detail?.relationship === 'owner' || detail?.relationship === 'collaborator';
 
   const load = useCallback(() => {
     if (!listId) {
@@ -227,6 +228,28 @@ export function useListDetailViewModel(listId: number | null) {
     }
   }
 
+  async function handleLeaveList() {
+    if (!listId || !canLeave || deleting || mutationLock.current) {
+      return;
+    }
+
+    mutationLock.current = true;
+    setDeleting(true);
+    setError(null);
+    try {
+      await leaveList(listId);
+      router.back();
+    } catch (error) {
+      if (redirectToLoginIfUnauthorized(error)) {
+        return;
+      }
+      setError(getApiErrorMessage(error, 'No se pudo salir de la lista.'));
+    } finally {
+      mutationLock.current = false;
+      setDeleting(false);
+    }
+  }
+
   async function handleAddItem(item: MediaItem) {
     if (!listId || !canEdit || mutationLock.current) {
       return;
@@ -323,32 +346,6 @@ export function useListDetailViewModel(listId: number | null) {
     }
   }
 
-  async function removeCollaborator(user: ListOwner) {
-    if (!listId || !canManageCollaborators || saving || mutationLock.current) {
-      return;
-    }
-
-    mutationLock.current = true;
-    setSaving(true);
-    setError(null);
-    try {
-      await removeListCollaborator(listId, user.id);
-      setDetail((current) =>
-        current
-          ? { ...current, collaborators: current.collaborators.filter((item) => item.id !== user.id) }
-          : current,
-      );
-    } catch (error) {
-      if (redirectToLoginIfUnauthorized(error)) {
-        return;
-      }
-      setError(getApiErrorMessage(error, 'No se pudo quitar el colaborador.'));
-    } finally {
-      mutationLock.current = false;
-      setSaving(false);
-    }
-  }
-
   function openOwnerProfile() {
     if (!detail) {
       return;
@@ -377,17 +374,18 @@ export function useListDetailViewModel(listId: number | null) {
     inviteError,
     canEdit,
     canDelete,
+    canLeave,
     canManageCollaborators,
     setQuery,
     setInviteQuery,
     updateForm,
     saveMetadata,
     handleDeleteList,
+    handleLeaveList,
     handleAddItem,
     handleRemoveItem,
     swapItems,
     inviteCollaborator,
-    removeCollaborator,
     openOwnerProfile,
     openCollaboratorProfile,
   };

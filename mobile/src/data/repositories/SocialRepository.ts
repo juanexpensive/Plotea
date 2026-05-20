@@ -80,9 +80,12 @@ export async function unfollowUser(userId: number): Promise<void> {
   await api.delete(`/users/${userId}/follow`);
 }
 
-export async function getSocialFeed(cursor?: string | null): Promise<FeedPage> {
+export async function getSocialFeed(cursor?: string | null, limit?: number): Promise<FeedPage> {
   const response = await api.get<{ items: ActivityItem[]; next_cursor: string | null }>('/feed', {
-    params: cursor ? { cursor } : undefined,
+    params: {
+      ...(cursor ? { cursor } : {}),
+      ...(limit ? { limit } : {}),
+    },
   });
   return response.data;
 }

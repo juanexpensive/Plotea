@@ -42,6 +42,9 @@ class IListRepository(ABC):
     async def delete(self, list_id: int, user_id: int) -> bool: ...
 
     @abstractmethod
+    async def leave(self, list_id: int, user_id: int) -> bool: ...
+
+    @abstractmethod
     async def add_item(
         self,
         list_id: int,
@@ -83,6 +86,3 @@ class IListRepository(ABC):
 
     @abstractmethod
     async def deny_invitation(self, invitation_id: int, invitee_user_id: int) -> bool: ...
-
-    @abstractmethod
-    async def remove_collaborator(self, list_id: int, owner_id: int, collaborator_user_id: int) -> bool: ...

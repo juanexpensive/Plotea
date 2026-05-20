@@ -1061,3 +1061,53 @@ async def test_visual_feed_groups_recent_activity_by_media(async_client: AsyncCl
     assert items[1]["media"]["tmdb_id"] == 550
     assert items[1]["recent_activity_count"] == 2
     assert {participant["username"] for participant in items[1]["participants"]} == {"visualone", "visualtwo"}
+    review_participant = next(
+        participant for participant in items[1]["participants"] if participant["activity_type"] == "review"
+    )
+    assert review_participant["review_id"] is not None
+    assert review_participant["review_body_preview"] == "Muy buena pelicula"
+    assert review_participant["review_contains_spoilers"] is False
+
+
+@pytest.mark.asyncio
+async def test_visual_feed_review_participant_uses_truncated_preview_and_spoiler_flag(async_client: AsyncClient):
+    viewer = await _register_and_login(async_client, "visual-spoiler-viewer@example.com", "visualspoilerviewer")
+    actor = await _register_and_login(async_client, "visual-spoiler-actor@example.com", "visualspoileractor")
+
+    await async_client.post("/users/2/follow", headers=_headers(viewer))
+    await async_client.post(
+        "/reviews",
+        json={
+            "tmdb_id": 777,
+            "media_type": "movie",
+            "rating": 8,
+            "body": "x" * 200,
+            "contains_spoilers": True,
+        },
+        headers=_headers(actor),
+    )
+
+    fake_tmdb = FakeTmdbClient(
+        payloads={
+            ("movie", 777): {
+                "id": 777,
+                "title": "Spoiler Film",
+                "poster_path": "/spoiler.jpg",
+                "vote_average": 7.1,
+                "release_date": "2024-02-01",
+                "runtime": 101,
+                "genres": [{"name": "Thriller"}],
+            }
+        }
+    )
+    app.dependency_overrides[get_tmdb_client] = lambda: fake_tmdb
+
+    response = await async_client.get("/feed/visual?limit=1", headers=_headers(viewer))
+
+    app.dependency_overrides.pop(get_tmdb_client, None)
+    assert response.status_code == 200
+    participant = response.json()[0]["participants"][0]
+    assert participant["activity_type"] == "review"
+    assert participant["review_contains_spoilers"] is True
+    assert participant["review_body_preview"] == f"{'x' * 157}..."
+    assert len(participant["review_body_preview"]) == 160
