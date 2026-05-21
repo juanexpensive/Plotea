@@ -53,14 +53,17 @@ export default function MyListsScreen() {
     }
   }
 
+  if (loading) {
+    return (
+      <View style={styles.screenCentered}>
+        <PlotStarLoader size="small" label="Cargando..." />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {loading ? (
-          <View style={styles.loadingOverlay}>
-            <PlotStarLoader size="small" />
-          </View>
-        ) : null}
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         {pendingInvitations.length > 0 ? (
@@ -262,6 +265,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: design.canvasNight,
   },
+  screenCentered: {
+    flex: 1,
+    backgroundColor: design.canvasNight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scroll: {
     flex: 1,
     backgroundColor: design.canvasNight,
@@ -272,12 +281,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 1,
-  },
-  loadingOverlay: {
-    flex: 1,
-    minHeight: 320,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   errorText: {
     color: design.danger,

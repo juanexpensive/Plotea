@@ -11,8 +11,12 @@ class Settings(BaseSettings):
     secret_key: str
     tmdb_api_key: str = ""
     expo_push_api_url: str = "https://exp.host/--/api/v2/push/send"
-    resend_api_key: str = ""
-    resend_from_email: str = "onboarding@resend.dev"
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    smtp_use_starttls: bool = True
     password_reset_base_url: str = ""
     password_reset_app_url: str = "plotskip://reset-password"
     uploads_dir: str = ""
@@ -26,6 +30,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env",
         env_file_encoding="utf-8",
+        extra="ignore",
     )
 
 

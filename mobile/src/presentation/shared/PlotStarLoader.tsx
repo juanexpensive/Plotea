@@ -75,6 +75,7 @@ export function PlotStarLoader({
 
   const imageWidth = boxSize * 2.3;
   const imageHeight = imageWidth / STAR_ASSET_RATIO;
+  const displayLabel = label ? 'Cargando...' : null;
 
   return (
     <View style={[styles.wrapper, style]}>
@@ -103,7 +104,7 @@ export function PlotStarLoader({
           />
         </Animated.View>
       </View>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {displayLabel ? <Text style={styles.label}>{displayLabel}</Text> : null}
     </View>
   );
 }
