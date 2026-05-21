@@ -38,7 +38,7 @@ export default function LoginScreen() {
             selectionColor={darkDesign.colors.accent}
           />
 
-          <Text style={styles.label}>Contrasena</Text>
+          <Text style={styles.label}>Contraseña</Text>
           <TextInput
             value={password}
             onChangeText={setPassword}
@@ -64,7 +64,7 @@ export default function LoginScreen() {
           </Pressable>
 
           <Pressable style={({ pressed }) => [styles.linkRow, pressed ? styles.linkPressed : null]} onPress={goToForgotPassword}>
-            <Text style={styles.linkText}>He olvidado mi contrasena</Text>
+            <Text style={styles.linkText}>He olvidado mi contraseña</Text>
           </Pressable>
 
           <View style={styles.divider} />

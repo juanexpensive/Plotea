@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { hasValidSession } from '../../src/data/repositories/AuthRepository';
 import { useNotificationsRuntime } from '../../src/presentation/features/notifications/NotificationsRuntime';
 import { RandomWatchlistPickModal } from '../../src/presentation/features/profile/RandomWatchlistPickModal';
@@ -9,6 +10,7 @@ import { PlotStarLoader } from '../../src/presentation/shared/PlotStarLoader';
 import { darkDesign } from '../../src/presentation/theme/darkDesign';
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
   const [ready, setReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isRandomPickVisible, setIsRandomPickVisible] = useState(false);
@@ -55,17 +57,19 @@ export default function TabsLayout() {
           tabBarStyle: {
             backgroundColor: darkDesign.colors.canvasRaised,
             borderTopColor: darkDesign.colors.border,
-            height: 72,
+            height: 58 + insets.bottom,
+            paddingBottom: Math.max(insets.bottom, 10),
+            paddingTop: 6,
           },
           tabBarActiveTintColor: darkDesign.colors.accent,
           tabBarInactiveTintColor: darkDesign.colors.textFaint,
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: '600',
-            marginBottom: 6,
+            marginBottom: 0,
           },
           tabBarIconStyle: {
-            marginTop: 6,
+            marginTop: 0,
           },
         }}
       >

@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -242,14 +241,6 @@ export default function ProfileScreen() {
               onOpenFollowers={() => openNetwork('followers')}
               onOpenFollowing={() => openNetwork('following')}
             />
-
-            <Pressable style={styles.loaderPreviewButton} onPress={() => router.push('/loader-preview')}>
-              <Text style={styles.loaderPreviewButtonText}>Ver preview del loader</Text>
-            </Pressable>
-            <Pressable style={styles.loaderPreviewButton} onPress={() => router.push('/notifications-lab')}>
-              <Text style={styles.loaderPreviewButtonText}>Abrir laboratorio push</Text>
-            </Pressable>
-
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
           </View>
@@ -791,20 +782,6 @@ const styles = StyleSheet.create({
     color: darkDesign.colors.textSoft,
     textAlign: 'center',
     paddingTop: darkDesign.spacing.md,
-  },
-  loaderPreviewButton: {
-    minHeight: 42,
-    borderRadius: darkDesign.radii.pill,
-    borderWidth: 1,
-    borderColor: darkDesign.colors.borderStrong,
-    paddingHorizontal: darkDesign.spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: darkDesign.colors.canvasRaised,
-  },
-  loaderPreviewButtonText: {
-    color: darkDesign.colors.accentSoft,
-    ...darkDesign.typography.button,
   },
   actionMenuOverlay: {
     flex: 1,

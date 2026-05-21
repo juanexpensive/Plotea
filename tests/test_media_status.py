@@ -30,56 +30,67 @@ async def test_get_media_status_defaults_to_none(async_client: AsyncClient):
     assert response.json() == {
         "tmdb_id": 550,
         "media_type": "movie",
-        "status": None,
+        "watched": False,
+        "watchlist": False,
     }
 
 
-async def test_set_and_update_media_status(async_client: AsyncClient):
+async def test_set_media_statuses_can_coexist(async_client: AsyncClient):
     tokens = await _register_and_login(async_client)
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
 
     watched_response = await async_client.put(
         "/media/movie/550/status",
-        json={"status": "watched"},
+        json={"status": "watched", "active": True},
         headers=headers,
     )
     assert watched_response.status_code == 200
-    assert watched_response.json()["status"] == "watched"
+    assert watched_response.json()["watched"] is True
+    assert watched_response.json()["watchlist"] is False
 
     watchlist_response = await async_client.put(
         "/media/movie/550/status",
-        json={"status": "watchlist"},
+        json={"status": "watchlist", "active": True},
         headers=headers,
     )
     assert watchlist_response.status_code == 200
-    assert watchlist_response.json()["status"] == "watchlist"
+    assert watchlist_response.json()["watched"] is True
+    assert watchlist_response.json()["watchlist"] is True
 
     get_response = await async_client.get("/media/movie/550/status", headers=headers)
     assert get_response.status_code == 200
-    assert get_response.json()["status"] == "watchlist"
+    assert get_response.json()["watched"] is True
+    assert get_response.json()["watchlist"] is True
 
 
-async def test_clear_media_status(async_client: AsyncClient):
+async def test_clear_only_one_media_status(async_client: AsyncClient):
     tokens = await _register_and_login(async_client)
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
 
     await async_client.put(
         "/media/tv/1399/status",
-        json={"status": "watched"},
+        json={"status": "watched", "active": True},
+        headers=headers,
+    )
+    await async_client.put(
+        "/media/tv/1399/status",
+        json={"status": "watchlist", "active": True},
         headers=headers,
     )
     clear_response = await async_client.put(
         "/media/tv/1399/status",
-        json={"status": None},
+        json={"status": "watchlist", "active": False},
         headers=headers,
     )
 
     assert clear_response.status_code == 200
-    assert clear_response.json()["status"] is None
+    assert clear_response.json()["watched"] is True
+    assert clear_response.json()["watchlist"] is False
 
     get_response = await async_client.get("/media/tv/1399/status", headers=headers)
     assert get_response.status_code == 200
-    assert get_response.json()["status"] is None
+    assert get_response.json()["watched"] is True
+    assert get_response.json()["watchlist"] is False
 
 
 async def test_media_status_requires_auth(async_client: AsyncClient):
@@ -93,7 +104,7 @@ async def test_media_status_rejects_invalid_media_type(async_client: AsyncClient
 
     response = await async_client.put(
         "/media/book/550/status",
-        json={"status": "watched"},
+        json={"status": "watched", "active": True},
         headers={"Authorization": f"Bearer {tokens['access_token']}"},
     )
 
@@ -105,12 +116,16 @@ async def test_list_media_statuses_grouped_by_status(async_client: AsyncClient):
     headers = {"Authorization": f"Bearer {tokens['access_token']}"}
 
     await async_client.put("/media/movie/550/status", json={"status": "watched"}, headers=headers)
-    await async_client.put("/media/tv/1399/status", json={"status": "watchlist"}, headers=headers)
+    await async_client.put("/media/movie/550/status", json={"status": "watchlist", "active": True}, headers=headers)
+    await async_client.put("/media/tv/1399/status", json={"status": "watchlist", "active": True}, headers=headers)
 
     response = await async_client.get("/media/statuses/me", headers=headers)
 
     assert response.status_code == 200
     assert response.json() == {
         "watched": [{"tmdb_id": 550, "media_type": "movie", "status": "watched"}],
-        "watchlist": [{"tmdb_id": 1399, "media_type": "tv", "status": "watchlist"}],
+        "watchlist": [
+            {"tmdb_id": 1399, "media_type": "tv", "status": "watchlist"},
+            {"tmdb_id": 550, "media_type": "movie", "status": "watchlist"},
+        ],
     }

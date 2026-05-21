@@ -20,7 +20,6 @@ import {
   buildDetailMetaLine,
   formatTmdbScore,
   formatUserScore,
-  getDisplayStatusLabel,
 } from '../../shared/mediaPresentation';
 import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { uiCopy } from '../../shared/uiCopy';
@@ -137,10 +136,17 @@ export default function DetailScreen() {
               <Text style={styles.title}>{detail.title}</Text>
               <Text style={styles.metaLine}>{metaLine}</Text>
               <View style={styles.pillRow}>
-                {status ? (
+                {status.watched ? (
                   <View style={[styles.infoPill, styles.infoPillActive]}>
                     <Text style={[styles.infoPillText, styles.infoPillTextActive]}>
-                      {getDisplayStatusLabel(status)}
+                      Vista
+                    </Text>
+                  </View>
+                ) : null}
+                {status.watchlist ? (
+                  <View style={[styles.infoPill, styles.infoPillActive]}>
+                    <Text style={[styles.infoPillText, styles.infoPillTextActive]}>
+                      {uiCopy.labels.pending}
                     </Text>
                   </View>
                 ) : null}
@@ -273,7 +279,7 @@ function ActionRail({
   onToggleWatchlist,
   onToggleReview,
 }: {
-  status: 'watched' | 'watchlist' | null;
+  status: { watched: boolean; watchlist: boolean };
   hasReview: boolean;
   showReviewForm: boolean;
   savingStatus: boolean;
@@ -285,16 +291,16 @@ function ActionRail({
   return (
     <View style={styles.actionRail}>
       <ActionIconButton
-        icon={status === 'watched' ? 'eye' : 'eye-outline'}
+        icon={status.watched ? 'eye' : 'eye-outline'}
         label="Vista"
-        active={status === 'watched'}
+        active={status.watched}
         disabled={savingStatus}
         onPress={onToggleWatched}
       />
       <ActionIconButton
-        icon={status === 'watchlist' ? 'clock' : 'clock-outline'}
+        icon={status.watchlist ? 'clock' : 'clock-outline'}
         label={uiCopy.labels.pending}
-        active={status === 'watchlist'}
+        active={status.watchlist}
         disabled={savingStatus}
         onPress={onToggleWatchlist}
       />

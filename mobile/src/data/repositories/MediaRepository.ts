@@ -5,7 +5,6 @@ import {
   MediaDetail,
   MediaStatus,
   MediaStatusLists,
-  PersonalMediaStatus,
 } from '../../domain/entities/media';
 
 export async function getHomeFeed(): Promise<HomeFeed> {
@@ -38,8 +37,9 @@ export async function getMyMediaStatuses(): Promise<MediaStatusLists> {
 export async function setMediaStatus(
   mediaType: string,
   tmdbId: number,
-  status: PersonalMediaStatus,
+  status: 'watched' | 'watchlist',
+  active: boolean,
 ): Promise<MediaStatus> {
-  const response = await api.put<MediaStatus>(`/media/${mediaType}/${tmdbId}/status`, { status });
+  const response = await api.put<MediaStatus>(`/media/${mediaType}/${tmdbId}/status`, { status, active });
   return response.data;
 }

@@ -144,7 +144,8 @@ async def get_media_status(
     return MediaStatusResponse(
         tmdb_id=tmdb_id,
         media_type=media_type,
-        status=status.status if status else None,
+        watched=status.watched,
+        watchlist=status.watchlist,
     )
 
 
@@ -162,9 +163,11 @@ async def set_media_status(
         tmdb_id,
         media_type,
         data.status,
+        data.active,
     )
     return MediaStatusResponse(
         tmdb_id=tmdb_id,
         media_type=media_type,
-        status=status.status if status else None,
+        watched=status.watched,
+        watchlist=status.watchlist,
     )

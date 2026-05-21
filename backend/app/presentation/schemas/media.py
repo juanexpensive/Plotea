@@ -31,13 +31,15 @@ class HomeFeedResponse(BaseModel):
 
 
 class MediaStatusRequest(BaseModel):
-    status: Literal["watched", "watchlist"] | None
+    status: Literal["watched", "watchlist"]
+    active: bool = True
 
 
 class MediaStatusResponse(BaseModel):
     tmdb_id: int
     media_type: Literal["movie", "tv"]
-    status: Literal["watched", "watchlist"] | None
+    watched: bool
+    watchlist: bool
 
 
 class MediaStatusItemResponse(BaseModel):

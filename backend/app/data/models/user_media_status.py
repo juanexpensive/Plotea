@@ -15,7 +15,7 @@ class UserMediaStatus(Base):
     __table_args__ = (
         CheckConstraint("media_type IN ('movie', 'tv')", name="ck_user_media_status_media_type"),
         CheckConstraint("status IN ('watched', 'watchlist')", name="ck_user_media_status_status"),
-        UniqueConstraint("user_id", "tmdb_id", "media_type", name="uq_user_media_status_user_media"),
+        UniqueConstraint("user_id", "tmdb_id", "media_type", "status", name="uq_user_media_status_user_media_status"),
     )
 
     id: Mapped[int] = mapped_column(Integer().with_variant(BigInteger(), "postgresql"), primary_key=True, autoincrement=True)

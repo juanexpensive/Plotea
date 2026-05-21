@@ -20,7 +20,8 @@ export type PersonalMediaStatus = 'watched' | 'watchlist' | null;
 export interface MediaStatus {
   tmdb_id: number;
   media_type: 'movie' | 'tv';
-  status: PersonalMediaStatus;
+  watched: boolean;
+  watchlist: boolean;
 }
 
 export interface SavedMediaStatus {

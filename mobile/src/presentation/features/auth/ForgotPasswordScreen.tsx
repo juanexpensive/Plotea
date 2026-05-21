@@ -12,7 +12,7 @@ export default function ForgotPasswordScreen() {
     <AuthFormLayout
       eyebrow="Recuperacion"
       title="Recupera el acceso a tu cuenta."
-      subtitle="Introduce tu email y te enviaremos un enlace para restablecer la contrasena."
+      subtitle="Introduce tu email y te enviaremos un enlace para restablecer la contraseña."
     >
       <Text style={styles.label}>Email</Text>
       <TextInput

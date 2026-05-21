@@ -1,0 +1,29 @@
+# Local caches and generated bundles
+.expo/
+dist/
+web-build/
+.eas-inspect/
+android/
+
+# Dependencies
+node_modules/
+
+# Local-only environment files
+.env.local
+.env.*.local
+
+# Debug and temporary files
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+*.tsbuildinfo
+.metro-health-check*
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+
+# Native leftovers not needed in remote builds
+.kotlin/
+*.orig.*

@@ -24,7 +24,7 @@ export default function RegisterScreen() {
     <AuthFormLayout
       eyebrow="Crear cuenta"
       title="Empieza a guardar lo que ves y lo que no quieres perder de vista."
-      subtitle="Crea tu perfil para llevar tus listas, resenas y visionados en un solo sitio."
+      subtitle="Crea tu perfil para llevar tus listas y reseñas."
     >
       <Text style={styles.label}>Email</Text>
       <TextInput
@@ -49,7 +49,7 @@ export default function RegisterScreen() {
         selectionColor={darkDesign.colors.accent}
       />
 
-      <Text style={styles.label}>Contrasena</Text>
+      <Text style={styles.label}>Contraseña</Text>
       <TextInput
         value={password}
         onChangeText={setPassword}
@@ -60,7 +60,7 @@ export default function RegisterScreen() {
         selectionColor={darkDesign.colors.accent}
       />
 
-      <Text style={styles.label}>Repite la contrasena</Text>
+      <Text style={styles.label}>Repite la contraseña</Text>
       <TextInput
         value={confirmPassword}
         onChangeText={setConfirmPassword}

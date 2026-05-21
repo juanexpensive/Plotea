@@ -56,7 +56,8 @@ async def test_create_review_marks_media_as_watched(async_client: AsyncClient):
 
     status_response = await async_client.get("/media/movie/550/status", headers=headers)
     assert status_response.status_code == 200
-    assert status_response.json()["status"] == "watched"
+    assert status_response.json()["watched"] is True
+    assert status_response.json()["watchlist"] is False
 
 
 @pytest.mark.asyncio

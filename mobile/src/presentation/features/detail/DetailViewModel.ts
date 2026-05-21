@@ -18,7 +18,7 @@ import { createWatchLog } from '../../../data/repositories/WatchLogRepository';
 import {
   Comment,
   MediaDetail,
-  PersonalMediaStatus,
+  MediaStatus,
   Review,
   ReviewRating,
 } from '../../../domain/entities/media';
@@ -48,6 +48,13 @@ const DEFAULT_THREAD_STATE: ReviewThreadState = {
   replyParentId: null,
   isSubmitting: false,
   deletingCommentId: null,
+};
+
+const EMPTY_MEDIA_STATUS: MediaStatus = {
+  tmdb_id: 0,
+  media_type: 'movie',
+  watched: false,
+  watchlist: false,
 };
 
 function getTodayIsoDate() {
@@ -89,7 +96,11 @@ function appendCommentToThread(comments: Comment[], newComment: Comment): Commen
 
 export function useDetailViewModel(mediaType: string, tmdbId: number) {
   const [detail, setDetail] = useState<MediaDetail | null>(null);
-  const [status, setStatus] = useState<PersonalMediaStatus>(null);
+  const [status, setStatus] = useState<MediaStatus>({
+    ...EMPTY_MEDIA_STATUS,
+    tmdb_id: tmdbId,
+    media_type: mediaType === 'tv' ? 'tv' : 'movie',
+  });
   const [reviews, setReviews] = useState<Review[]>([]);
   const [myReview, setMyReview] = useState<Review | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -143,7 +154,7 @@ export function useDetailViewModel(mediaType: string, tmdbId: number) {
         }
 
         setDetail(detailResult.value);
-        setStatus(statusResult.value.status);
+        setStatus(statusResult.value);
         setReviews(sortReviewsByCreatedAt(reviewsResult.value));
         setMyReview(myReviewResult.value);
         setCurrentUserId(currentUserResult.value.id);
@@ -189,13 +200,13 @@ export function useDetailViewModel(mediaType: string, tmdbId: number) {
     setMyReview((current) => (current && current.id === reviewId ? updater(current) : current));
   }
 
-  async function handleStatusPress(nextStatus: Exclude<PersonalMediaStatus, null>) {
-    const statusToSave = status === nextStatus ? null : nextStatus;
+  async function handleStatusPress(nextStatus: 'watched' | 'watchlist') {
+    const isActive = nextStatus === 'watched' ? status.watched : status.watchlist;
     setSavingStatus(true);
     setError(null);
     try {
-      const response = await setMediaStatus(mediaType, tmdbId, statusToSave);
-      setStatus(response.status);
+      const response = await setMediaStatus(mediaType, tmdbId, nextStatus, !isActive);
+      setStatus(response);
     } catch (nextError) {
       setError(getApiErrorMessage(nextError, 'Error al guardar el estado.'));
     } finally {
@@ -214,7 +225,7 @@ export function useDetailViewModel(mediaType: string, tmdbId: number) {
         watched_at: watchedAt,
         rating,
       });
-      setStatus('watched');
+      setStatus((current) => ({ ...current, watched: true }));
       setShowWatchLogForm(false);
       setWatchedAt(getTodayIsoDate());
       setRating(null);
@@ -253,7 +264,7 @@ export function useDetailViewModel(mediaType: string, tmdbId: number) {
           ...current.filter((existingReview) => existingReview.id !== savedReview.id),
         ]),
       );
-      setStatus('watched');
+      setStatus((current) => ({ ...current, watched: true }));
       setShowReviewForm(false);
       setSuccessMessage(myReview ? 'Resena actualizada.' : 'Resena publicada.');
     } catch (nextError) {
