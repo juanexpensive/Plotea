@@ -1,6 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PlotStarLoader } from '../../shared/PlotStarLoader';
-import { uiCopy } from '../../shared/uiCopy';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { SavedMediaStatusEnriched } from '../../../domain/entities/media';
@@ -44,21 +43,12 @@ export function ProfileWatchlistTab({
   return (
     <View style={styles.content}>
       <View style={styles.heroSection}>
-        <Text style={styles.eyebrow}>{uiCopy.tabs.watchlist}</Text>
         <Text style={styles.title}>{`Pendientes de ${username}`}</Text>
-        <Text style={styles.subtitle}>
-          {items.length === 0 ? 'Tu proxima obsesion empieza aqui.' : `${items.length} titulos guardados`}
-        </Text>
       </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      {items.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>Todavia no has guardado nada.</Text>
-          <Text style={styles.emptyText}>Marca peliculas o series para que tu lista de pendientes empiece a tomar forma.</Text>
-        </View>
-      ) : (
+      {items.length > 0 ? (
         <View style={styles.posterGrid}>
           {items.map((item, index) => (
             <View
@@ -78,7 +68,7 @@ export function ProfileWatchlistTab({
             </View>
           ))}
         </View>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -99,22 +89,12 @@ const styles = StyleSheet.create({
   heroSection: {
     gap: darkDesign.spacing.sm,
   },
-  eyebrow: {
-    color: darkDesign.colors.textFaint,
-    letterSpacing: 2.8,
-    textTransform: 'uppercase',
-    ...darkDesign.typography.micro,
-  },
   title: {
     color: darkDesign.colors.text,
     fontSize: 31,
     lineHeight: 36,
     fontWeight: '800',
     letterSpacing: -0.9,
-  },
-  subtitle: {
-    color: darkDesign.colors.textMuted,
-    ...darkDesign.typography.body,
   },
   posterGrid: {
     flexDirection: 'row',
@@ -148,15 +128,6 @@ const styles = StyleSheet.create({
   posterFallback: {
     backgroundColor: darkDesign.colors.canvasRaisedSoft,
   },
-  emptyState: {
-    ...sharedStyles.panel,
-    paddingVertical: darkDesign.spacing.xxl,
-  },
-  emptyTitle: {
-    color: darkDesign.colors.text,
-    ...darkDesign.typography.section,
-  },
-  emptyText: sharedStyles.captionMuted,
   pressed: sharedStyles.pressed,
   errorText: sharedStyles.errorText,
 });

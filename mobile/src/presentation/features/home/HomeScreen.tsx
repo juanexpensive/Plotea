@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
@@ -16,7 +15,6 @@ import {
 } from 'react-native';
 import { MediaItem } from '../../../domain/entities/media';
 import {
-  formatFeaturedDescription,
   formatMediaMetaLine,
   formatTmdbScore,
   getMediaTypeLabel,
@@ -150,11 +148,9 @@ function FeaturedCard({ item }: { item: MediaItem }) {
       <View style={styles.featuredBody}>
         <Text style={styles.featuredKicker}>{uiCopy.labels.featured}</Text>
         <Text style={styles.featuredTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.featuredDescription}>{formatFeaturedDescription(item)}</Text>
         <View style={styles.featuredFooter}>
-          <View style={styles.featuredPill}>
-            <Text style={styles.featuredPillText}>Abrir ficha</Text>
-          </View>
+          <Text style={styles.featuredScore}>{formatTmdbScore(item.vote_average)}</Text>
+          <Text style={styles.featuredDate}>{item.release_date ?? 'Proximamente'}</Text>
         </View>
       </View>
     </Pressable>
@@ -212,20 +208,7 @@ function SearchModal({
           </Pressable>
         </View>
 
-        <View style={styles.searchTabs}>
-          <View style={styles.searchTabActive}>
-            <Text style={styles.searchTabActiveText}>{uiCopy.labels.titles}</Text>
-          </View>
-        </View>
-
-        {!isSearching ? (
-          <View style={styles.searchModalEmptyState}>
-            <Text style={styles.searchModalEmptyTitle}>Empieza a escribir</Text>
-            <Text style={styles.searchModalEmptyBody}>
-              Usa al menos 2 caracteres para buscar peliculas o series en toda la base.
-            </Text>
-          </View>
-        ) : (
+        {isSearching ? (
           <ScrollView style={styles.searchModalResults} contentContainerStyle={styles.searchModalResultsContent}>
             <SearchResults
               results={results}
@@ -234,7 +217,7 @@ function SearchModal({
               onOpenItem={onOpenItem}
             />
           </ScrollView>
-        )}
+        ) : null}
       </View>
     </Modal>
   );
@@ -249,7 +232,6 @@ export default function HomeScreen() {
     searchResults,
     searchLoading,
     searchError,
-    isSearching,
     setQuery,
     clearSearch,
   } = useHomeViewModel();
@@ -539,38 +521,6 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 10,
     borderTopLeftRadius: 10,
   },
-  searchTabs: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: darkDesign.colors.border,
-  },
-  searchTabActive: {
-    paddingBottom: 14,
-    borderBottomWidth: 4,
-    borderBottomColor: darkDesign.colors.accent,
-  },
-  searchTabActiveText: {
-    color: darkDesign.colors.text,
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  searchModalEmptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 10,
-  },
-  searchModalEmptyTitle: {
-    color: darkDesign.colors.text,
-    ...darkDesign.typography.section,
-  },
-  searchModalEmptyBody: {
-    color: darkDesign.colors.textMuted,
-    ...darkDesign.typography.body,
-    textAlign: 'center',
-  },
   searchModalResults: {
     flex: 1,
   },
@@ -825,26 +775,20 @@ const styles = StyleSheet.create({
     color: darkDesign.colors.text,
     ...darkDesign.typography.title,
   },
-  featuredDescription: {
-    color: darkDesign.colors.textMuted,
-    ...darkDesign.typography.body,
-  },
   featuredFooter: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 4,
   },
-  featuredPill: {
-    minHeight: 36,
-    borderRadius: darkDesign.radii.sm,
-    backgroundColor: darkDesign.colors.accent,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+  featuredScore: {
+    color: darkDesign.colors.accent,
+    ...darkDesign.typography.body,
+    fontWeight: '700',
   },
-  featuredPillText: {
-    color: darkDesign.colors.onAccent,
-    ...darkDesign.typography.button,
+  featuredDate: {
+    color: darkDesign.colors.textMuted,
+    ...darkDesign.typography.body,
   },
   cardPressed: {
     opacity: 0.9,

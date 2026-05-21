@@ -5,7 +5,7 @@ import { PublicUserSummary } from '../../../domain/entities/social';
 import { PlotStarLoader } from '../../shared/PlotStarLoader';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
-import { ProfileNetworkTab, useProfileNetworkViewModel } from './ProfileNetworkViewModel';
+import { useProfileNetworkViewModel } from './ProfileNetworkViewModel';
 
 export default function ProfileNetworkScreen() {
   const { tab, username, display_name } = useLocalSearchParams<{
@@ -17,7 +17,7 @@ export default function ProfileNetworkScreen() {
     useProfileNetworkViewModel(tab);
 
   const titleOwner = display_name || username || 'Tu';
-  const title = `${titleOwner}'s Network`;
+  const title = `Red de ${titleOwner}`;
   const list = activeTab === 'followers' ? followers : following;
 
   return (
@@ -31,12 +31,12 @@ export default function ProfileNetworkScreen() {
 
       <View style={styles.tabs}>
         <NetworkTabButton
-          label="Following"
+          label="Seguidos"
           active={activeTab === 'following'}
           onPress={() => setActiveTab('following')}
         />
         <NetworkTabButton
-          label="Followers"
+          label="Seguidores"
           active={activeTab === 'followers'}
           onPress={() => setActiveTab('followers')}
         />
@@ -126,11 +126,9 @@ function NetworkRow({
         onPress={onToggleFollow}
         disabled={disabled}
       >
-        <Ionicons
-          name={user.is_following ? 'checkmark' : 'add'}
-          size={28}
-          color={user.is_following ? darkDesign.colors.onAccent : darkDesign.colors.text}
-        />
+        <Text style={user.is_following ? styles.followButtonTextActive : styles.followButtonText}>
+          {user.is_following ? 'Siguiendo' : 'Seguir'}
+        </Text>
       </Pressable>
     </View>
   );
@@ -255,22 +253,34 @@ const styles = StyleSheet.create({
     ...darkDesign.typography.caption,
   },
   followButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    minHeight: 34,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#b6bec9',
+    backgroundColor: darkDesign.colors.canvasRaised,
+    borderWidth: 1,
+    borderColor: darkDesign.colors.borderStrong,
+    paddingHorizontal: 12,
     marginRight: darkDesign.spacing.xs,
   },
   followButtonActive: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    minHeight: 34,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: darkDesign.colors.accent,
+    paddingHorizontal: 12,
     marginRight: darkDesign.spacing.xs,
+  },
+  followButtonText: {
+    color: darkDesign.colors.textSoft,
+    ...darkDesign.typography.micro,
+    fontWeight: '700',
+  },
+  followButtonTextActive: {
+    color: darkDesign.colors.onAccent,
+    ...darkDesign.typography.micro,
+    fontWeight: '700',
   },
   emptyText: {
     color: darkDesign.colors.textMuted,

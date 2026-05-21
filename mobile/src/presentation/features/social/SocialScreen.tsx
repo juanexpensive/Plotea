@@ -1,4 +1,5 @@
-import { FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ActivityItem, VisualFeedItem } from '../../../domain/entities/social';
 import { formatWatchLogScore, getMediaTypeLabel } from '../../shared/mediaPresentation';
 import { PlotStarLoader } from '../../shared/PlotStarLoader';
@@ -6,6 +7,8 @@ import { uiCopy } from '../../shared/uiCopy';
 import { darkDesign } from '../../theme/darkDesign';
 import { sharedStyles } from '../../theme/sharedStyles';
 import { useSocialViewModel } from './SocialViewModel';
+import { useUserSearchViewModel } from './UserSearchViewModel';
+import { UserSearchResults } from './UserSearchResults';
 
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w300';
 
@@ -20,11 +23,12 @@ export default function SocialScreen() {
     feedLoadingMore,
     feedError,
     loadMoreFeed,
-    openUserSearch,
     openUserProfile,
     openListDetail,
     openMediaDetail,
   } = useSocialViewModel();
+  const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
+  const userSearch = useUserSearchViewModel();
   const isBootstrapping = visualLoading || feedLoading;
 
   if (isBootstrapping) {
@@ -37,9 +41,26 @@ export default function SocialScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <SearchUsersModal
+        visible={isSearchModalVisible}
+        query={userSearch.query}
+        results={userSearch.results}
+        loading={userSearch.loading}
+        error={userSearch.error}
+        isSearching={userSearch.isSearching}
+        onChangeQuery={userSearch.setQuery}
+        onClose={() => {
+          setIsSearchModalVisible(false);
+          userSearch.setQuery('');
+        }}
+        onOpenProfile={(username) => {
+          setIsSearchModalVisible(false);
+          userSearch.openProfile(username);
+        }}
+      />
       <View style={styles.topRow}>
         <Text style={styles.title}>{uiCopy.tabs.social}</Text>
-        <Pressable style={styles.searchButton} onPress={openUserSearch}>
+        <Pressable style={styles.searchButton} onPress={() => setIsSearchModalVisible(true)}>
           <Text style={styles.searchButtonText}>{uiCopy.actions.searchUsers}</Text>
         </Pressable>
       </View>
@@ -153,9 +174,12 @@ function VisualCard({
                       {participant.display_name ?? participant.username}
                     </Text>
                   </Pressable>
-                  <Text style={styles.personMeta}>
-                    {participant.activity_type === 'review' ? 'Resena' : 'Visionado'} - {formatWatchLogScore(participant.rating)}
-                  </Text>
+                  <View style={styles.personMetaRow}>
+                    <Text style={styles.personMetaLabel}>
+                      {participant.activity_type === 'review' ? 'Resena' : 'Visionado'}
+                    </Text>
+                    <Text style={styles.personMetaScore}>{formatWatchLogScore(participant.rating)}</Text>
+                  </View>
                   {hasSpoilerWarning ? (
                     <Pressable
                       style={({ pressed }) => [styles.spoilerPreviewBox, pressed ? styles.pressed : null]}
@@ -197,9 +221,14 @@ function SocialActivityCard({
 }) {
   const actorName = item.actor.display_name ?? item.actor.username;
   const hasMedia = item.activity_type === 'review' || item.activity_type === 'watch_log';
+  const isPublicListCard = item.activity_type === 'list_created' && item.is_public && item.list_id !== null;
 
   return (
-    <View style={styles.activityCard}>
+    <Pressable
+      style={({ pressed }) => [styles.activityCard, pressed && isPublicListCard ? styles.pressed : null]}
+      onPress={isPublicListCard ? () => onOpenList(item.list_id as number) : undefined}
+      disabled={!isPublicListCard}
+    >
       <View style={styles.activityHeader}>
         <Pressable onPress={() => onOpenUser(item.actor.username)}>
           <Text style={styles.activityActor}>{actorName}</Text>
@@ -224,10 +253,7 @@ function SocialActivityCard({
       ) : null}
       {item.activity_type === 'review' ? (
         <>
-          <Text style={styles.activityBody}>
-            ha publicado una resena sobre {item.media_type === 'movie' ? 'una pelicula' : 'una serie'} {item.title}.
-          </Text>
-          <Text style={styles.activityAccent}>Nota: {formatWatchLogScore(item.rating)}</Text>
+          <Text style={styles.activityAccent}>{formatWatchLogScore(item.rating)}</Text>
           {item.contains_spoilers ? (
             <Text style={styles.activityPreviewSpoiler}>Contiene spoilers</Text>
           ) : (
@@ -262,14 +288,72 @@ function SocialActivityCard({
           <Text style={styles.activityAccent}>
             {item.items_count} {item.items_count === 1 ? 'obra' : 'obras'}
           </Text>
-          {item.is_public && item.list_id !== null ? (
-            <Pressable style={styles.inlinePill} onPress={() => onOpenList(item.list_id as number)}>
-              <Text style={styles.inlinePillText}>Abrir lista</Text>
-            </Pressable>
-          ) : null}
         </>
       ) : null}
-    </View>
+    </Pressable>
+  );
+}
+
+function SearchUsersModal({
+  visible,
+  query,
+  results,
+  loading,
+  error,
+  isSearching,
+  onChangeQuery,
+  onClose,
+  onOpenProfile,
+}: {
+  visible: boolean;
+  query: string;
+  results: ReturnType<typeof useUserSearchViewModel>['results'];
+  loading: boolean;
+  error: string | null;
+  isSearching: boolean;
+  onChangeQuery: (value: string) => void;
+  onClose: () => void;
+  onOpenProfile: (username: string) => void;
+}) {
+  const hasSearchTerm = query.trim().length > 0;
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+      <View style={styles.searchModalScreen}>
+        <View style={styles.searchModalHeader}>
+          <Pressable style={styles.searchModalIconButton} onPress={onClose}>
+            <Text style={styles.searchModalIcon}>←</Text>
+          </Pressable>
+          <View style={styles.searchModalInputShell}>
+            <TextInput
+              style={styles.searchModalInput}
+              value={query}
+              onChangeText={onChangeQuery}
+              placeholder="Buscar usuarios"
+              placeholderTextColor={darkDesign.colors.textFaint}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+              selectionColor={darkDesign.colors.accent}
+              autoFocus
+            />
+          </View>
+          <Pressable style={styles.searchModalIconButton} onPress={hasSearchTerm ? () => onChangeQuery('') : onClose}>
+            <Text style={styles.searchModalIcon}>{hasSearchTerm ? '×' : '✕'}</Text>
+          </Pressable>
+        </View>
+
+        <ScrollView style={styles.searchModalResults} contentContainerStyle={styles.searchModalResultsContent}>
+          <UserSearchResults
+            results={results}
+            loading={loading}
+            error={error}
+            isSearching={isSearching}
+            onOpenProfile={onOpenProfile}
+          />
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
@@ -373,6 +457,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  personMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
   inlinePressable: {
     alignSelf: 'flex-start',
   },
@@ -381,7 +471,12 @@ const styles = StyleSheet.create({
     ...darkDesign.typography.caption,
     fontWeight: '700',
   },
-  personMeta: sharedStyles.captionMuted,
+  personMetaLabel: sharedStyles.captionMuted,
+  personMetaScore: {
+    color: darkDesign.colors.accent,
+    ...darkDesign.typography.caption,
+    fontWeight: '700',
+  },
   personPreview: {
     color: darkDesign.colors.textMuted,
     ...darkDesign.typography.caption,
@@ -451,7 +546,7 @@ const styles = StyleSheet.create({
     ...darkDesign.typography.body,
   },
   activityAccent: {
-    color: darkDesign.colors.accentSoft,
+    color: darkDesign.colors.accent,
     ...darkDesign.typography.caption,
     fontWeight: '700',
   },
@@ -460,7 +555,7 @@ const styles = StyleSheet.create({
     ...darkDesign.typography.caption,
   },
   activityPreviewSpoiler: {
-    color: darkDesign.colors.accentSoft,
+    color: darkDesign.colors.accent,
     ...darkDesign.typography.caption,
     fontWeight: '600',
   },
@@ -468,25 +563,50 @@ const styles = StyleSheet.create({
     color: darkDesign.colors.accentSoft,
     fontWeight: '700',
   },
-  inlinePill: {
-    alignSelf: 'flex-start',
-    minHeight: 34,
-    borderRadius: darkDesign.radii.sm,
-    borderWidth: 1,
-    borderColor: darkDesign.colors.borderStrong,
-    backgroundColor: darkDesign.colors.canvasRaised,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  inlinePillText: {
-    color: darkDesign.colors.textSoft,
-    fontSize: 12,
-    fontWeight: '700',
-  },
   feedFooter: {
     alignItems: 'center',
     gap: darkDesign.spacing.sm,
     paddingBottom: darkDesign.spacing.md,
+  },
+  searchModalScreen: {
+    flex: 1,
+    backgroundColor: '#080909',
+    paddingTop: 56,
+  },
+  searchModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: darkDesign.spacing.md,
+    paddingHorizontal: darkDesign.spacing.lg,
+    paddingBottom: 18,
+  },
+  searchModalIconButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchModalIcon: {
+    color: darkDesign.colors.text,
+    fontSize: 26,
+    fontWeight: '300',
+  },
+  searchModalInputShell: {
+    flex: 1,
+  },
+  searchModalInput: {
+    color: darkDesign.colors.text,
+    fontSize: 22,
+    fontWeight: '600',
+    letterSpacing: -0.4,
+    paddingVertical: 0,
+  },
+  searchModalResults: {
+    flex: 1,
+  },
+  searchModalResultsContent: {
+    paddingHorizontal: darkDesign.spacing.lg,
+    paddingBottom: darkDesign.spacing.xl,
   },
   loadMoreButton: sharedStyles.secondaryButton,
   loadMoreText: sharedStyles.secondaryButtonText,

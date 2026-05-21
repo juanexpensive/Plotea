@@ -106,10 +106,6 @@ export function useSocialViewModel() {
     }
   }
 
-  function openUserSearch() {
-    router.push('/user-search');
-  }
-
   function openUserProfile(username: string) {
     router.push({ pathname: '/user-profile', params: { username } });
   }
@@ -132,7 +128,6 @@ export function useSocialViewModel() {
     feedLoadingMore,
     feedError,
     loadMoreFeed,
-    openUserSearch,
     openUserProfile,
     openListDetail,
     openMediaDetail,

@@ -57,7 +57,7 @@ export default function MyListsScreen() {
     <View style={styles.screen}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {loading ? (
-          <View style={styles.loadingBox}>
+          <View style={styles.loadingOverlay}>
             <PlotStarLoader size="small" />
           </View>
         ) : null}
@@ -273,9 +273,11 @@ const styles = StyleSheet.create({
   section: {
     gap: 1,
   },
-  loadingBox: {
-    paddingVertical: 16,
+  loadingOverlay: {
+    flex: 1,
+    minHeight: 320,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   errorText: {
     color: design.danger,

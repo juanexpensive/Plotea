@@ -210,9 +210,7 @@ export default function PublicProfileScreen() {
               params: { media_type: item.media_type, tmdb_id: String(item.tmdb_id) },
             })
           }
-          eyebrow="Diario"
-          title={`Historial de ${profile.display_name ?? profile.username}`}
-          subtitle="Todas sus entradas, ordenadas por mes."
+          title="Diario"
         />
       ) : null}
     </ScrollView>

@@ -316,9 +316,7 @@ export default function ProfileScreen() {
           error={diary.error}
           onOpenDetail={openDiaryDetail}
           onDelete={diary.removeItem}
-          eyebrow="Diario"
-          title="Tu historial"
-          subtitle="Todas tus entradas, ordenadas por mes."
+          title="Diario"
         />
       ) : null}
     </ScrollView>
