@@ -5,6 +5,7 @@ from app.data.repositories.activity_repository import ActivityRepository
 from app.data.repositories.follow_repository import FollowRepository
 from app.data.repositories.list_repository import ListRepository
 from app.data.repositories.user_repository import UserRepository
+from app.domain.services.media_summary_loader import MediaSummaryLoader
 from app.domain.entities.lists import (
     ListDetail,
     ListEntry,
@@ -20,15 +21,19 @@ from app.domain.entities.user import User
 from app.domain.services.activity_publisher import ActivityPublisher
 from app.domain.services.i_tmdb_client import ITmdbClient
 from app.domain.services.push_notifications_service import PushNotificationsService
+from app.domain.usecases.lists.accept_list_invitation import AcceptListInvitationUseCase
 from app.domain.usecases.lists.add_list_item import AddListItemUseCase
 from app.domain.usecases.lists.create_list import CreateListUseCase
 from app.domain.usecases.lists.create_list_invitation import CreateListInvitationUseCase
 from app.domain.usecases.lists.delete_list import DeleteListUseCase
+from app.domain.usecases.lists.deny_list_invitation import DenyListInvitationUseCase
 from app.domain.usecases.lists.get_list_detail import GetListDetailUseCase
 from app.domain.usecases.lists.leave_list import LeaveListUseCase
 from app.domain.usecases.lists.list_my_lists import ListMyListsUseCase
+from app.domain.usecases.lists.list_pending_invitations import ListPendingInvitationsUseCase
 from app.domain.usecases.lists.list_public_lists import ListPublicListsUseCase
 from app.domain.usecases.lists.remove_list_item import RemoveListItemUseCase
+from app.domain.usecases.lists.search_invitable_users import SearchInvitableUsersUseCase
 from app.domain.usecases.lists.swap_list_items import SwapListItemsUseCase
 from app.domain.usecases.lists.update_list import UpdateListUseCase
 from app.domain.usecases.media.get_media_detail import GetMediaDetailUseCase
@@ -92,7 +97,7 @@ def _to_media_summary_response(media_summary: MediaSummary | None) -> MediaSumma
 
     return MediaSummaryResponse(
         tmdb_id=media_summary.tmdb_id,
-        media_type=media_summary.media_type,  # type: ignore[arg-type]
+        media_type=media_summary.media_type,
         title=media_summary.title,
         poster_path=media_summary.poster_path,
         release_date=media_summary.release_date,
@@ -102,7 +107,7 @@ def _to_media_summary_response(media_summary: MediaSummary | None) -> MediaSumma
 def _to_item_response(item: ListEntry) -> ListItemResponse:
     return ListItemResponse(
         tmdb_id=item.tmdb_id,
-        media_type=item.media_type,  # type: ignore[arg-type]
+        media_type=item.media_type,
         position=item.position,
         added_at=item.added_at,
         added_by=_to_user_response(item.added_by),
@@ -144,11 +149,13 @@ def _to_my_lists_response(overview: MyListsOverview) -> MyListsResponse:
 
 
 async def _enrich_with_media(list_detail: ListDetail, tmdb: ITmdbClient) -> ListDetail:
+    media_loader = MediaSummaryLoader(GetMediaDetailUseCase(tmdb))
+    media_map = await media_loader.load_many(
+        [(item.media_type, item.tmdb_id) for item in list_detail.items]
+    )
+
     for item in list_detail.items:
-        try:
-            detail = await GetMediaDetailUseCase(tmdb).execute(item.media_type, item.tmdb_id)
-        except Exception:
-            continue
+        detail = media_map[(item.media_type, item.tmdb_id)]
         item.media_summary = MediaSummary(
             tmdb_id=detail.tmdb_id,
             media_type=detail.media_type,
@@ -173,7 +180,7 @@ async def list_my_pending_invitations(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[ListInvitationResponse]:
-    invitations = await ListRepository(session).list_pending_invitations_received(current_user.id)
+    invitations = await ListPendingInvitationsUseCase(ListRepository(session)).execute(current_user.id)
     return [_to_invitation_response(item) for item in invitations]
 
 
@@ -327,9 +334,7 @@ async def accept_list_invitation(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
-    accepted = await ListRepository(session).accept_invitation(invitation_id, current_user.id)
-    if not accepted:
-        raise HTTPException(status_code=404, detail="Invitation not found")
+    await AcceptListInvitationUseCase(ListRepository(session)).execute(invitation_id, current_user.id)
     return MessageResponse(message="Invitation accepted")
 
 
@@ -339,9 +344,7 @@ async def deny_list_invitation(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
-    denied = await ListRepository(session).deny_invitation(invitation_id, current_user.id)
-    if not denied:
-        raise HTTPException(status_code=404, detail="Invitation not found")
+    await DenyListInvitationUseCase(ListRepository(session)).execute(invitation_id, current_user.id)
     return MessageResponse(message="Invitation denied")
 
 
@@ -352,19 +355,14 @@ async def search_invitable_users(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[ListUserResponse]:
-    list_repo = ListRepository(session)
-    if not await list_repo.is_owner(list_id, current_user.id):
-        raise HTTPException(status_code=404, detail="List not found")
-
-    users = await UserRepository(session).search_mutual_followers(q, current_user.id)
-    collaborators = {item.id for item in await list_repo._get_collaborators(list_id)}
-    results = []
-    for user in users:
-        if user.id in collaborators or user.id == current_user.id:
-            continue
-        if await list_repo.has_pending_invitation(list_id, user.id):
-            continue
-        results.append(user)
+    users = await SearchInvitableUsersUseCase(
+        ListRepository(session),
+        UserRepository(session),
+    ).execute(
+        list_id=list_id,
+        current_user_id=current_user.id,
+        query=q,
+    )
     return [
         ListUserResponse(
             id=user.id,

@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-
+from app.domain.errors import ConflictError, UnprocessableEntityError
 from app.domain.entities.review import Review
 from app.domain.repositories.i_media_status_repository import IMediaStatusRepository
 from app.domain.repositories.i_review_repository import IReviewRepository
@@ -29,11 +28,11 @@ class CreateReviewUseCase:
         normalized_body = body.strip()
 
         if normalized_body == "":
-            raise HTTPException(status_code=422, detail="body cannot be empty")
+            raise UnprocessableEntityError("body cannot be empty")
 
         existing_review = await self._review_repo.get_by_user_and_media(user_id, tmdb_id, media_type)
         if existing_review is not None:
-            raise HTTPException(status_code=409, detail="Review already exists for this media")
+            raise ConflictError("Review already exists for this media")
 
         review = await self._review_repo.create(
             user_id=user_id,

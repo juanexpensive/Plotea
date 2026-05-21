@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-
+from app.domain.errors import BadRequestError, ConflictError, NotFoundError
 from app.domain.entities.lists import ListInvitationSummary
 from app.domain.repositories.i_follow_repository import IFollowRepository
 from app.domain.repositories.i_list_repository import IListRepository
@@ -28,23 +27,23 @@ class CreateListInvitationUseCase:
         invitee_user_id: int,
     ) -> ListInvitationSummary:
         if invitee_user_id == inviter_user_id:
-            raise HTTPException(status_code=400, detail="You cannot invite yourself")
+            raise BadRequestError("You cannot invite yourself")
 
         invitee = await self._user_repo.get_by_id(invitee_user_id)
         if invitee is None:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise NotFoundError("User not found")
         if not await self._list_repo.is_owner(list_id, inviter_user_id):
-            raise HTTPException(status_code=404, detail="List not found")
+            raise NotFoundError("List not found")
         if await self._list_repo.is_collaborator(list_id, invitee_user_id):
-            raise HTTPException(status_code=409, detail="User is already a collaborator")
+            raise ConflictError("User is already a collaborator")
         if await self._list_repo.has_pending_invitation(list_id, invitee_user_id):
-            raise HTTPException(status_code=409, detail="Pending invitation already exists")
+            raise ConflictError("Pending invitation already exists")
         if not await self._follow_repo.are_mutual_followers(inviter_user_id, invitee_user_id):
-            raise HTTPException(status_code=400, detail="Mutual follow is required to invite collaborators")
+            raise BadRequestError("Mutual follow is required to invite collaborators")
 
         invitation = await self._list_repo.create_invitation(list_id, inviter_user_id, invitee_user_id)
         if invitation is None:
-            raise HTTPException(status_code=400, detail="Could not create invitation")
+            raise BadRequestError("Could not create invitation")
 
         await self._push_notifications_service.notify_list_invitation(
             recipient_user_id=invitee_user_id,

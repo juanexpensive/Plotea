@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -14,11 +15,13 @@ from app.domain.entities.lists import (
     ListEntry,
     ListInvitationSummary,
     ListItemRef,
+    ListRelationship,
     ListPermissions,
     ListSummary,
     ListUser,
     MyListsOverview,
 )
+from app.domain.errors import ConflictError
 from app.domain.repositories.i_list_repository import IListRepository
 
 
@@ -40,7 +43,7 @@ class ListRepository(IListRepository):
         model = ListModel(user_id=user_id, name=name, description=description, is_public=is_public)
         self._session.add(model)
         await self._session.commit()
-        return await self._get_summary_by_id(model.id, relationship="owner")  # type: ignore[arg-type]
+        return await self._get_summary_by_id(model.id, relationship="owner")
 
     async def list_for_user(self, user_id: int) -> MyListsOverview:
         return MyListsOverview(
@@ -155,17 +158,21 @@ class ListRepository(IListRepository):
             ListItemModel.list_id == list_id
         )
         next_position = await self._session.scalar(next_position_query)
-        self._session.add(
-            ListItemModel(
-                list_id=list_id,
-                added_by_user_id=user_id,
-                tmdb_id=tmdb_id,
-                media_type=media_type,
-                position=int(next_position or 0),
+        try:
+            self._session.add(
+                ListItemModel(
+                    list_id=list_id,
+                    added_by_user_id=user_id,
+                    tmdb_id=tmdb_id,
+                    media_type=media_type,
+                    position=int(next_position or 0),
+                )
             )
-        )
-        await self._touch_list(list_id)
-        await self._session.commit()
+            await self._touch_list(list_id)
+            await self._session.commit()
+        except IntegrityError as exc:
+            await self._session.rollback()
+            raise ConflictError("Item already exists in list") from exc
         return await self.get_visible_detail(list_id, user_id)
 
     async def remove_item(
@@ -405,14 +412,14 @@ class ListRepository(IListRepository):
         )
         return [self._to_summary(list_model, user_model, count, "collaborator") for list_model, user_model, count in result.all()]
 
-    async def _relationship_for_user(self, list_id: int, user_id: int) -> str:
+    async def _relationship_for_user(self, list_id: int, user_id: int) -> ListRelationship:
         if await self.is_owner(list_id, user_id):
             return "owner"
         if await self.is_collaborator(list_id, user_id):
             return "collaborator"
         return "viewer"
 
-    async def _get_summary_by_id(self, list_id: int, relationship: str) -> ListSummary:
+    async def _get_summary_by_id(self, list_id: int, relationship: ListRelationship) -> ListSummary:
         items_count = self._items_count_subquery()
         result = await self._session.execute(
             select(ListModel, UserModel, items_count.label("items_count"))
@@ -458,7 +465,7 @@ class ListRepository(IListRepository):
 
         return self._to_summary(list_model, user_model, count, relationship), permissions
 
-    async def _get_collaborators(self, list_id: int) -> list[ListUser]:
+    async def list_collaborators(self, list_id: int) -> list[ListUser]:
         result = await self._session.execute(
             select(UserModel)
             .join(ListCollaboratorModel, ListCollaboratorModel.user_id == UserModel.id)
@@ -487,7 +494,7 @@ class ListRepository(IListRepository):
         ]
         return ListDetail(
             **summary.__dict__,
-            collaborators=await self._get_collaborators(summary.id),
+            collaborators=await self.list_collaborators(summary.id),
             permissions=permissions,
             items=[ListEntry(**item_data) for item_data in items],
         )
@@ -526,7 +533,7 @@ class ListRepository(IListRepository):
         list_model: ListModel,
         user_model: UserModel,
         items_count: int | None,
-        relationship: str,
+        relationship: ListRelationship,
     ) -> ListSummary:
         return ListSummary(
             id=list_model.id,
@@ -535,7 +542,7 @@ class ListRepository(IListRepository):
             is_public=list_model.is_public,
             owner=self._to_list_user(user_model),
             items_count=int(items_count or 0),
-            relationship=relationship,  # type: ignore[arg-type]
+            relationship=relationship,
             created_at=list_model.created_at,
             updated_at=list_model.updated_at,
         )

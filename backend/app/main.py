@@ -36,6 +36,7 @@ from app.presentation.routers import notifications as notifications_router  # no
 from app.presentation.routers import reviews as reviews_router  # noqa: E402
 from app.presentation.routers import social as social_router  # noqa: E402
 from app.presentation.routers import watch_log as watch_log_router  # noqa: E402
+from app.presentation.error_handlers import register_exception_handlers  # noqa: E402
 
 AVATAR_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -54,6 +55,7 @@ app = FastAPI(title="PlotSkip API", lifespan=lifespan)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+register_exception_handlers(app)
 
 settings = get_settings()
 app.add_middleware(

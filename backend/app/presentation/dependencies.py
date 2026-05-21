@@ -23,7 +23,7 @@ from app.domain.usecases.auth.register import RegisterUseCase
 from app.domain.usecases.auth.reset_password import ResetPasswordUseCase
 from app.infrastructure.config import Settings, get_settings
 from app.infrastructure.database import get_db
-from app.infrastructure.email import GmailSmtpEmailSender
+from app.infrastructure.email import ResendEmailSender
 from app.infrastructure.expo_push_gateway import ExpoPushGateway
 from app.infrastructure.security import (
     BcryptPasswordHasher,
@@ -94,7 +94,7 @@ async def get_optional_current_user(
 
 
 def get_password_reset_email_sender() -> IEmailSender:
-    return GmailSmtpEmailSender()
+    return ResendEmailSender()
 
 
 def get_push_delivery_gateway(

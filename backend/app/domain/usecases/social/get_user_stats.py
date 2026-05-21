@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-
+from app.domain.errors import NotFoundError
 from app.domain.entities.social import PublicUserStats
 from app.domain.repositories.i_user_repository import IUserRepository
 from app.domain.repositories.i_watch_log_repository import IWatchLogRepository
@@ -20,7 +19,7 @@ class GetUserStatsUseCase:
     async def execute(self, username: str) -> PublicUserStats:
         user = await self._user_repo.get_by_username(username)
         if user is None:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise NotFoundError("User not found")
 
         watch_logs = await self._watch_log_repo.list_by_user(user.id)
         return await self._aggregator.build(watch_logs)

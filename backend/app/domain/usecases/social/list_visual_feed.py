@@ -25,9 +25,10 @@ class ListVisualFeedUseCase:
             key = (activity.media_type, activity.tmdb_id)
             grouped.setdefault(key, []).append(activity)
 
+        media_map = await self._media_loader.load_many(list(grouped))
         items: list[VisualFeedItem] = []
         for (media_type, tmdb_id), group in grouped.items():
-            media = await self._media_loader.load(media_type, tmdb_id)
+            media = media_map[(media_type, tmdb_id)]
             participants: list[VisualFeedParticipant] = []
             seen_users: set[int] = set()
             for activity in group:
@@ -41,7 +42,7 @@ class ListVisualFeedUseCase:
                         display_name=activity.actor.display_name,
                         avatar_url=activity.actor.avatar_url,
                         activity_type=activity.activity_type,
-                        rating=activity.rating if hasattr(activity, "rating") else None,
+                        rating=activity.rating,
                         created_at=activity.created_at,
                         review_id=activity.review_id if isinstance(activity, ReviewActivity) else None,
                         review_body_preview=activity.body_preview if isinstance(activity, ReviewActivity) else None,

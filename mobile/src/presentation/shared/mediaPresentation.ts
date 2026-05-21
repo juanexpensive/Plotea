@@ -48,7 +48,7 @@ export function formatMediaMetaLine({
     parts.push(formatTmdbScore(voteAverage));
   }
 
-  return parts.join(' · ');
+  return parts.join(' | ');
 }
 
 export function formatFeaturedDescription(item: {
@@ -56,14 +56,14 @@ export function formatFeaturedDescription(item: {
   vote_average: number;
   release_date: string | null;
 }) {
-  const year = item.release_date ? ` · ${item.release_date.slice(0, 4)}` : '';
+  const year = item.release_date ? ` | ${item.release_date.slice(0, 4)}` : '';
   return `${getMediaTypeLabel(item.media_type)} con nota ${formatTmdbScore(item.vote_average)}${year}`;
 }
 
 export function buildDetailMetaLine(releaseDate: string | null, runtime: number | null, average: number) {
   return [releaseDate ? releaseDate.slice(0, 4) : null, runtime ? `${runtime} min` : null, `${formatTmdbScore(average)} TMDB`]
     .filter(Boolean)
-    .join(' · ');
+    .join(' | ');
 }
 
 export function buildDetailEyebrow(mediaType: 'movie' | 'tv', genres: string[]) {
@@ -72,7 +72,7 @@ export function buildDetailEyebrow(mediaType: 'movie' | 'tv', genres: string[]) 
     return mediaLabel;
   }
 
-  return `${mediaLabel} · ${genres.slice(0, 3).join(' · ').toUpperCase()}`;
+  return `${mediaLabel} | ${genres.slice(0, 3).join(' | ').toUpperCase()}`;
 }
 
 export function getDisplayStatusLabel(status: PersonalMediaStatus) {

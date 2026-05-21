@@ -2,6 +2,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
+from app.domain.entities.media import MediaType
+
+ListRelationship = Literal["owner", "collaborator", "viewer"]
+
 
 @dataclass
 class ListUser:
@@ -14,7 +18,7 @@ class ListUser:
 @dataclass
 class MediaSummary:
     tmdb_id: int
-    media_type: str
+    media_type: MediaType
     title: str | None
     poster_path: str | None
     release_date: str | None
@@ -35,7 +39,7 @@ class ListSummary:
     is_public: bool
     owner: ListUser
     items_count: int
-    relationship: Literal["owner", "collaborator", "viewer"]
+    relationship: ListRelationship
     created_at: datetime
     updated_at: datetime
 
@@ -43,13 +47,13 @@ class ListSummary:
 @dataclass
 class ListItemRef:
     tmdb_id: int
-    media_type: str
+    media_type: MediaType
 
 
 @dataclass
 class ListEntry:
     tmdb_id: int
-    media_type: str
+    media_type: MediaType
     position: int
     added_at: datetime
     added_by: ListUser

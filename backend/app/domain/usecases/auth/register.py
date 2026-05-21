@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-
+from app.domain.errors import ConflictError
 from app.domain.entities.user import User
 from app.domain.repositories.i_user_repository import IUserRepository
 from app.domain.services.i_password_hasher import IPasswordHasher
@@ -12,9 +11,9 @@ class RegisterUseCase:
 
     async def execute(self, email: str, username: str, password: str) -> User:
         if await self._user_repo.get_by_email(email):
-            raise HTTPException(status_code=409, detail="El email ya esta en uso")
+            raise ConflictError("El email ya esta en uso")
         if await self._user_repo.get_by_username(username):
-            raise HTTPException(status_code=409, detail="El nombre de usuario ya esta en uso")
+            raise ConflictError("El nombre de usuario ya esta en uso")
 
         return await self._user_repo.create(
             email=email,

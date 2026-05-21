@@ -14,12 +14,15 @@ class GetMyFavoriteMediaUseCase:
 
     async def execute(self, user_id: int) -> list[tuple[int, MediaItem]]:
         selections = await self._favorite_repo.list_by_user(user_id)
+        media_map = await self._media_loader.load_many(
+            [(selection.media_type, selection.tmdb_id) for selection in selections]
+        )
         items: list[tuple[int, MediaItem]] = []
         for selection in selections:
             items.append(
                 (
                     selection.position,
-                    await self._media_loader.load(selection.media_type, selection.tmdb_id),
+                    media_map[(selection.media_type, selection.tmdb_id)],
                 )
             )
         return items

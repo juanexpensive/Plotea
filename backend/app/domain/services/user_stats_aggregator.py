@@ -1,3 +1,4 @@
+import asyncio
 from collections import Counter
 
 from app.domain.entities.social import GenreStat, PublicUserStats
@@ -15,10 +16,13 @@ class UserStatsAggregator:
         total_runtime_minutes = 0
         genre_counts: Counter[str] = Counter()
 
-        for item in watch_logs:
-            try:
-                detail = await self._get_media_detail.execute(item.media_type, item.tmdb_id)
-            except Exception:
+        details = await asyncio.gather(
+            *(self._get_media_detail.execute(item.media_type, item.tmdb_id) for item in watch_logs),
+            return_exceptions=True,
+        )
+
+        for detail in details:
+            if isinstance(detail, Exception):
                 continue
 
             if detail.runtime is not None:

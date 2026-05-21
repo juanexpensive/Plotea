@@ -20,10 +20,28 @@
 
 
 
- 
 
 
 
+en home en seleccion destacada sobra el mensaje de "serie con nota" y el boton abrir ficha, deberia aparecer la nota (en verde), la fecha y ya, la funcionalidad del boton la debe tener la card en si
+
+el buscador cuando vas a buscar no tiene sentido y no sigue el design, elimina el subitilo de "titulos" 
+
+cuando vas a buscar usuarios no quiero que me des tantas explicaciones  como lo de al menos 2 caracteres o encuentra perfiles publicos etc, ni que me lleve a otra view, deberia de ser como el de home
+
+en social las notas siempre iran en el verde
+
+no quiero el mensaje de "ha publicado una resena sobre una pelicula" que sea directamente la pelicula, nota y el mensaje de la resena
+
+no deberia aparecer un boton de abrir lista en social, la propia card deberia de ser clickeable
+
+en mis listas el loader sale arriba en vez de en el centro
+
+en pendientes hay mucha info, solo quiero que salga Pendientes de ... y ya esta nada de tu proxima obsesion ni mensaje si no tienes nada etc
+
+al igual que diario que solo debe poner Diario
+
+en la view de Network deberia poner seguidores seguidos o amigos algo asi y el boton para seguiro dejar de seguir debe ser mas prqueño que es enorme
 
 
 

@@ -212,19 +212,12 @@ async def _load_feed_media_map(
     activities: list[BaseActivity],
     media_loader: MediaSummaryLoader,
 ) -> dict[tuple[str, int], MediaItem]:
-    media_map: dict[tuple[str, int], MediaItem] = {}
-
-    for activity in activities:
-        if not isinstance(activity, ReviewActivity | WatchLogActivity):
-            continue
-
-        media_key = (activity.media_type, activity.tmdb_id)
-        if media_key in media_map:
-            continue
-
-        media_map[media_key] = await media_loader.load(activity.media_type, activity.tmdb_id)
-
-    return media_map
+    media_keys = [
+        (activity.media_type, activity.tmdb_id)
+        for activity in activities
+        if isinstance(activity, ReviewActivity | WatchLogActivity)
+    ]
+    return await media_loader.load_many(media_keys)
 
 
 def _to_activity_response(activity: BaseActivity, media_map: dict[tuple[str, int], MediaItem] | None = None):
@@ -463,12 +456,15 @@ async def update_my_favorite_media(
         ],
     )
     media_loader = MediaSummaryLoader(GetMediaDetailUseCase(tmdb))
+    media_map = await media_loader.load_many(
+        [(selection.media_type, selection.tmdb_id) for selection in selections]
+    )
     response_items = []
     for selection in selections:
         response_items.append(
             _to_favorite_media_response(
                 selection.position,
-                await media_loader.load(selection.media_type, selection.tmdb_id),
+                media_map[(selection.media_type, selection.tmdb_id)],
             )
         )
     return response_items
@@ -497,11 +493,16 @@ async def get_user_watchlist_enriched(
     target_user = await _require_target_user(username, session)
     status_lists = await ListMediaStatusesUseCase(MediaStatusRepository(session)).execute(target_user.id)
     media_loader = MediaSummaryLoader(GetMediaDetailUseCase(tmdb))
-    response_items: list[MediaStatusWithMediaResponse] = []
-
-    for status in status_lists.watchlist:
-        media = await media_loader.load(status.media_type, status.tmdb_id)
-        response_items.append(_status_to_enriched_item_response(status, media))
+    media_map = await media_loader.load_many(
+        [(status.media_type, status.tmdb_id) for status in status_lists.watchlist]
+    )
+    response_items = [
+        _status_to_enriched_item_response(
+            status,
+            media_map[(status.media_type, status.tmdb_id)],
+        )
+        for status in status_lists.watchlist
+    ]
 
     return response_items
 
@@ -529,21 +530,23 @@ async def get_user_watch_log_enriched(
     target_user = await _require_target_user(username, session)
     watch_logs = await ListWatchLogUseCase(WatchLogRepository(session)).execute(target_user.id)
     media_loader = MediaSummaryLoader(GetMediaDetailUseCase(tmdb))
-    response_items: list[WatchLogEnrichedResponse] = []
-
-    for watch_log in watch_logs:
-        media = await media_loader.load(watch_log.media_type, watch_log.tmdb_id)
-        response_items.append(
-            WatchLogEnrichedResponse(
-                id=watch_log.id,
-                tmdb_id=watch_log.tmdb_id,
-                media_type=watch_log.media_type,
-                watched_at=watch_log.watched_at,
-                rating=watch_log.rating,
-                created_at=watch_log.created_at,
-                media=_to_media_item_response(media),
-            )
+    media_map = await media_loader.load_many(
+        [(watch_log.media_type, watch_log.tmdb_id) for watch_log in watch_logs]
+    )
+    response_items = [
+        WatchLogEnrichedResponse(
+            id=watch_log.id,
+            tmdb_id=watch_log.tmdb_id,
+            media_type=watch_log.media_type,
+            watched_at=watch_log.watched_at,
+            rating=watch_log.rating,
+            created_at=watch_log.created_at,
+            media=_to_media_item_response(
+                media_map[(watch_log.media_type, watch_log.tmdb_id)]
+            ),
         )
+        for watch_log in watch_logs
+    ]
 
     return response_items
 

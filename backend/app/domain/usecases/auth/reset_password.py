@@ -1,7 +1,6 @@
 from datetime import timezone
 
-from fastapi import HTTPException
-
+from app.domain.errors import BadRequestError
 from app.domain.repositories.i_password_reset_repository import IPasswordResetRepository
 from app.domain.repositories.i_refresh_token_repository import IRefreshTokenRepository
 from app.domain.repositories.i_user_repository import IUserRepository
@@ -31,17 +30,17 @@ class ResetPasswordUseCase:
         token_hash = self._token_service.hash_token(token)
         password_reset_token = await self._password_reset_repo.get_by_hash(token_hash)
         if password_reset_token is None:
-            raise HTTPException(status_code=400, detail="Token de restablecimiento invalido")
+            raise BadRequestError("Token de restablecimiento invalido")
 
         if password_reset_token.used:
-            raise HTTPException(status_code=400, detail="Token de restablecimiento ya usado")
+            raise BadRequestError("Token de restablecimiento ya usado")
 
         if password_reset_token.expires_at.replace(tzinfo=timezone.utc) < self._clock.now():
-            raise HTTPException(status_code=400, detail="Token de restablecimiento expirado")
+            raise BadRequestError("Token de restablecimiento expirado")
 
         user = await self._user_repo.get_by_id(password_reset_token.user_id)
         if user is None:
-            raise HTTPException(status_code=400, detail="Token de restablecimiento invalido")
+            raise BadRequestError("Token de restablecimiento invalido")
 
         await self._user_repo.update_password_hash(
             user.id,

@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-
+from app.domain.errors import NotFoundError, UnprocessableEntityError
 from app.domain.entities.review import Review
 from app.domain.repositories.i_review_repository import IReviewRepository
 
@@ -18,11 +17,11 @@ class UpdateReviewUseCase:
     ) -> Review:
         review = await self._review_repo.get_by_id(review_id)
         if review is None or review.user_id != user_id:
-            raise HTTPException(status_code=404, detail="Review not found")
+            raise NotFoundError("Review not found")
 
         normalized_body = body.strip()
         if normalized_body == "":
-            raise HTTPException(status_code=422, detail="body cannot be empty")
+            raise UnprocessableEntityError("body cannot be empty")
 
         return await self._review_repo.update(
             review_id=review_id,

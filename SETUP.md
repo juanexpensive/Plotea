@@ -96,16 +96,13 @@ Rellena como minimo:
 DATABASE_URL=postgresql+asyncpg://user:pass@ep-xxx.neon.tech/plotskip?sslmode=require
 SECRET_KEY=pega-aqui-tu-clave
 TMDB_API_KEY=tu-clave-tmdb
-SMTP_USERNAME=tu-email@gmail.com
-SMTP_PASSWORD=tu-app-password-de-gmail
-SMTP_FROM_EMAIL=tu-email@gmail.com
+RESEND_API_KEY=tu-clave-resend
 ```
 
 Notas:
 
 - La URL de Neon suele venir como `postgresql://...`; cambiale solo el prefijo a `postgresql+asyncpg://...`.
 - `backend/.env` no se sube a git.
-- Para Gmail SMTP, la opcion recomendada es usar una **App Password** con 2FA activado en la cuenta.
 
 ## Paso 6 - Aplicar migraciones
 

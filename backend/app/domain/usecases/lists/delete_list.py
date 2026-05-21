@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-
+from app.domain.errors import NotFoundError
 from app.domain.repositories.i_list_repository import IListRepository
 
 
@@ -10,4 +9,4 @@ class DeleteListUseCase:
     async def execute(self, list_id: int, user_id: int) -> None:
         deleted = await self._list_repo.delete(list_id, user_id)
         if not deleted:
-            raise HTTPException(status_code=404, detail="List not found")
+            raise NotFoundError("List not found")

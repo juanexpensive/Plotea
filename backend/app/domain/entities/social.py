@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from datetime import date, datetime
+from typing import Literal
 
-from app.domain.entities.media import MediaItem
+from app.domain.entities.media import MediaItem, MediaType
 
 
 @dataclass
@@ -47,7 +48,7 @@ class PublicUserStats:
 class FavoriteMediaSelection:
     position: int
     tmdb_id: int
-    media_type: str
+    media_type: MediaType
 
 
 @dataclass
@@ -75,7 +76,7 @@ class FollowedUser:
 @dataclass
 class BaseActivity:
     id: int
-    activity_type: str
+    activity_type: Literal["review", "watch_log", "follow", "list_created"]
     created_at: datetime
     actor: ActivityActor
 
@@ -84,7 +85,7 @@ class BaseActivity:
 class ReviewActivity(BaseActivity):
     review_id: int
     tmdb_id: int
-    media_type: str
+    media_type: MediaType
     rating: int
     body_preview: str
     contains_spoilers: bool
@@ -94,7 +95,7 @@ class ReviewActivity(BaseActivity):
 class WatchLogActivity(BaseActivity):
     watch_log_id: int
     tmdb_id: int
-    media_type: str
+    media_type: MediaType
     watched_at: date
     rating: int | None
 
@@ -118,7 +119,7 @@ class VisualFeedParticipant:
     username: str
     display_name: str | None
     avatar_url: str | None
-    activity_type: str
+    activity_type: Literal["review", "watch_log"]
     rating: int | None
     created_at: datetime
     review_id: int | None = None
@@ -138,7 +139,7 @@ class VisualFeedItem:
 class RecentWatchLogEntry:
     id: int
     tmdb_id: int
-    media_type: str
+    media_type: MediaType
     watched_at: date
     rating: int | None
     created_at: datetime

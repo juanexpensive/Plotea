@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
 
-from fastapi import HTTPException
-
+from app.domain.errors import UnauthorizedError
 from app.domain.repositories.i_refresh_token_repository import IRefreshTokenRepository
 from app.domain.repositories.i_user_repository import IUserRepository
 from app.domain.services.i_auth_policy import IAuthPolicy
@@ -37,7 +36,7 @@ class LoginUseCase:
     async def execute(self, email: str, password: str) -> LoginResult:
         user = await self._user_repo.get_by_email(email)
         if not user or not self._password_hasher.verify_password(password, user.password_hash):
-            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+            raise UnauthorizedError("Credenciales incorrectas")
 
         access_token = self._token_service.create_access_token(str(user.id))
         raw_refresh = self._token_service.create_refresh_token()

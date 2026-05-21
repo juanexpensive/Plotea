@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
 
-from fastapi import HTTPException
-
+from app.domain.errors import UnauthorizedError
 from app.domain.repositories.i_refresh_token_repository import IRefreshTokenRepository
 from app.domain.services.i_auth_policy import IAuthPolicy
 from app.domain.services.i_auth_token_service import IAuthTokenService
@@ -33,11 +32,11 @@ class RefreshUseCase:
         entity = await self._refresh_repo.get_by_hash(token_hash)
 
         if entity is None:
-            raise HTTPException(status_code=401, detail="Token de refresco invalido")
+            raise UnauthorizedError("Token de refresco invalido")
 
         if entity.expires_at.replace(tzinfo=self._clock.now().tzinfo) < self._clock.now():
             await self._refresh_repo.delete_by_hash(token_hash)
-            raise HTTPException(status_code=401, detail="Token de refresco expirado")
+            raise UnauthorizedError("Token de refresco expirado")
 
         next_refresh_token = self._token_service.create_refresh_token()
         next_refresh_token_hash = self._token_service.hash_token(next_refresh_token)
@@ -45,7 +44,7 @@ class RefreshUseCase:
         replaced = await self._refresh_repo.replace(token_hash, next_refresh_token_hash, next_expires_at)
 
         if not replaced:
-            raise HTTPException(status_code=401, detail="Token de refresco invalido")
+            raise UnauthorizedError("Token de refresco invalido")
 
         return RefreshResult(
             access_token=self._token_service.create_access_token(str(entity.user_id)),

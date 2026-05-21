@@ -300,7 +300,8 @@ class UserRepository(IUserRepository):
         await self._session.commit()
 
         refreshed = await self.get_by_id(user_id)
-        assert refreshed is not None
+        if refreshed is None:
+            raise RuntimeError("Updated user could not be reloaded")
         return refreshed
 
     def _to_entity(self, model: UserModel) -> User:

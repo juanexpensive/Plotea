@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-
+from app.domain.errors import BadRequestError, ConflictError, NotFoundError
 from app.domain.entities.review_vote_summary import ReviewVoteSummary
 from app.domain.repositories.i_review_repository import IReviewRepository
 from app.domain.repositories.i_review_vote_repository import IReviewVoteRepository
@@ -23,11 +22,11 @@ class AddReviewVoteUseCase:
     async def execute(self, user_id: int, review_id: int) -> ReviewVoteSummary:
         review = await self._review_repo.get_by_id(review_id)
         if review is None:
-            raise HTTPException(status_code=404, detail="Review not found")
+            raise NotFoundError("Review not found")
         if review.user_id == user_id:
-            raise HTTPException(status_code=400, detail="Cannot vote your own review")
+            raise BadRequestError("Cannot vote your own review")
         if await self._vote_repo.exists(user_id, review_id):
-            raise HTTPException(status_code=409, detail="Vote already exists")
+            raise ConflictError("Vote already exists")
 
         await self._vote_repo.add(user_id, review_id)
         voter = await self._user_repo.get_by_id(user_id)

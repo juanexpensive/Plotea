@@ -5,6 +5,7 @@ from app.domain.entities.lists import (
     ListInvitationSummary,
     ListItemRef,
     ListSummary,
+    ListUser,
     MyListsOverview,
 )
 
@@ -86,3 +87,15 @@ class IListRepository(ABC):
 
     @abstractmethod
     async def deny_invitation(self, invitation_id: int, invitee_user_id: int) -> bool: ...
+
+    @abstractmethod
+    async def is_owner(self, list_id: int, user_id: int) -> bool: ...
+
+    @abstractmethod
+    async def is_collaborator(self, list_id: int, user_id: int) -> bool: ...
+
+    @abstractmethod
+    async def has_pending_invitation(self, list_id: int, invitee_user_id: int) -> bool: ...
+
+    @abstractmethod
+    async def list_collaborators(self, list_id: int) -> list[ListUser]: ...

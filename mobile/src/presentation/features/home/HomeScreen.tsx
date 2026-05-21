@@ -187,7 +187,7 @@ function SearchModal({
         <StatusBar style="light" />
         <View style={styles.searchModalHeader}>
           <Pressable style={styles.searchModalIconButton} onPress={onClose}>
-            <Text style={styles.searchModalIcon}>←</Text>
+            <Text style={styles.searchModalIcon}>{'<'}</Text>
           </Pressable>
           <View style={styles.searchModalInputShell}>
             <TextInput
@@ -204,7 +204,7 @@ function SearchModal({
             />
           </View>
           <Pressable style={styles.searchModalIconButton} onPress={hasSearchTerm ? onClear : onClose}>
-            <Text style={styles.searchModalIcon}>{hasSearchTerm ? '×' : '✕'}</Text>
+            <Text style={styles.searchModalIcon}>x</Text>
           </Pressable>
         </View>
 

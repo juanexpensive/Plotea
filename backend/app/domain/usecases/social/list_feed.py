@@ -1,8 +1,7 @@
 import base64
 from datetime import datetime
 
-from fastapi import HTTPException
-
+from app.domain.errors import BadRequestError
 from app.domain.entities.social import BaseActivity, FeedCursor
 from app.domain.repositories.i_activity_repository import IActivityRepository
 
@@ -18,7 +17,7 @@ def decode_feed_cursor(value: str) -> FeedCursor:
         created_at_raw, activity_id_raw = decoded.rsplit("|", 1)
         return FeedCursor(created_at=datetime.fromisoformat(created_at_raw), activity_id=int(activity_id_raw))
     except Exception as exc:  # pragma: no cover - defensive invalid cursor handling
-        raise HTTPException(status_code=400, detail="Invalid cursor") from exc
+        raise BadRequestError("Invalid cursor") from exc
 
 
 class ListFeedUseCase:

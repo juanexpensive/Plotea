@@ -33,7 +33,10 @@ class ReviewRepository(IReviewRepository):
         )
         self._session.add(model)
         await self._session.commit()
-        return await self.get_by_id(model.id, current_user_id=current_user_id)  # type: ignore[arg-type]
+        created = await self.get_by_id(model.id, current_user_id=current_user_id)
+        if created is None:
+            raise RuntimeError("Created review could not be reloaded")
+        return created
 
     async def get_by_id(self, review_id: int, current_user_id: int | None = None) -> Review | None:
         result = await self._session.execute(
@@ -84,12 +87,16 @@ class ReviewRepository(IReviewRepository):
         current_user_id: int | None = None,
     ) -> Review:
         model = await self._session.get(ReviewModel, review_id)
-        assert model is not None
+        if model is None:
+            raise RuntimeError("Review not found during update")
         model.rating = rating
         model.body = body
         model.contains_spoilers = contains_spoilers
         await self._session.commit()
-        return await self.get_by_id(review_id, current_user_id=current_user_id)  # type: ignore[return-value]
+        updated = await self.get_by_id(review_id, current_user_id=current_user_id)
+        if updated is None:
+            raise RuntimeError("Updated review could not be reloaded")
+        return updated
 
     async def delete(self, review_id: int) -> None:
         await self._session.execute(delete(ReviewModel).where(ReviewModel.id == review_id))

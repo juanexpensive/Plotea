@@ -1,7 +1,6 @@
 from datetime import date
 
-from fastapi import HTTPException
-
+from app.domain.errors import BadRequestError
 from app.domain.entities.watch_log import WatchLog
 from app.domain.repositories.i_media_status_repository import IMediaStatusRepository
 from app.domain.repositories.i_watch_log_repository import IWatchLogRepository
@@ -28,7 +27,7 @@ class CreateWatchLogUseCase:
         rating: int | None,
     ) -> WatchLog:
         if watched_at > date.today():
-            raise HTTPException(status_code=400, detail="watched_at cannot be in the future")
+            raise BadRequestError("watched_at cannot be in the future")
 
         watch_log = await self._watch_log_repo.create(
             user_id=user_id,

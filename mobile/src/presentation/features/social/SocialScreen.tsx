@@ -322,7 +322,7 @@ function SearchUsersModal({
       <View style={styles.searchModalScreen}>
         <View style={styles.searchModalHeader}>
           <Pressable style={styles.searchModalIconButton} onPress={onClose}>
-            <Text style={styles.searchModalIcon}>←</Text>
+            <Text style={styles.searchModalIcon}>{'<'}</Text>
           </Pressable>
           <View style={styles.searchModalInputShell}>
             <TextInput
@@ -339,7 +339,7 @@ function SearchUsersModal({
             />
           </View>
           <Pressable style={styles.searchModalIconButton} onPress={hasSearchTerm ? () => onChangeQuery('') : onClose}>
-            <Text style={styles.searchModalIcon}>{hasSearchTerm ? '×' : '✕'}</Text>
+            <Text style={styles.searchModalIcon}>x</Text>
           </Pressable>
         </View>
 

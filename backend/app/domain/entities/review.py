@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.domain.entities.media import MediaType
+
 
 @dataclass
 class Review:
@@ -9,7 +11,7 @@ class Review:
     username: str
     display_name: str | None
     tmdb_id: int
-    media_type: str
+    media_type: MediaType
     rating: int
     body: str
     contains_spoilers: bool

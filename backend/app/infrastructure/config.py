@@ -11,12 +11,8 @@ class Settings(BaseSettings):
     secret_key: str
     tmdb_api_key: str = ""
     expo_push_api_url: str = "https://exp.host/--/api/v2/push/send"
-    smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
-    smtp_username: str = ""
-    smtp_password: str = ""
-    smtp_from_email: str = ""
-    smtp_use_starttls: bool = True
+    resend_api_key: str = ""
+    resend_from_email: str = "onboarding@resend.dev"
     password_reset_base_url: str = ""
     password_reset_app_url: str = "plotskip://reset-password"
     uploads_dir: str = ""

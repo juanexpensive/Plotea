@@ -14,8 +14,12 @@ class ListRecentWatchLogEnrichedUseCase:
 
     async def execute(self, user_id: int, limit: int) -> list[RecentWatchLogEntry]:
         watch_logs = await self._watch_log_repo.list_by_user(user_id)
+        visible_watch_logs = watch_logs[:limit]
+        media_map = await self._media_loader.load_many(
+            [(watch_log.media_type, watch_log.tmdb_id) for watch_log in visible_watch_logs]
+        )
         items: list[RecentWatchLogEntry] = []
-        for watch_log in watch_logs[:limit]:
+        for watch_log in visible_watch_logs:
             items.append(
                 RecentWatchLogEntry(
                     id=watch_log.id,
@@ -24,7 +28,7 @@ class ListRecentWatchLogEnrichedUseCase:
                     watched_at=watch_log.watched_at,
                     rating=watch_log.rating,
                     created_at=watch_log.created_at,
-                    media=await self._media_loader.load(watch_log.media_type, watch_log.tmdb_id),
+                    media=media_map[(watch_log.media_type, watch_log.tmdb_id)],
                 )
             )
         return items

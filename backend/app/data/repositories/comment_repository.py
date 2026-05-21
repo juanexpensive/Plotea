@@ -26,7 +26,10 @@ class CommentRepository(ICommentRepository):
         )
         self._session.add(model)
         await self._session.commit()
-        return await self.get_by_id(model.id)  # type: ignore[arg-type, return-value]
+        created = await self.get_by_id(model.id)
+        if created is None:
+            raise RuntimeError("Created comment could not be reloaded")
+        return created
 
     async def get_by_id(self, comment_id: int) -> Comment | None:
         result = await self._session.execute(self._base_query().where(CommentModel.id == comment_id))
@@ -56,11 +59,15 @@ class CommentRepository(ICommentRepository):
 
     async def soft_delete(self, comment_id: int, placeholder_body: str) -> Comment:
         model = await self._session.get(CommentModel, comment_id)
-        assert model is not None
+        if model is None:
+            raise RuntimeError("Comment not found during soft delete")
         model.body = placeholder_body
         model.is_deleted = True
         await self._session.commit()
-        return await self.get_by_id(comment_id)  # type: ignore[return-value]
+        deleted = await self.get_by_id(comment_id)
+        if deleted is None:
+            raise RuntimeError("Soft-deleted comment could not be reloaded")
+        return deleted
 
     def _base_query(self):
         return select(CommentModel, UserModel).join(UserModel, UserModel.id == CommentModel.user_id)

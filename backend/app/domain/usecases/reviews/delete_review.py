@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-
+from app.domain.errors import NotFoundError
 from app.domain.repositories.i_review_repository import IReviewRepository
 
 
@@ -10,6 +9,6 @@ class DeleteReviewUseCase:
     async def execute(self, user_id: int, review_id: int) -> None:
         review = await self._review_repo.get_by_id(review_id)
         if review is None or review.user_id != user_id:
-            raise HTTPException(status_code=404, detail="Review not found")
+            raise NotFoundError("Review not found")
 
         await self._review_repo.delete(review_id)
