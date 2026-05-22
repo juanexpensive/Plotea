@@ -1,0 +1,146 @@
+from dataclasses import dataclass
+from datetime import date, datetime
+from typing import Literal
+
+from app.domain.entities.media import MediaItem, MediaType
+
+
+@dataclass
+class PublicUserSummary:
+    id: int
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+    is_following: bool
+    follows_me: bool
+
+
+@dataclass
+class PublicUserProfile:
+    id: int
+    username: str
+    display_name: str | None
+    bio: str | None
+    avatar_url: str | None
+    created_at: datetime
+    followers_count: int
+    following_count: int
+    reviews_count: int
+    watch_logs_count: int
+    is_following: bool
+
+
+@dataclass
+class GenreStat:
+    name: str
+    count: int
+
+
+@dataclass
+class PublicUserStats:
+    watched_count: int
+    estimated_hours: float
+    top_genres: list[GenreStat]
+    average_rating: float | None
+
+
+@dataclass
+class FavoriteMediaSelection:
+    position: int
+    tmdb_id: int
+    media_type: MediaType
+
+
+@dataclass
+class ActivityActor:
+    id: int
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+
+
+@dataclass
+class FeedCursor:
+    created_at: datetime
+    activity_id: int
+
+
+@dataclass
+class FollowedUser:
+    id: int
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+
+
+@dataclass
+class BaseActivity:
+    id: int
+    activity_type: Literal["review", "watch_log", "follow", "list_created"]
+    created_at: datetime
+    actor: ActivityActor
+
+
+@dataclass
+class ReviewActivity(BaseActivity):
+    review_id: int
+    tmdb_id: int
+    media_type: MediaType
+    rating: int
+    body_preview: str
+    contains_spoilers: bool
+
+
+@dataclass
+class WatchLogActivity(BaseActivity):
+    watch_log_id: int
+    tmdb_id: int
+    media_type: MediaType
+    watched_at: date
+    rating: int | None
+
+
+@dataclass
+class FollowActivity(BaseActivity):
+    followed_user: FollowedUser
+
+
+@dataclass
+class ListCreatedActivity(BaseActivity):
+    list_id: int | None
+    list_name: str | None
+    items_count: int
+    is_public: bool
+
+
+@dataclass
+class VisualFeedParticipant:
+    id: int
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+    activity_type: Literal["review", "watch_log"]
+    rating: int | None
+    created_at: datetime
+    review_id: int | None = None
+    review_body_preview: str | None = None
+    review_contains_spoilers: bool | None = None
+
+
+@dataclass
+class VisualFeedItem:
+    media: MediaItem
+    participants: list[VisualFeedParticipant]
+    recent_activity_count: int
+    latest_activity_at: datetime
+
+
+@dataclass
+class RecentWatchLogEntry:
+    id: int
+    tmdb_id: int
+    media_type: MediaType
+    watched_at: date
+    rating: int | None
+    created_at: datetime
+    media: MediaItem

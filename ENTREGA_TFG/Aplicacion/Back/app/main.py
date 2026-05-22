@@ -1,0 +1,84 @@
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
+from app.infrastructure.config import get_settings
+from app.infrastructure.database import dispose_db, init_db
+from app.infrastructure.limiter import limiter
+from app.infrastructure.storage_paths import AVATAR_UPLOADS_DIR, STATIC_DIR, UPLOADS_DIR
+from app.infrastructure.tmdb import close_tmdb_client, init_tmdb_client
+
+# Import models so Base.metadata registers all tables (needed by Alembic and tests)
+import app.data.models.user  # noqa: F401, E402
+import app.data.models.refresh_token  # noqa: F401, E402
+import app.data.models.password_reset_token  # noqa: F401, E402
+import app.data.models.push_device  # noqa: F401, E402
+import app.data.models.comment  # noqa: F401, E402
+import app.data.models.follow  # noqa: F401, E402
+import app.data.models.activity  # noqa: F401, E402
+import app.data.models.list  # noqa: F401, E402
+import app.data.models.list_item  # noqa: F401, E402
+import app.data.models.list_collaborator  # noqa: F401, E402
+import app.data.models.list_invitation  # noqa: F401, E402
+import app.data.models.user_media_status  # noqa: F401, E402
+import app.data.models.review_vote  # noqa: F401, E402
+import app.data.models.watch_log  # noqa: F401, E402
+import app.data.models.review  # noqa: F401, E402
+import app.data.models.user_favorite_media  # noqa: F401, E402
+
+from app.presentation.routers import auth as auth_router  # noqa: E402
+from app.presentation.routers import lists as lists_router  # noqa: E402
+from app.presentation.routers import media as media_router  # noqa: E402
+from app.presentation.routers import notifications as notifications_router  # noqa: E402
+from app.presentation.routers import reviews as reviews_router  # noqa: E402
+from app.presentation.routers import social as social_router  # noqa: E402
+from app.presentation.routers import watch_log as watch_log_router  # noqa: E402
+from app.presentation.error_handlers import register_exception_handlers  # noqa: E402
+
+AVATAR_UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings = get_settings()
+    init_db(settings.database_url)
+    init_tmdb_client(settings.tmdb_api_key)
+    yield
+    await dispose_db()
+    await close_tmdb_client()
+
+
+app = FastAPI(title="PlotSkip API", lifespan=lifespan)
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+register_exception_handlers(app)
+
+settings = get_settings()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_allowed_origins,
+    allow_methods=settings.cors_allowed_methods,
+    allow_headers=settings.cors_allowed_headers,
+)
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
+
+app.include_router(auth_router.router)
+app.include_router(lists_router.router)
+app.include_router(media_router.router)
+app.include_router(notifications_router.router)
+app.include_router(reviews_router.router)
+app.include_router(social_router.router)
+app.include_router(watch_log_router.router)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}

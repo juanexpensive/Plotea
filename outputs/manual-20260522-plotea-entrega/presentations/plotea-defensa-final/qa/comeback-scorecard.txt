@@ -1,0 +1,15 @@
+story: 4
+specificity: 4
+rhythm: 4
+whitespace: 4
+chart clarity: n/a
+typography: 4
+restraint: 5
+precision: 4
+coherence: 4
+reference delta: n/a
+
+notes:
+- Deck deliberately kept simple, direct, and editable.
+- Visual system follows Plotea dark + green palette.
+- No screenshots or hard metrics were used because they were not requested/provided.

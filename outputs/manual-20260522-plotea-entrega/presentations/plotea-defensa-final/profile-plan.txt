@@ -1,0 +1,24 @@
+task mode: create
+primary deck-profile: product-platform
+secondary profile gates: engineering-platform
+required proof objects:
+- portada con identidad visual de Plotea
+- slide de introduccion y propuesta de valor
+- slide de arquitectura/plataforma
+- slide de desarrollo por fases
+- slide de dificultades
+- slide de mejoras futuras
+- slide de conclusiones
+source/asset requirements:
+- usar Plotea.png como activo visual principal
+- respetar la paleta de DESIGN.md: fondo oscuro + acentos verdes
+brand authenticity constraints:
+- no inventar logos alternativos
+- no usar iconografia ajena a Plotea
+profile-specific QA gates:
+- claridad del sistema de producto
+- arquitectura concreta y no generica
+- ritmo visual simple y consistente
+known missing inputs:
+- sin capturas de app
+- sin métricas cuantitativas de uso

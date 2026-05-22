@@ -1,0 +1,2000 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/tu9dk9",
+    "id": "tu9dk9",
+    "slide": 7,
+    "layoutId": "7b6da391-b2eb-4877-b123-5bd89a3b9a9a",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "27589131-f0f5-45ea-84af-b648d1cc4781",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#1C1C1C",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "+mn-lt"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "7b6da391-b2eb-4877-b123-5bd89a3b9a9a",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "27589131-f0f5-45ea-84af-b648d1cc4781",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "27589131-f0f5-45ea-84af-b648d1cc4781",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/szqtcj6t",
+      "id": "1",
+      "bbox": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0"
+      },
+      "geometry": "rect",
+      "fillColor": "#1C1C1C"
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/3ex0nuxc",
+      "id": "2",
+      "bbox": [
+        64,
+        64,
+        900,
+        21.6
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.0.0"
+      },
+      "geometry": "rect",
+      "text": "Conclusiones",
+      "textPreview": "Conclusiones",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "+mn-lt",
+        "color": "#3ECF8E",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Conclusiones"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Conclusiones",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "color": "#3ECF8E",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Conclusiones",
+              "fontSize": 18,
+              "color": "#3ECF8E",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/at47y1kr",
+      "id": "3",
+      "bbox": [
+        64,
+        97.6,
+        900,
+        100.8
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.0.1"
+      },
+      "geometry": "rect",
+      "text": "Plotea me ha servido para aprender a construir mejor",
+      "textPreview": "Plotea me ha servido para aprender a construir mejor",
+      "resolvedFontSize": 42,
+      "resolvedTextStyle": {
+        "fontSize": 42,
+        "typeface": "+mn-lt",
+        "color": "#FFFFFF",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Plotea me ha servido para aprender a construir"
+          },
+          {
+            "index": 2,
+            "text": "mejor"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Plotea me ha servido para aprender a construir mejor",
+          "resolvedTextStyle": {
+            "fontSize": 42,
+            "color": "#FFFFFF",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Plotea me ha servido para aprender a construir mejor",
+              "fontSize": 42,
+              "color": "#FFFFFF",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/l87ed8ba",
+      "id": "4",
+      "bbox": [
+        64,
+        210.4,
+        900,
+        24
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.0.2"
+      },
+      "geometry": "rect",
+      "text": "El resultado final no se parece del todo a la idea inicial, pero eso tambien forma parte del aprendizaje.",
+      "textPreview": "El resultado final no se parece del todo a la idea inicial, pero eso tambien forma parte del aprendizaje.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "fontSize": 20,
+        "typeface": "+mn-lt",
+        "color": "#9A9A9A",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "El resultado final no se parece del todo a la idea inicial, pero eso tambien forma parte del aprendizaje."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "El resultado final no se parece del todo a la idea inicial, pero eso tambien forma parte del aprendizaje.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "color": "#9A9A9A",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "El resultado final no se parece del todo a la idea inicial, pero eso tambien forma parte del aprendizaje.",
+              "fontSize": 20,
+              "color": "#9A9A9A",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sneloj2t",
+      "id": "5",
+      "bbox": [
+        64,
+        268.4,
+        1152,
+        290
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.1"
+      },
+      "geometry": "roundRect",
+      "fillColor": "#202020"
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/32lszqtc",
+      "id": "6",
+      "bbox": [
+        94,
+        298.4,
+        16,
+        25.2
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.1.0.0.0.0"
+      },
+      "geometry": "rect",
+      "text": "•",
+      "textPreview": "•",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "+mn-lt",
+        "color": "#3ECF8E",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "•"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "•",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "color": "#3ECF8E",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "•",
+              "fontSize": 21,
+              "color": "#3ECF8E",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ahoza1gv",
+      "id": "7",
+      "bbox": [
+        124,
+        298.4,
+        590,
+        25.2
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.1.0.0.0.1"
+      },
+      "geometry": "rect",
+      "text": "He aprendido a trabajar mas paso a paso.",
+      "textPreview": "He aprendido a trabajar mas paso a paso.",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "+mn-lt",
+        "color": "#D7D7D7",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "He aprendido a trabajar mas paso a paso."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "He aprendido a trabajar mas paso a paso.",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "color": "#D7D7D7",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "He aprendido a trabajar mas paso a paso.",
+              "fontSize": 21,
+              "color": "#D7D7D7",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/lwval87e",
+      "id": "8",
+      "bbox": [
+        94,
+        341.6,
+        16,
+        25.2
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.1.0.0.1.0"
+      },
+      "geometry": "rect",
+      "text": "•",
+      "textPreview": "•",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "+mn-lt",
+        "color": "#3ECF8E",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "•"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "•",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "color": "#3ECF8E",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "•",
+              "fontSize": 21,
+              "color": "#3ECF8E",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/wb2hwfyx",
+      "id": "9",
+      "bbox": [
+        124,
+        341.6,
+        590,
+        50.4
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.1.0.0.1.1"
+      },
+      "geometry": "rect",
+      "text": "He aprendido a crear el proyecto de forma mas granular, separando mejor en componentes.",
+      "textPreview": "He aprendido a crear el proyecto de forma mas granular, separando mejor en componentes.",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "+mn-lt",
+        "color": "#D7D7D7",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "He aprendido a crear el proyecto de forma mas granular, separando"
+          },
+          {
+            "index": 2,
+            "text": "mejor en componentes."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "He aprendido a crear el proyecto de forma mas granular, separando mejor en componentes.",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "color": "#D7D7D7",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "He aprendido a crear el proyecto de forma mas granular, separando mejor en componentes.",
+              "fontSize": 21,
+              "color": "#D7D7D7",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2lszqtcj",
+      "id": "10",
+      "bbox": [
+        94,
+        410,
+        16,
+        25.2
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.1.0.0.2.0"
+      },
+      "geometry": "rect",
+      "text": "•",
+      "textPreview": "•",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "+mn-lt",
+        "color": "#3ECF8E",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "•"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "•",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "color": "#3ECF8E",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "•",
+              "fontSize": 21,
+              "color": "#3ECF8E",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/v6psfil0",
+      "id": "11",
+      "bbox": [
+        124,
+        410,
+        590,
+        50.4
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.1.0.0.2.1"
+      },
+      "geometry": "rect",
+      "text": "Termino contento por haber podido sacar adelante una app completa y funcional.",
+      "textPreview": "Termino contento por haber podido sacar adelante una app completa y funcional.",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "+mn-lt",
+        "color": "#D7D7D7",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Termino contento por haber podido sacar adelante una app"
+          },
+          {
+            "index": 2,
+            "text": "completa y funcional."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Termino contento por haber podido sacar adelante una app completa y funcional.",
+          "resolvedTextStyle": {
+            "fontSize": 21,
+            "color": "#D7D7D7",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Termino contento por haber podido sacar adelante una app completa y funcional.",
+              "fontSize": 21,
+              "color": "#D7D7D7",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/knih4byh",
+      "id": "12",
+      "bbox": [
+        742,
+        298.4,
+        420,
+        28.8
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.1.0.1.0"
+      },
+      "geometry": "rect",
+      "text": "Idea inicial vs resultado final",
+      "textPreview": "Idea inicial vs resultado final",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "+mn-lt",
+        "color": "#3ECF8E",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Idea inicial vs resultado final"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Idea inicial vs resultado final",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "color": "#3ECF8E",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Idea inicial vs resultado final",
+              "fontSize": 24,
+              "color": "#3ECF8E",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/d8bat47y",
+      "id": "13",
+      "bbox": [
+        742,
+        341.2,
+        420,
+        68.4
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.1.0.1.1"
+      },
+      "geometry": "rect",
+      "text": "La aplicacion final no se parece exactamente a lo que habia imaginado al principio, pero ha evolucionado hacia algo mas realista, mas util y mejor construido.",
+      "textPreview": "La aplicacion final no se parece exactamente a lo que habia imaginado al principio, pero ha evolucionado hacia algo mas realista, mas uti...",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "fontSize": 19,
+        "typeface": "+mn-lt",
+        "color": "#9A9A9A",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "La aplicacion final no se parece exactamente a lo que"
+          },
+          {
+            "index": 2,
+            "text": "habia imaginado al principio, pero ha evolucionado"
+          },
+          {
+            "index": 3,
+            "text": "hacia algo mas realista, mas util y mejor construido."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "La aplicacion final no se parece exactamente a lo que habia imaginado al principio, pero ha evolucionado hacia algo mas realista, mas util y mejor construido.",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "color": "#9A9A9A",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "La aplicacion final no se parece exactamente a lo que habia imaginado al principio, pero ha evolucionado hacia algo mas realista, mas util y mejor construido.",
+              "fontSize": 19,
+              "color": "#9A9A9A",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/29gr2p8n",
+      "id": "14",
+      "bbox": [
+        64,
+        592.4,
+        1040,
+        62.4
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0.2"
+      },
+      "geometry": "rect",
+      "text": "Plotea demuestra que una idea personal puede convertirse en un producto completo cuando se baja a tierra con decisiones tecnicas y funcionales claras.",
+      "textPreview": "Plotea demuestra que una idea personal puede convertirse en un producto completo cuando se baja a tierra con decisiones tecnicas y funcio...",
+      "resolvedFontSize": 26,
+      "resolvedTextStyle": {
+        "fontSize": 26,
+        "typeface": "+mn-lt",
+        "color": "#FFFFFF",
+        "alignment": "left",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Plotea demuestra que una idea personal puede convertirse en un producto completo cuando se"
+          },
+          {
+            "index": 2,
+            "text": "baja a tierra con decisiones tecnicas y funcionales claras."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Plotea demuestra que una idea personal puede convertirse en un producto completo cuando se baja a tierra con decisiones tecnicas y funcionales claras.",
+          "resolvedTextStyle": {
+            "fontSize": 26,
+            "color": "#FFFFFF",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Plotea demuestra que una idea personal puede convertirse en un producto completo cuando se baja a tierra con decisiones tecnicas y funcionales claras.",
+              "fontSize": 26,
+              "color": "#FFFFFF",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    }
+  ],
+  "composeRuns": [
+    {
+      "index": 1,
+      "frame": {
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 720
+      },
+      "root": {
+        "path": "0",
+        "kind": "panel",
+        "requestedSize": {
+          "width": {
+            "mode": "fixed",
+            "value": 1280
+          },
+          "height": {
+            "mode": "fixed",
+            "value": 720
+          }
+        },
+        "intrinsicSize": {
+          "width": 1280,
+          "height": 718.8
+        },
+        "frame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "children": [
+          {
+            "path": "0.0",
+            "kind": "column",
+            "requestedSize": {
+              "width": {
+                "mode": "fill",
+                "value": 1
+              },
+              "height": {
+                "mode": "fill",
+                "value": 1
+              }
+            },
+            "intrinsicSize": {
+              "width": 1152,
+              "height": 590.8
+            },
+            "frame": {
+              "left": 64,
+              "top": 64,
+              "width": 1152,
+              "height": 592
+            },
+            "children": [
+              {
+                "path": "0.0.0",
+                "kind": "column",
+                "requestedSize": {
+                  "width": {
+                    "mode": "fixed",
+                    "value": 900
+                  },
+                  "height": {
+                    "mode": "hug"
+                  }
+                },
+                "intrinsicSize": {
+                  "width": 900,
+                  "height": 170.4
+                },
+                "frame": {
+                  "left": 64,
+                  "top": 64,
+                  "width": 900,
+                  "height": 170.4
+                },
+                "children": [
+                  {
+                    "path": "0.0.0.0",
+                    "kind": "text",
+                    "requestedSize": {
+                      "width": {
+                        "mode": "fixed",
+                        "value": 900
+                      },
+                      "height": {
+                        "mode": "hug"
+                      }
+                    },
+                    "intrinsicSize": {
+                      "width": 900,
+                      "height": 21.6
+                    },
+                    "frame": {
+                      "left": 64,
+                      "top": 64,
+                      "width": 900,
+                      "height": 21.6
+                    },
+                    "children": [],
+                    "text": "Conclusiones",
+                    "transform": "none",
+                    "element": {
+                      "aid": "sh/3ex0nuxc",
+                      "id": "2",
+                      "kind": "shape"
+                    }
+                  },
+                  {
+                    "path": "0.0.0.1",
+                    "kind": "text",
+                    "requestedSize": {
+                      "width": {
+                        "mode": "fixed",
+                        "value": 900
+                      },
+                      "height": {
+                        "mode": "hug"
+                      }
+                    },
+                    "intrinsicSize": {
+                      "width": 900,
+                      "height": 100.8
+                    },
+                    "frame": {
+                      "left": 64,
+                      "top": 97.6,
+                      "width": 900,
+                      "height": 100.8
+                    },
+                    "children": [],
+                    "text": "Plotea me ha servido para aprender a construir mejor",
+                    "transform": "none",
+                    "element": {
+                      "aid": "sh/at47y1kr",
+                      "id": "3",
+                      "kind": "shape"
+                    }
+                  },
+                  {
+                    "path": "0.0.0.2",
+                    "kind": "text",
+                    "requestedSize": {
+                      "width": {
+                        "mode": "fixed",
+                        "value": 900
+                      },
+                      "height": {
+                        "mode": "hug"
+                      }
+                    },
+                    "intrinsicSize": {
+                      "width": 900,
+                      "height": 24
+                    },
+                    "frame": {
+                      "left": 64,
+                      "top": 210.4,
+                      "width": 900,
+                      "height": 24
+                    },
+                    "children": [],
+                    "text": "El resultado final no se parece del todo a la idea inicial, pero eso tambien forma parte del aprendizaje.",
+                    "transform": "none",
+                    "element": {
+                      "aid": "sh/l87ed8ba",
+                      "id": "4",
+                      "kind": "shape"
+                    }
+                  }
+                ],
+                "padding": {
+                  "top": 0,
+                  "right": 0,
+                  "bottom": 0,
+                  "left": 0
+                },
+                "gap": 12,
+                "effectiveGap": 12,
+                "justifyOffset": 0,
+                "align": "start",
+                "justify": "start",
+                "contentFrame": {
+                  "left": 64,
+                  "top": 64,
+                  "width": 900,
+                  "height": 170.4
+                },
+                "items": [
+                  {
+                    "path": "0.0.0.0",
+                    "frame": {
+                      "left": 64,
+                      "top": 64,
+                      "width": 900,
+                      "height": 21.6
+                    }
+                  },
+                  {
+                    "path": "0.0.0.1",
+                    "frame": {
+                      "left": 64,
+                      "top": 97.6,
+                      "width": 900,
+                      "height": 100.8
+                    }
+                  },
+                  {
+                    "path": "0.0.0.2",
+                    "frame": {
+                      "left": 64,
+                      "top": 210.4,
+                      "width": 900,
+                      "height": 24
+                    }
+                  }
+                ]
+              },
+              {
+                "path": "0.0.1",
+                "kind": "panel",
+                "requestedSize": {
+                  "width": {
+                    "mode": "fixed",
+                    "value": 1152
+                  },
+                  "height": {
+                    "mode": "fixed",
+                    "value": 290
+                  }
+                },
+                "intrinsicSize": {
+                  "width": 1128,
+                  "height": 222
+                },
+                "frame": {
+                  "left": 64,
+                  "top": 268.4,
+                  "width": 1152,
+                  "height": 290
+                },
+                "children": [
+                  {
+                    "path": "0.0.1.0",
+                    "kind": "row",
+                    "requestedSize": {
+                      "width": {
+                        "mode": "fill",
+                        "value": 1
+                      },
+                      "height": {
+                        "mode": "fill",
+                        "value": 1
+                      }
+                    },
+                    "intrinsicSize": {
+                      "width": 1068,
+                      "height": 162
+                    },
+                    "frame": {
+                      "left": 94,
+                      "top": 298.4,
+                      "width": 1092,
+                      "height": 230
+                    },
+                    "children": [
+                      {
+                        "path": "0.0.1.0.0",
+                        "kind": "column",
+                        "requestedSize": {
+                          "width": {
+                            "mode": "fixed",
+                            "value": 620
+                          },
+                          "height": {
+                            "mode": "hug"
+                          }
+                        },
+                        "intrinsicSize": {
+                          "width": 620,
+                          "height": 162
+                        },
+                        "frame": {
+                          "left": 94,
+                          "top": 298.4,
+                          "width": 620,
+                          "height": 162
+                        },
+                        "children": [
+                          {
+                            "path": "0.0.1.0.0.0",
+                            "kind": "row",
+                            "requestedSize": {
+                              "width": {
+                                "mode": "fixed",
+                                "value": 620
+                              },
+                              "height": {
+                                "mode": "hug"
+                              }
+                            },
+                            "intrinsicSize": {
+                              "width": 620,
+                              "height": 25.2
+                            },
+                            "frame": {
+                              "left": 94,
+                              "top": 298.4,
+                              "width": 620,
+                              "height": 25.2
+                            },
+                            "children": [
+                              {
+                                "path": "0.0.1.0.0.0.0",
+                                "kind": "text",
+                                "requestedSize": {
+                                  "width": {
+                                    "mode": "fixed",
+                                    "value": 16
+                                  },
+                                  "height": {
+                                    "mode": "hug"
+                                  }
+                                },
+                                "intrinsicSize": {
+                                  "width": 16,
+                                  "height": 25.2
+                                },
+                                "frame": {
+                                  "left": 94,
+                                  "top": 298.4,
+                                  "width": 16,
+                                  "height": 25.2
+                                },
+                                "children": [],
+                                "text": "•",
+                                "transform": "none",
+                                "element": {
+                                  "aid": "sh/32lszqtc",
+                                  "id": "6",
+                                  "kind": "shape"
+                                }
+                              },
+                              {
+                                "path": "0.0.1.0.0.0.1",
+                                "kind": "text",
+                                "requestedSize": {
+                                  "width": {
+                                    "mode": "fixed",
+                                    "value": 590
+                                  },
+                                  "height": {
+                                    "mode": "hug"
+                                  }
+                                },
+                                "intrinsicSize": {
+                                  "width": 590,
+                                  "height": 25.2
+                                },
+                                "frame": {
+                                  "left": 124,
+                                  "top": 298.4,
+                                  "width": 590,
+                                  "height": 25.2
+                                },
+                                "children": [],
+                                "text": "He aprendido a trabajar mas paso a paso.",
+                                "transform": "none",
+                                "element": {
+                                  "aid": "sh/ahoza1gv",
+                                  "id": "7",
+                                  "kind": "shape"
+                                }
+                              }
+                            ],
+                            "padding": {
+                              "top": 0,
+                              "right": 0,
+                              "bottom": 0,
+                              "left": 0
+                            },
+                            "gap": 14,
+                            "effectiveGap": 14,
+                            "justifyOffset": 0,
+                            "align": "start",
+                            "justify": "start",
+                            "contentFrame": {
+                              "left": 94,
+                              "top": 298.4,
+                              "width": 620,
+                              "height": 25.2
+                            },
+                            "items": [
+                              {
+                                "path": "0.0.1.0.0.0.0",
+                                "frame": {
+                                  "left": 94,
+                                  "top": 298.4,
+                                  "width": 16,
+                                  "height": 25.2
+                                }
+                              },
+                              {
+                                "path": "0.0.1.0.0.0.1",
+                                "frame": {
+                                  "left": 124,
+                                  "top": 298.4,
+                                  "width": 590,
+                                  "height": 25.2
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "path": "0.0.1.0.0.1",
+                            "kind": "row",
+                            "requestedSize": {
+                              "width": {
+                                "mode": "fixed",
+                                "value": 620
+                              },
+                              "height": {
+                                "mode": "hug"
+                              }
+                            },
+                            "intrinsicSize": {
+                              "width": 620,
+                              "height": 50.4
+                            },
+                            "frame": {
+                              "left": 94,
+                              "top": 341.6,
+                              "width": 620,
+                              "height": 50.4
+                            },
+                            "children": [
+                              {
+                                "path": "0.0.1.0.0.1.0",
+                                "kind": "text",
+                                "requestedSize": {
+                                  "width": {
+                                    "mode": "fixed",
+                                    "value": 16
+                                  },
+                                  "height": {
+                                    "mode": "hug"
+                                  }
+                                },
+                                "intrinsicSize": {
+                                  "width": 16,
+                                  "height": 25.2
+                                },
+                                "frame": {
+                                  "left": 94,
+                                  "top": 341.6,
+                                  "width": 16,
+                                  "height": 25.2
+                                },
+                                "children": [],
+                                "text": "•",
+                                "transform": "none",
+                                "element": {
+                                  "aid": "sh/lwval87e",
+                                  "id": "8",
+                                  "kind": "shape"
+                                }
+                              },
+                              {
+                                "path": "0.0.1.0.0.1.1",
+                                "kind": "text",
+                                "requestedSize": {
+                                  "width": {
+                                    "mode": "fixed",
+                                    "value": 590
+                                  },
+                                  "height": {
+                                    "mode": "hug"
+                                  }
+                                },
+                                "intrinsicSize": {
+                                  "width": 590,
+                                  "height": 50.4
+                                },
+                                "frame": {
+                                  "left": 124,
+                                  "top": 341.6,
+                                  "width": 590,
+                                  "height": 50.4
+                                },
+                                "children": [],
+                                "text": "He aprendido a crear el proyecto de forma mas granular, separando mejor en componentes.",
+                                "transform": "none",
+                                "element": {
+                                  "aid": "sh/wb2hwfyx",
+                                  "id": "9",
+                                  "kind": "shape"
+                                }
+                              }
+                            ],
+                            "padding": {
+                              "top": 0,
+                              "right": 0,
+                              "bottom": 0,
+                              "left": 0
+                            },
+                            "gap": 14,
+                            "effectiveGap": 14,
+                            "justifyOffset": 0,
+                            "align": "start",
+                            "justify": "start",
+                            "contentFrame": {
+                              "left": 94,
+                              "top": 341.6,
+                              "width": 620,
+                              "height": 50.4
+                            },
+                            "items": [
+                              {
+                                "path": "0.0.1.0.0.1.0",
+                                "frame": {
+                                  "left": 94,
+                                  "top": 341.6,
+                                  "width": 16,
+                                  "height": 25.2
+                                }
+                              },
+                              {
+                                "path": "0.0.1.0.0.1.1",
+                                "frame": {
+                                  "left": 124,
+                                  "top": 341.6,
+                                  "width": 590,
+                                  "height": 50.4
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "path": "0.0.1.0.0.2",
+                            "kind": "row",
+                            "requestedSize": {
+                              "width": {
+                                "mode": "fixed",
+                                "value": 620
+                              },
+                              "height": {
+                                "mode": "hug"
+                              }
+                            },
+                            "intrinsicSize": {
+                              "width": 620,
+                              "height": 50.4
+                            },
+                            "frame": {
+                              "left": 94,
+                              "top": 410,
+                              "width": 620,
+                              "height": 50.4
+                            },
+                            "children": [
+                              {
+                                "path": "0.0.1.0.0.2.0",
+                                "kind": "text",
+                                "requestedSize": {
+                                  "width": {
+                                    "mode": "fixed",
+                                    "value": 16
+                                  },
+                                  "height": {
+                                    "mode": "hug"
+                                  }
+                                },
+                                "intrinsicSize": {
+                                  "width": 16,
+                                  "height": 25.2
+                                },
+                                "frame": {
+                                  "left": 94,
+                                  "top": 410,
+                                  "width": 16,
+                                  "height": 25.2
+                                },
+                                "children": [],
+                                "text": "•",
+                                "transform": "none",
+                                "element": {
+                                  "aid": "sh/2lszqtcj",
+                                  "id": "10",
+                                  "kind": "shape"
+                                }
+                              },
+                              {
+                                "path": "0.0.1.0.0.2.1",
+                                "kind": "text",
+                                "requestedSize": {
+                                  "width": {
+                                    "mode": "fixed",
+                                    "value": 590
+                                  },
+                                  "height": {
+                                    "mode": "hug"
+                                  }
+                                },
+                                "intrinsicSize": {
+                                  "width": 590,
+                                  "height": 50.4
+                                },
+                                "frame": {
+                                  "left": 124,
+                                  "top": 410,
+                                  "width": 590,
+                                  "height": 50.4
+                                },
+                                "children": [],
+                                "text": "Termino contento por haber podido sacar adelante una app completa y funcional.",
+                                "transform": "none",
+                                "element": {
+                                  "aid": "sh/v6psfil0",
+                                  "id": "11",
+                                  "kind": "shape"
+                                }
+                              }
+                            ],
+                            "padding": {
+                              "top": 0,
+                              "right": 0,
+                              "bottom": 0,
+                              "left": 0
+                            },
+                            "gap": 14,
+                            "effectiveGap": 14,
+                            "justifyOffset": 0,
+                            "align": "start",
+                            "justify": "start",
+                            "contentFrame": {
+                              "left": 94,
+                              "top": 410,
+                              "width": 620,
+                              "height": 50.4
+                            },
+                            "items": [
+                              {
+                                "path": "0.0.1.0.0.2.0",
+                                "frame": {
+                                  "left": 94,
+                                  "top": 410,
+                                  "width": 16,
+                                  "height": 25.2
+                                }
+                              },
+                              {
+                                "path": "0.0.1.0.0.2.1",
+                                "frame": {
+                                  "left": 124,
+                                  "top": 410,
+                                  "width": 590,
+                                  "height": 50.4
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        "padding": {
+                          "top": 0,
+                          "right": 0,
+                          "bottom": 0,
+                          "left": 0
+                        },
+                        "gap": 18,
+                        "effectiveGap": 18,
+                        "justifyOffset": 0,
+                        "align": "start",
+                        "justify": "start",
+                        "contentFrame": {
+                          "left": 94,
+                          "top": 298.4,
+                          "width": 620,
+                          "height": 162
+                        },
+                        "items": [
+                          {
+                            "path": "0.0.1.0.0.0",
+                            "frame": {
+                              "left": 94,
+                              "top": 298.4,
+                              "width": 620,
+                              "height": 25.2
+                            }
+                          },
+                          {
+                            "path": "0.0.1.0.0.1",
+                            "frame": {
+                              "left": 94,
+                              "top": 341.6,
+                              "width": 620,
+                              "height": 50.4
+                            }
+                          },
+                          {
+                            "path": "0.0.1.0.0.2",
+                            "frame": {
+                              "left": 94,
+                              "top": 410,
+                              "width": 620,
+                              "height": 50.4
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "path": "0.0.1.0.1",
+                        "kind": "column",
+                        "requestedSize": {
+                          "width": {
+                            "mode": "fixed",
+                            "value": 420
+                          },
+                          "height": {
+                            "mode": "hug"
+                          }
+                        },
+                        "intrinsicSize": {
+                          "width": 420,
+                          "height": 111.2
+                        },
+                        "frame": {
+                          "left": 742,
+                          "top": 298.4,
+                          "width": 420,
+                          "height": 111.2
+                        },
+                        "children": [
+                          {
+                            "path": "0.0.1.0.1.0",
+                            "kind": "text",
+                            "requestedSize": {
+                              "width": {
+                                "mode": "fixed",
+                                "value": 420
+                              },
+                              "height": {
+                                "mode": "hug"
+                              }
+                            },
+                            "intrinsicSize": {
+                              "width": 420,
+                              "height": 28.8
+                            },
+                            "frame": {
+                              "left": 742,
+                              "top": 298.4,
+                              "width": 420,
+                              "height": 28.8
+                            },
+                            "children": [],
+                            "text": "Idea inicial vs resultado final",
+                            "transform": "none",
+                            "element": {
+                              "aid": "sh/knih4byh",
+                              "id": "12",
+                              "kind": "shape"
+                            }
+                          },
+                          {
+                            "path": "0.0.1.0.1.1",
+                            "kind": "text",
+                            "requestedSize": {
+                              "width": {
+                                "mode": "fixed",
+                                "value": 420
+                              },
+                              "height": {
+                                "mode": "hug"
+                              }
+                            },
+                            "intrinsicSize": {
+                              "width": 420,
+                              "height": 68.4
+                            },
+                            "frame": {
+                              "left": 742,
+                              "top": 341.2,
+                              "width": 420,
+                              "height": 68.4
+                            },
+                            "children": [],
+                            "text": "La aplicacion final no se parece exactamente a lo que habia imaginado al principio, pero ha evolucionado hacia algo mas realista, mas util y mejor construido.",
+                            "transform": "none",
+                            "element": {
+                              "aid": "sh/d8bat47y",
+                              "id": "13",
+                              "kind": "shape"
+                            }
+                          }
+                        ],
+                        "padding": {
+                          "top": 0,
+                          "right": 0,
+                          "bottom": 0,
+                          "left": 0
+                        },
+                        "gap": 14,
+                        "effectiveGap": 14,
+                        "justifyOffset": 0,
+                        "align": "start",
+                        "justify": "start",
+                        "contentFrame": {
+                          "left": 742,
+                          "top": 298.4,
+                          "width": 420,
+                          "height": 111.2
+                        },
+                        "items": [
+                          {
+                            "path": "0.0.1.0.1.0",
+                            "frame": {
+                              "left": 742,
+                              "top": 298.4,
+                              "width": 420,
+                              "height": 28.8
+                            }
+                          },
+                          {
+                            "path": "0.0.1.0.1.1",
+                            "frame": {
+                              "left": 742,
+                              "top": 341.2,
+                              "width": 420,
+                              "height": 68.4
+                            }
+                          }
+                        ]
+                      }
+                    ],
+                    "padding": {
+                      "top": 0,
+                      "right": 0,
+                      "bottom": 0,
+                      "left": 0
+                    },
+                    "gap": 28,
+                    "effectiveGap": 28,
+                    "justifyOffset": 0,
+                    "align": "start",
+                    "justify": "start",
+                    "contentFrame": {
+                      "left": 94,
+                      "top": 298.4,
+                      "width": 1092,
+                      "height": 230
+                    },
+                    "items": [
+                      {
+                        "path": "0.0.1.0.0",
+                        "frame": {
+                          "left": 94,
+                          "top": 298.4,
+                          "width": 620,
+                          "height": 162
+                        }
+                      },
+                      {
+                        "path": "0.0.1.0.1",
+                        "frame": {
+                          "left": 742,
+                          "top": 298.4,
+                          "width": 420,
+                          "height": 111.2
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "padding": {
+                  "top": 30,
+                  "right": 30,
+                  "bottom": 30,
+                  "left": 30
+                },
+                "align": "start",
+                "justify": "start",
+                "contentFrame": {
+                  "left": 94,
+                  "top": 298.4,
+                  "width": 1092,
+                  "height": 230
+                },
+                "element": {
+                  "aid": "sh/sneloj2t",
+                  "id": "5",
+                  "kind": "shape"
+                }
+              },
+              {
+                "path": "0.0.2",
+                "kind": "text",
+                "requestedSize": {
+                  "width": {
+                    "mode": "fixed",
+                    "value": 1040
+                  },
+                  "height": {
+                    "mode": "hug"
+                  }
+                },
+                "intrinsicSize": {
+                  "width": 1040,
+                  "height": 62.4
+                },
+                "frame": {
+                  "left": 64,
+                  "top": 592.4,
+                  "width": 1040,
+                  "height": 62.4
+                },
+                "children": [],
+                "text": "Plotea demuestra que una idea personal puede convertirse en un producto completo cuando se baja a tierra con decisiones tecnicas y funcionales claras.",
+                "transform": "none",
+                "element": {
+                  "aid": "sh/29gr2p8n",
+                  "id": "14",
+                  "kind": "shape"
+                }
+              }
+            ],
+            "padding": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            },
+            "gap": 34,
+            "effectiveGap": 34,
+            "justifyOffset": 0,
+            "align": "start",
+            "justify": "start",
+            "contentFrame": {
+              "left": 64,
+              "top": 64,
+              "width": 1152,
+              "height": 592
+            },
+            "items": [
+              {
+                "path": "0.0.0",
+                "frame": {
+                  "left": 64,
+                  "top": 64,
+                  "width": 900,
+                  "height": 170.4
+                }
+              },
+              {
+                "path": "0.0.1",
+                "frame": {
+                  "left": 64,
+                  "top": 268.4,
+                  "width": 1152,
+                  "height": 290
+                }
+              },
+              {
+                "path": "0.0.2",
+                "frame": {
+                  "left": 64,
+                  "top": 592.4,
+                  "width": 1040,
+                  "height": 62.4
+                }
+              }
+            ]
+          }
+        ],
+        "padding": {
+          "top": 64,
+          "right": 64,
+          "bottom": 64,
+          "left": 64
+        },
+        "align": "start",
+        "justify": "start",
+        "contentFrame": {
+          "left": 64,
+          "top": 64,
+          "width": 1152,
+          "height": 592
+        },
+        "element": {
+          "aid": "sh/szqtcj6t",
+          "id": "1",
+          "kind": "shape"
+        }
+      }
+    }
+  ]
+}

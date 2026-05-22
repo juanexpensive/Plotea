@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = Path.home() / "Downloads"
-OUTPUT_DOCX = OUTPUT_DIR / "TFG_PlotSkip_primera_version.docx"
+OUTPUT_DOCX = OUTPUT_DIR / "TFG_Plotea_final.docx"
 ASSETS_DIR = ROOT / "dias" / "generated_doc_assets"
 LOGO_PATH = ROOT / "Plotea.png"
 FONT_REGULAR = r"C:\Windows\Fonts\arial.ttf"
@@ -111,9 +111,9 @@ def make_context_diagram() -> Path:
     draw = ImageDraw.Draw(image)
 
     title_font = load_font(34, bold=True)
-    draw.text((60, 40), "Diagrama de contexto de PlotSkip", fill=COLOR_DARK, font=title_font)
+    draw.text((60, 40), "Diagrama de contexto de Plotea", fill=COLOR_DARK, font=title_font)
 
-    draw_box(draw, (590, 290, 1010, 560), "PlotSkip\nAplicacion movil + API", COLOR_ACCENT, COLOR_DARK, bold=True)
+    draw_box(draw, (590, 290, 1010, 560), "Plotea\nAplicacion movil + API", COLOR_ACCENT, COLOR_DARK, bold=True)
     draw_box(draw, (120, 160, 420, 310), "Usuario registrado", COLOR_SUCCESS, COLOR_DARK)
     draw_box(draw, (120, 560, 420, 710), "TMDB API", "#7C3AED", COLOR_DARK)
     draw_box(draw, (1170, 180, 1470, 330), "Servicio de correo\nResend", "#EA580C", COLOR_DARK)
@@ -141,11 +141,11 @@ def make_use_case_diagram() -> Path:
 
     draw.text((60, 36), "Modelo resumido de casos de uso", fill=COLOR_DARK, font=load_font(34, bold=True))
     actor_box = (70, 360, 330, 660)
-    draw_box(draw, actor_box, "Usuario de PlotSkip", COLOR_SUCCESS, COLOR_DARK)
+    draw_box(draw, actor_box, "Usuario de Plotea", COLOR_SUCCESS, COLOR_DARK)
 
     system_box = (420, 110, 1590, 920)
     draw.rounded_rectangle(system_box, radius=24, outline=COLOR_DARK, width=4)
-    draw.text((470, 140), "Sistema PlotSkip", fill=COLOR_DARK, font=load_font(28, bold=True))
+    draw.text((470, 140), "Sistema Plotea", fill=COLOR_DARK, font=load_font(28, bold=True))
 
     cases = [
         ((520, 220, 960, 300), "Registrarse e iniciar sesion"),
@@ -389,6 +389,17 @@ def add_toc(paragraph) -> None:
     run._r.append(fld_end)
 
 
+def enable_update_fields_on_open(document: Document) -> None:
+    settings_element = document.settings.element
+    existing = settings_element.find(qn("w:updateFields"))
+    if existing is None:
+        update_fields = OxmlElement("w:updateFields")
+        update_fields.set(qn("w:val"), "true")
+        settings_element.append(update_fields)
+    else:
+        existing.set(qn("w:val"), "true")
+
+
 def add_paragraphs(document: Document, text: str) -> None:
     for paragraph_text in [part.strip() for part in dedent(text).strip().split("\n\n") if part.strip()]:
         p = document.add_paragraph(paragraph_text)
@@ -494,7 +505,7 @@ def make_cover(document: Document) -> None:
 
     subtitle = document.add_paragraph()
     subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = subtitle.add_run("PlotSkip")
+    run = subtitle.add_run("Plotea")
     run.font.name = "Arial"
     run.font.size = Pt(20)
     run.font.bold = True
@@ -508,7 +519,7 @@ def make_cover(document: Document) -> None:
     details = [
         "Juan Caro Vaquero",
         "Curso 2025-2026",
-        "Primera version de trabajo",
+        "Documento final",
         "IES Nervion",
     ]
     for item in details:
@@ -532,6 +543,7 @@ def build_document() -> None:
     design_class_diagram = make_design_class_diagram()
 
     document = Document()
+    enable_update_fields_on_open(document)
     set_document_styles(document)
     add_header_footer(document)
     make_cover(document)
@@ -544,9 +556,9 @@ def build_document() -> None:
     add_paragraphs(
         document,
         """
-        El objetivo de PlotSkip es desarrollar una aplicacion movil centrada en el seguimiento, valoracion y conversacion social alrededor del cine y las series. La propuesta busca combinar en una sola experiencia el diario de visionado, la escritura de resenas, la curacion de listas y la relacion entre usuarios con gustos similares.
+        El objetivo de Plotea es desarrollar una aplicacion movil centrada en el seguimiento, valoracion y conversacion social alrededor del cine y las series. La propuesta busca combinar en una sola experiencia el diario de visionado, la escritura de resenas, la curacion de listas y la relacion entre usuarios con gustos similares.
 
-        El sistema se plantea como una red social vertical especializada en contenido audiovisual. A diferencia de soluciones generalistas o demasiado fragmentadas, PlotSkip pretende ofrecer un flujo natural para descubrir obras, registrar lo que se ha visto, opinar sobre ello y conectar con la actividad de otros usuarios desde una misma interfaz.
+        El sistema se plantea como una red social vertical especializada en contenido audiovisual. A diferencia de soluciones generalistas o demasiado fragmentadas, Plotea pretende ofrecer un flujo natural para descubrir obras, registrar lo que se ha visto, opinar sobre ello y conectar con la actividad de otros usuarios desde una misma interfaz.
         """,
     )
 
@@ -554,16 +566,16 @@ def build_document() -> None:
     add_paragraphs(
         document,
         """
-        PlotSkip consiste en una aplicacion movil para Android e iOS desarrollada con React Native y Expo, apoyada por una API REST construida con FastAPI y una base de datos PostgreSQL. La aplicacion permite buscar peliculas y series mediante TMDB, consultar fichas de detalle, marcar estados personales como vista o watchlist, registrar visionados por fecha y publicar resenas con puntuacion.
+        Plotea consiste en una aplicacion movil para Android e iOS desarrollada con React Native y Expo, apoyada por una API REST construida con FastAPI y una base de datos PostgreSQL. La aplicacion permite buscar peliculas y series mediante TMDB, consultar fichas de detalle, marcar estados personales como vista o watchlist, registrar visionados por fecha y publicar resenas con puntuacion.
 
         El sistema dispone tambien de una capa social. Los usuarios pueden seguir a otros perfiles, ver un feed de actividad reciente, comentar resenas, votar las que consideran utiles y consultar perfiles publicos con estadisticas agregadas. A ello se suma un sistema de listas publicas o privadas, con posibilidad de colaboracion entre varios usuarios y autoria por elemento, lo que refuerza el caracter comunitario de la aplicacion.
 
-        Desde el punto de vista de seguridad y experiencia de uso, PlotSkip utiliza autenticacion basada en JWT con refresh tokens, cierre de sesion seguro, recuperacion de contrasena por correo electronico y almacenamiento protegido del estado de sesion en el dispositivo. El resultado es una aplicacion de uso continuado, pensada para registrar habitos audiovisuales y compartirlos con otros usuarios.
+        Desde el punto de vista de seguridad y experiencia de uso, Plotea utiliza autenticacion basada en JWT con refresh tokens, cierre de sesion seguro, recuperacion de contrasena por correo electronico y almacenamiento protegido del estado de sesion en el dispositivo. El resultado es una aplicacion de uso continuado, pensada para registrar habitos audiovisuales y compartirlos con otros usuarios.
         """,
     )
 
     document.add_heading("1.2. Diagrama de contexto", level=3)
-    add_figure(document, context_diagram, "Figura 1. Diagrama de contexto de PlotSkip.", width_inches=6.6)
+    add_figure(document, context_diagram, "Figura 1. Diagrama de contexto de Plotea.", width_inches=6.6)
     add_paragraphs(
         document,
         """
@@ -575,11 +587,11 @@ def build_document() -> None:
     add_paragraphs(
         document,
         """
-        En el mercado actual existen varias referencias parciales, pero ninguna cubre exactamente el enfoque funcional de PlotSkip. Letterboxd es el referente mas evidente para diario, resenas y listas de cine, pero no integra series con la misma naturalidad y ademas ha recibido criticas por cambios de interfaz que han ocultado acciones basicas. IMDb dispone de un catalogo enorme, pero su experiencia es menos social y mas enciclopedica. Trakt resuelve bien el seguimiento de consumo, aunque la capa comunitaria resulta menos rica para la conversacion editorial.
+        En el mercado actual existen varias referencias parciales, pero ninguna cubre exactamente el enfoque funcional de Plotea. Letterboxd es el referente mas evidente para diario, resenas y listas de cine, pero no integra series con la misma naturalidad y ademas ha recibido criticas por cambios de interfaz que han ocultado acciones basicas. IMDb dispone de un catalogo enorme, pero su experiencia es menos social y mas enciclopedica. Trakt resuelve bien el seguimiento de consumo, aunque la capa comunitaria resulta menos rica para la conversacion editorial.
 
         A partir de ese analisis se detectan tres oportunidades. La primera es unificar peliculas y series dentro de una misma experiencia coherente. La segunda es reforzar la combinacion entre seguimiento personal y red social, de forma que el usuario no solo registre lo que ve, sino que encuentre valor en la actividad de otros perfiles. La tercera es ofrecer una arquitectura tecnica moderna y mantenible, evitando dependencias o subsistemas fuera del alcance real del producto.
 
-        PlotSkip se posiciona, por tanto, como una solucion especializada en comunidad audiovisual, mas cercana al uso diario y a la identidad del usuario que a una simple base de datos de obras.
+        Plotea se posiciona, por tanto, como una solucion especializada en comunidad audiovisual, mas cercana al uso diario y a la identidad del usuario que a una simple base de datos de obras.
         """,
     )
 
@@ -720,7 +732,7 @@ def build_document() -> None:
     add_paragraphs(
         document,
         """
-        Se selecciona la primera alternativa, formada por React Native con Expo, FastAPI y PostgreSQL, por ser la que mejor se alinea con el estado actual del proyecto y con la naturaleza relacional del dominio. PlotSkip no necesita una base de datos documental ni un backend improvisado alrededor de tiempo real generalista; necesita consistencia en usuarios, follow, resenas, listas y estadisticas.
+        Se selecciona la primera alternativa, formada por React Native con Expo, FastAPI y PostgreSQL, por ser la que mejor se alinea con el estado actual del proyecto y con la naturaleza relacional del dominio. Plotea no necesita una base de datos documental ni un backend improvisado alrededor de tiempo real generalista; necesita consistencia en usuarios, follow, resenas, listas y estadisticas.
 
         FastAPI permite mantener una API clara, tipada y facil de probar, mientras que PostgreSQL aporta integridad referencial y consultas expresivas para el feed social, el diario, las listas colaborativas y las estadisticas agregadas. En el cliente, React Native con Expo ofrece una iteracion rapida sobre iOS y Android sin comprometer la experiencia movil. La eleccion final no responde solo a preferencias tecnologicas, sino a una mejor correspondencia entre problema, arquitectura y madurez real del desarrollo.
         """,
@@ -764,12 +776,12 @@ def build_document() -> None:
 
     document.add_heading("2.2. Sprints", level=3)
     sprint_rows = [
-        TableRow(["Primer sprint", "Base tecnica, registro, login y persistencia de sesion.", "18/03/2025 - 29/03/2025", "11 dias"]),
-        TableRow(["Segundo sprint", "Busqueda de media, detalle y estados personales de visionado.", "30/03/2025 - 12/04/2025", "14 dias"]),
-        TableRow(["Tercer sprint", "Resenas, comentarios y primeras capacidades sociales.", "13/04/2025 - 26/04/2025", "14 dias"]),
-        TableRow(["Cuarto sprint", "Diario de visionado, feed social y perfiles publicos.", "27/04/2025 - 11/05/2025", "15 dias"]),
-        TableRow(["Quinto sprint", "Listas, estadisticas, favoritas y perfil curado.", "12/05/2025 - 31/05/2025", "20 dias"]),
-        TableRow(["Sexto sprint", "Listas colaborativas, pulido de UX y preparacion de la memoria.", "01/06/2025 - 12/06/2025", "12 dias"]),
+        TableRow(["Primer sprint", "Base tecnica, registro, login y persistencia de sesion.", "01/03/2026 - 11/03/2026", "11 dias"]),
+        TableRow(["Segundo sprint", "Busqueda de media, detalle y estados personales de visionado.", "12/03/2026 - 23/03/2026", "12 dias"]),
+        TableRow(["Tercer sprint", "Resenas, comentarios y primeras capacidades sociales.", "24/03/2026 - 04/04/2026", "12 dias"]),
+        TableRow(["Cuarto sprint", "Diario de visionado, feed social y perfiles publicos.", "05/04/2026 - 18/04/2026", "14 dias"]),
+        TableRow(["Quinto sprint", "Listas, estadisticas, favoritas y perfil curado.", "19/04/2026 - 05/05/2026", "17 dias"]),
+        TableRow(["Sexto sprint", "Listas colaborativas, pulido de UX, despliegue y cierre de memoria.", "06/05/2026 - 22/05/2026", "17 dias"]),
     ]
     add_table(document, ["Sprint", "Objetivo", "Fechas", "Duracion"], sprint_rows, [4.0, 8.4, 3.2, 2.2])
     add_paragraphs(
@@ -784,7 +796,7 @@ def build_document() -> None:
     add_paragraphs(
         document,
         """
-        En la fase de analisis se identifica PlotSkip como un sistema cliente-servidor compuesto por una aplicacion movil y una API REST. La app movil se desarrolla en TypeScript sobre React Native y Expo, y la API se construye con FastAPI siguiendo una separacion clara entre dominio, datos, presentacion e infraestructura.
+        En la fase de analisis se identifica Plotea como un sistema cliente-servidor compuesto por una aplicacion movil y una API REST. La app movil se desarrolla en TypeScript sobre React Native y Expo, y la API se construye con FastAPI siguiendo una separacion clara entre dominio, datos, presentacion e infraestructura.
 
         El sistema utiliza PostgreSQL como fuente principal de verdad para usuarios, relaciones sociales, resenas, diario y listas. La informacion audiovisual se consulta en TMDB y se normaliza en una cache minima para acelerar listados, feeds y enriquecimiento de estadisticas. La sesion de usuario se gestiona con access token de corta vida y refresh token persistido, lo que reduce la friccion al reabrir la aplicacion.
 
@@ -806,7 +818,7 @@ def build_document() -> None:
     add_paragraphs(
         document,
         """
-        El modelo de casos de uso se centra en un unico actor principal, el usuario de PlotSkip, que atraviesa distintos momentos de la experiencia: acceso al sistema, descubrimiento de contenido, registro de actividad, conversacion social y gestion de identidad. Algunas acciones generan estados derivados, como el feed social o las estadisticas, pero el origen sigue siendo la actividad voluntaria del usuario dentro de la aplicacion.
+        El modelo de casos de uso se centra en un unico actor principal, el usuario de Plotea, que atraviesa distintos momentos de la experiencia: acceso al sistema, descubrimiento de contenido, registro de actividad, conversacion social y gestion de identidad. Algunas acciones generan estados derivados, como el feed social o las estadisticas, pero el origen sigue siendo la actividad voluntaria del usuario dentro de la aplicacion.
         """,
     )
 
@@ -1077,18 +1089,18 @@ def build_document() -> None:
 
     document.add_heading("4.1.2. Catalogo de requisitos de diseno", level=4)
     design_req_rows = [
-        TableRow(["RD0", "La arquitectura debe separar dominio, datos, presentacion e infraestructura.", "18/03/2025"]),
-        TableRow(["RD1", "La base de datos principal debe responder a un modelo relacional.", "18/03/2025"]),
-        TableRow(["RD2", "La autenticacion debe soportar access token y refresh token.", "20/03/2025"]),
-        TableRow(["RD3", "La API debe permitir testing automatizado de sus contratos principales.", "20/03/2025"]),
-        TableRow(["RD4", "La app debe degradar de forma segura cuando fallen servicios externos como TMDB.", "22/03/2025"]),
+        TableRow(["RD0", "La arquitectura debe separar dominio, datos, presentacion e infraestructura.", "03/03/2026"]),
+        TableRow(["RD1", "La base de datos principal debe responder a un modelo relacional.", "03/03/2026"]),
+        TableRow(["RD2", "La autenticacion debe soportar access token y refresh token.", "06/03/2026"]),
+        TableRow(["RD3", "La API debe permitir testing automatizado de sus contratos principales.", "08/03/2026"]),
+        TableRow(["RD4", "La app debe degradar de forma segura cuando fallen servicios externos como TMDB.", "10/03/2026"]),
     ]
     add_table(document, ["Codigo", "Descripcion", "Fecha"], design_req_rows, [2.1, 11.9, 2.0])
     view_req_rows = [
-        TableRow(["RV0", "La interfaz debe ser comprensible y estable para el usuario habitual.", "24/03/2025"]),
-        TableRow(["RV1", "Las acciones principales no deben quedar ocultas tras varios pasos.", "24/03/2025"]),
-        TableRow(["RV2", "Los formularios deben validar entrada antes de llegar al backend cuando sea posible.", "24/03/2025"]),
-        TableRow(["RV3", "La experiencia debe personalizarse con estados, favoritas y actividad del usuario.", "26/03/2025"]),
+        TableRow(["RV0", "La interfaz debe ser comprensible y estable para el usuario habitual.", "12/03/2026"]),
+        TableRow(["RV1", "Las acciones principales no deben quedar ocultas tras varios pasos.", "12/03/2026"]),
+        TableRow(["RV2", "Los formularios deben validar entrada antes de llegar al backend cuando sea posible.", "13/03/2026"]),
+        TableRow(["RV3", "La experiencia debe personalizarse con estados, favoritas y actividad del usuario.", "15/03/2026"]),
     ]
     add_table(document, ["Codigo", "Descripcion", "Fecha"], view_req_rows, [2.1, 11.9, 2.0])
 
@@ -1106,7 +1118,7 @@ def build_document() -> None:
     add_paragraphs(
         document,
         """
-        El modelo fisico de datos de PlotSkip se implementa sobre PostgreSQL y se apoya en tablas con claves foraneas, restricciones de unicidad e indices para las consultas mas frecuentes. La decision prioriza consistencia, trazabilidad y facilidad de consulta en un dominio claramente relacional.
+        El modelo fisico de datos de Plotea se implementa sobre PostgreSQL y se apoya en tablas con claves foraneas, restricciones de unicidad e indices para las consultas mas frecuentes. La decision prioriza consistencia, trazabilidad y facilidad de consulta en un dominio claramente relacional.
         """,
     )
     physical_rows = [
@@ -1144,7 +1156,7 @@ def build_document() -> None:
     add_paragraphs(
         document,
         """
-        PlotSkip no migra informacion desde una aplicacion anterior, por lo que no existe una carga historica compleja de negocio. La puesta en marcha del sistema se basa en tres pasos: configuracion de entorno, aplicacion de migraciones de base de datos y conexion con servicios externos como TMDB y correo electronico.
+        Plotea no migra informacion desde una aplicacion anterior, por lo que no existe una carga historica compleja de negocio. La puesta en marcha del sistema se basa en tres pasos: configuracion de entorno, aplicacion de migraciones de base de datos y conexion con servicios externos como TMDB y correo electronico.
 
         En la primera ejecucion no se precargan usuarios ni catalogos completos. El catalogo audiovisual se resuelve bajo demanda a partir de TMDB, con una cache local de datos basicos para acelerar consultas repetidas. De esta forma se reduce el volumen de datos inicial, se simplifica el mantenimiento y se evita duplicar innecesariamente informacion externa.
         """,
@@ -1206,16 +1218,16 @@ def build_document() -> None:
     ]
     add_table(document, ["Codigo", "Descripcion", "Tipo"], config_test_rows, [3.0, 11.0, 2.0])
 
-    note_heading = document.add_heading("Observaciones de esta primera version", level=2)
-    note_heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    add_bullets(
+    document.add_heading("5. Conclusiones", level=1)
+    add_paragraphs(
         document,
-        [
-            "Se ha depurado el contenido heredado para dejar una memoria alineada con el alcance y el estado real de PlotSkip.",
-            "La estructura reproduce los apartados del documento de referencia, pero ajustados al dominio real de PlotSkip.",
-            "Los diagramas incluidos son funcionales y suficientes para una primera version, aunque pueden refinarse visualmente en una siguiente iteracion.",
-            "No se han incorporado credenciales ni notas internas del documento antiguo, por seguridad y limpieza academica.",
-        ],
+        """
+        Plotea ha permitido materializar una aplicacion movil completa alrededor de un dominio muy concreto: el seguimiento y la conversacion social sobre cine y series. El proyecto no se ha limitado a construir pantallas aisladas, sino que ha consolidado una arquitectura consistente, un modelo relacional adecuado al problema y una experiencia de uso coherente entre autenticacion, descubrimiento, diario, resenas, social y listas.
+
+        Desde el punto de vista tecnico, el trabajo confirma que la combinacion de React Native con Expo, FastAPI y PostgreSQL ofrece un equilibrio adecuado entre productividad, mantenibilidad y control del dominio. Desde el punto de vista funcional, el resultado valida la hipotesis inicial: existe espacio para una solucion audiovisual que combine registro personal, identidad publica y comunidad sin depender de una experiencia enciclopedica o fragmentada.
+
+        Como lineas de evolucion, quedan identificadas la mejora del flujo de avatares mediante seleccion directa de imagen, el refuerzo de las notificaciones push ligadas a eventos sociales y el pulido final de determinados detalles visuales en dispositivo real. Estas ampliaciones no alteran el nucleo del sistema ya construido, sino que prolongan una base que en su estado actual puede considerarse completa y entregable dentro del alcance del proyecto.
+        """,
     )
 
     document.save(str(OUTPUT_DOCX))
