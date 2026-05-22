@@ -55,9 +55,15 @@ async def test_create_review_marks_media_as_watched(async_client: AsyncClient):
     assert body["display_name"] is None
 
     status_response = await async_client.get("/media/movie/550/status", headers=headers)
+    watch_log_response = await async_client.get("/watchlog/me", headers=headers)
     assert status_response.status_code == 200
+    assert watch_log_response.status_code == 200
     assert status_response.json()["watched"] is True
     assert status_response.json()["watchlist"] is False
+    assert len(watch_log_response.json()) == 1
+    assert watch_log_response.json()[0]["tmdb_id"] == 550
+    assert watch_log_response.json()[0]["media_type"] == "movie"
+    assert watch_log_response.json()[0]["rating"] == 8
 
 
 @pytest.mark.asyncio
@@ -182,11 +188,97 @@ async def test_update_own_review(async_client: AsyncClient):
         },
         headers=headers,
     )
+    watch_log_response = await async_client.get("/watchlog/me", headers=headers)
 
     assert update_response.status_code == 200
+    assert watch_log_response.status_code == 200
     assert update_response.json()["rating"] == 9
     assert update_response.json()["body"] == "Texto actualizado"
     assert update_response.json()["contains_spoilers"] is True
+    assert len(watch_log_response.json()) == 1
+    assert watch_log_response.json()[0]["rating"] == 6
+
+
+@pytest.mark.asyncio
+async def test_update_review_backfills_watch_log_when_legacy_review_has_none(async_client: AsyncClient):
+    tokens = await _register_and_login(
+        async_client,
+        email="legacy-review@example.com",
+        username="legacyreview",
+    )
+    headers = _headers(tokens)
+    create_response = await async_client.post(
+        "/reviews",
+        json={
+            "tmdb_id": 601,
+            "media_type": "movie",
+            "rating": 6,
+            "body": "Texto legacy",
+            "contains_spoilers": False,
+        },
+        headers=headers,
+    )
+    review_id = create_response.json()["id"]
+    watch_log_response = await async_client.get("/watchlog/me", headers=headers)
+    watch_log_id = watch_log_response.json()[0]["id"]
+    delete_watch_log_response = await async_client.delete(f"/watchlog/{watch_log_id}", headers=headers)
+
+    update_response = await async_client.put(
+        f"/reviews/{review_id}",
+        json={
+            "rating": 8,
+            "body": "Texto legacy actualizado",
+            "contains_spoilers": True,
+        },
+        headers=headers,
+    )
+    refreshed_watch_log_response = await async_client.get("/watchlog/me", headers=headers)
+
+    assert delete_watch_log_response.status_code == 204
+    assert update_response.status_code == 200
+    assert refreshed_watch_log_response.status_code == 200
+    assert len(refreshed_watch_log_response.json()) == 1
+    assert refreshed_watch_log_response.json()[0]["tmdb_id"] == 601
+    assert refreshed_watch_log_response.json()[0]["rating"] == 8
+
+
+@pytest.mark.asyncio
+async def test_create_review_adds_new_watch_log_even_when_one_already_exists(async_client: AsyncClient):
+    tokens = await _register_and_login(
+        async_client,
+        email="review-with-watchlog@example.com",
+        username="reviewwithwatchlog",
+    )
+    headers = _headers(tokens)
+
+    existing_watch_log = await async_client.post(
+        "/watchlog",
+        json={
+            "tmdb_id": 550,
+            "media_type": "movie",
+            "watched_at": "2026-05-21",
+            "rating": 7,
+        },
+        headers=headers,
+    )
+    review_response = await async_client.post(
+        "/reviews",
+        json={
+            "tmdb_id": 550,
+            "media_type": "movie",
+            "rating": 8,
+            "body": "Comentario con diario previo",
+            "contains_spoilers": False,
+        },
+        headers=headers,
+    )
+    watch_log_response = await async_client.get("/watchlog/me", headers=headers)
+
+    assert existing_watch_log.status_code == 201
+    assert review_response.status_code == 201
+    assert watch_log_response.status_code == 200
+    assert len(watch_log_response.json()) == 2
+    assert [item["rating"] for item in watch_log_response.json()] == [8, 7]
 
 
 @pytest.mark.asyncio

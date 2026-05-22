@@ -1016,3 +1016,45 @@
 - Validation: `npm exec tsc -- --noEmit`
 - Review gate: el repo ya explica la secuencia de build, credenciales y uso de la herramienta oficial de Expo sin depender de memoria tribal
 - Estado: completada
+# Fase 21 - Bugfix UX social y perfil
+
+## Objetivo
+
+- Corregir cuatro fallos detectados en pruebas mÃ³viles reales: que publicar una reseÃ±a alimente el diario, que `Listas` explique claramente el vacÃ­o, que la bio/nombre inline guarden al tocar fuera y que el avatar siga funcionando en `preview build`.
+
+## Alcance
+
+- En alcance:
+- crear entrada implÃ­cita en `watch_log` al publicar reseÃ±a, incluso si ya habÃ­a otras entradas previas para esa misma obra
+- refresco del diario propio al recuperar foco para que el cambio se refleje al volver desde detalle
+- empty state textual simple en `MyListsScreen`
+- autosave al salir de la ediciÃ³n inline de `display_name` y `bio`
+- correcciÃ³n de `avatar_url` para respetar `https` detrÃ¡s de proxy en Railway/preview
+- tests backend para diario implÃ­cito y avatar con `X-Forwarded-Proto`
+- Fuera de alcance:
+- nuevo endpoint para mezclar reseÃ±as y diario en una sola colecciÃ³n
+- rediseÃ±o visual mayor de perfil o listas
+- automatizaciÃ³n E2E mobile nueva
+
+## Fases
+
+### Fase 1: backend diario implÃ­cito y avatar seguro
+
+- Goal: crear diario automÃ¡tico desde reseÃ±a permitiendo entradas repetidas por obra y generar `avatar_url` pÃºblica correcta detrÃ¡s de proxy
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_reviews.py -q`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`
+- Review gate: publicar reseÃ±a siempre aÃ±ade una nueva entrada al diario y el avatar subido sale en `https` cuando el proxy lo indica
+- Estado: completada
+
+### Fase 2: mobile sincronizaciÃ³n y autosave
+
+- Goal: refrescar `Diario` al volver a perfil, simplificar el vacÃ­o de `Listas` y guardar bio/nombre al tocar fuera
+- Validation: `cd mobile && npm exec tsc -- --noEmit`
+- Review gate: el diario propio refleja la reseÃ±a al volver, `Listas` muestra solo texto simple sin panel destacado y la ediciÃ³n inline no depende del botÃ³n atrÃ¡s
+- Estado: completada
+
+### Fase 3: QA y cierre
+
+- Goal: revisar diff, correr checks y dejar documentados riesgos residuales
+- Validation: `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_reviews.py -q`, `backend\.venv\Scripts\python.exe -m pytest ..\tests\test_social.py -q`, `cd mobile && npm exec tsc -- --noEmit`
+- Review gate: quedan claros los lÃ­mites del diario implÃ­cito, incluida la duplicaciÃ³n intencional por obra, y cualquier validaciÃ³n manual pendiente en preview build
+- Estado: completada

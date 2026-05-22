@@ -1874,3 +1874,44 @@
 ## Validation
 
 - `npm exec tsc -- --noEmit`
+# Fase 21 - Bugfix UX social y perfil Details
+
+## Repository Context
+
+- Relevant files:
+- `backend/app/domain/usecases/reviews/create_review.py`
+- `backend/app/domain/repositories/i_watch_log_repository.py`
+- `backend/app/data/repositories/watch_log_repository.py`
+- `backend/app/main.py`
+- `backend/app/presentation/routers/social.py`
+- `mobile/src/presentation/features/profile/ProfileViewModel.ts`
+- `mobile/src/presentation/features/profile/ProfileScreen.tsx`
+- `mobile/src/presentation/features/profile/WatchLogListViewModel.ts`
+- `mobile/src/presentation/features/lists/MyListsScreen.tsx`
+- `tests/test_reviews.py`
+- `tests/test_social.py`
+- Existing patterns to follow:
+- use cases backend finos con dependencias explÃ­citas
+- repositorios mobile ligeros con sincronizaciÃ³n por foco en pantallas sensibles
+- `WatchLogDiaryContent` ya reutilizable entre perfil propio y pÃºblico
+- Constraints:
+- no romper contratos HTTP pÃºblicos existentes
+- mantener explÃ­cito que la reseÃ±a crea una nueva entrada de diario aunque la obra ya tuviera otras
+- no tocar cambios ajenos en el worktree
+
+## Decisions Locked
+
+- Crear reseÃ±a sigue marcando `watched`, pero ahora ademÃ¡s crea siempre una entrada nueva de diario para esa obra y usuario
+- La entrada implÃ­cita usa fecha `today()` backend y reutiliza la nota de la reseÃ±a
+- El diario propio debe recargarse al recuperar foco, no solo al montar la pantalla
+- El vacÃ­o de listas se muestra como texto integrado en el layout, sin tarjeta/panel destacado
+- `display_name` y `bio` comparten una estrategia de commit inline al tocar fuera
+- `avatar_url` debe construirse con el esquema pÃºblico real respetando `X-Forwarded-Proto`
+
+## Review Findings
+
+- fixed: publicar reseÃ±a ahora crea siempre una entrada implÃ­cita de diario, incluso si la obra ya tenÃ­a `watch_log` previo
+- fixed: `WatchLogListViewModel` recarga por foco y el `Diario` propio refleja cambios al volver desde detalle
+- fixed: `MyListsScreen` sustituye el panel vacÃ­o por texto simple integrado en la pantalla
+- fixed: `display_name` y `bio` ya hacen commit inline al tocar fuera, cambiar de tab, abrir menÃº o empezar a desplazarse
+- fixed: el backend respeta `X-Forwarded-Proto` al generar `avatar_url`, evitando URLs `http` rotas en preview Android

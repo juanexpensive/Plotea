@@ -7,6 +7,7 @@ from app.data.repositories.media_status_repository import MediaStatusRepository
 from app.data.repositories.review_repository import ReviewRepository
 from app.data.repositories.review_vote_repository import ReviewVoteRepository
 from app.data.repositories.user_repository import UserRepository
+from app.data.repositories.watch_log_repository import WatchLogRepository
 from app.domain.entities.comment import Comment
 from app.domain.entities.review import Review
 from app.domain.entities.user import User
@@ -84,6 +85,7 @@ async def create_review(
     review = await CreateReviewUseCase(
         ReviewRepository(session),
         MediaStatusRepository(session),
+        WatchLogRepository(session),
         ActivityPublisher(ActivityRepository(session)),
     ).execute(
         user_id=current_user.id,
@@ -103,7 +105,10 @@ async def update_review(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> ReviewResponse:
-    review = await UpdateReviewUseCase(ReviewRepository(session)).execute(
+    review = await UpdateReviewUseCase(
+        ReviewRepository(session),
+        WatchLogRepository(session),
+    ).execute(
         user_id=current_user.id,
         review_id=review_id,
         rating=data.rating,

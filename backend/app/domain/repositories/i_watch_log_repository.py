@@ -18,7 +18,6 @@ class IWatchLogRepository(ABC):
     @abstractmethod
     async def list_by_user(self, user_id: int) -> list[WatchLog]: ...
 
-    @abstractmethod
     async def get_by_id(self, watch_log_id: int) -> WatchLog | None: ...
 
     @abstractmethod

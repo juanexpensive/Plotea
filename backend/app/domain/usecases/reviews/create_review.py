@@ -1,7 +1,10 @@
+from datetime import date
+
 from app.domain.errors import ConflictError, UnprocessableEntityError
 from app.domain.entities.review import Review
 from app.domain.repositories.i_media_status_repository import IMediaStatusRepository
 from app.domain.repositories.i_review_repository import IReviewRepository
+from app.domain.repositories.i_watch_log_repository import IWatchLogRepository
 from app.domain.services.activity_publisher import ActivityPublisher
 
 
@@ -10,10 +13,12 @@ class CreateReviewUseCase:
         self,
         review_repo: IReviewRepository,
         media_status_repo: IMediaStatusRepository,
+        watch_log_repo: IWatchLogRepository,
         activity_publisher: ActivityPublisher | None = None,
     ) -> None:
         self._review_repo = review_repo
         self._media_status_repo = media_status_repo
+        self._watch_log_repo = watch_log_repo
         self._activity_publisher = activity_publisher
 
     async def execute(
@@ -42,6 +47,13 @@ class CreateReviewUseCase:
             body=normalized_body,
             contains_spoilers=contains_spoilers,
             current_user_id=user_id,
+        )
+        await self._watch_log_repo.create(
+            user_id=user_id,
+            tmdb_id=tmdb_id,
+            media_type=media_type,
+            watched_at=date.today(),
+            rating=rating,
         )
         await self._media_status_repo.set(user_id, tmdb_id, media_type, "watched")
         if self._activity_publisher is not None:

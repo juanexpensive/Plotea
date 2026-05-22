@@ -202,7 +202,7 @@ async def test_public_profile_exposes_counts_without_email(async_client: AsyncCl
     assert body["followers_count"] == 1
     assert body["following_count"] == 0
     assert body["reviews_count"] == 1
-    assert body["watch_logs_count"] == 1
+    assert body["watch_logs_count"] == 2
     assert body["is_following"] is True
 
 
@@ -254,7 +254,7 @@ async def test_update_my_profile_rejects_blank_display_name(async_client: AsyncC
 
 
 @pytest.mark.asyncio
-async def test_upload_my_avatar_persists_public_url(async_client: AsyncClient):
+async def test_upload_my_avatar_respects_forwarded_https(async_client: AsyncClient):
     owner = await _register_and_login(async_client, "avatar-upload@example.com", "avatarupload")
     png_bytes = (
         b"\x89PNG\r\n\x1a\n"
@@ -266,14 +266,14 @@ async def test_upload_my_avatar_persists_public_url(async_client: AsyncClient):
 
     response = await async_client.post(
         "/users/me/avatar",
-        headers=_headers(owner),
+        headers={**_headers(owner), "X-Forwarded-Proto": "https"},
         files={"avatar": ("avatar.png", png_bytes, "image/png")},
     )
 
     assert response.status_code == 200
     body = response.json()
     parsed_avatar_url = urlparse(body["avatar_url"])
-    assert parsed_avatar_url.scheme == "http"
+    assert parsed_avatar_url.scheme == "https"
     assert parsed_avatar_url.netloc == "test"
     assert parsed_avatar_url.path.startswith("/uploads/avatars/user-1-")
 

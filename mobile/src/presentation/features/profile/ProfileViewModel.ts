@@ -330,11 +330,12 @@ export function useProfileViewModel() {
     setIsActionMenuOpen(false);
   }
 
-  function startDisplayNameEditing() {
+  async function startDisplayNameEditing() {
     if (!user) {
       return;
     }
 
+    await commitInlineProfileEdits();
     setSuccessMessage(null);
     setError(null);
     setDisplayNameDraft(user.display_name ?? '');
@@ -506,11 +507,12 @@ export function useProfileViewModel() {
     router.push('/(tabs)/lists');
   }
 
-  function startBioEditing() {
+  async function startBioEditing() {
     if (!user) {
       return;
     }
 
+    await commitInlineProfileEdits();
     setSuccessMessage(null);
     setError(null);
     setBioDraft(user.bio ?? '');
@@ -588,6 +590,20 @@ export function useProfileViewModel() {
     }
   }
 
+  async function commitInlineProfileEdits() {
+    if (savingProfile) {
+      return;
+    }
+
+    if (isEditingDisplayName) {
+      await saveDisplayNameInline();
+    }
+
+    if (isEditingBio) {
+      await saveBioInline();
+    }
+  }
+
   return {
     user,
     profileSummary,
@@ -625,6 +641,7 @@ export function useProfileViewModel() {
     setBioDraft,
     setActiveFavoriteSlot,
     setFavoriteQuery,
+    commitInlineProfileEdits,
     handleLogout,
     openActionMenu,
     closeActionMenu,

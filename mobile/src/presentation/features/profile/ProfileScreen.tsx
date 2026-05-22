@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MediaItem, WatchLogEnrichedEntry } from '../../../domain/entities/media';
 import { PublicUserProfile, PublicUserStats } from '../../../domain/entities/social';
 import { PlotStarLoader } from '../../shared/PlotStarLoader';
@@ -25,6 +26,7 @@ type ProfileTabKey = 'profile' | 'watchlist' | 'diary';
 
 export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('profile');
+  const insets = useSafeAreaInsets();
   const {
     user,
     profileSummary,
@@ -61,6 +63,7 @@ export default function ProfileScreen() {
     setDisplayNameDraft,
     setBioDraft,
     setFavoriteQuery,
+    commitInlineProfileEdits,
     handleLogout,
     openActionMenu,
     closeActionMenu,
@@ -89,6 +92,7 @@ export default function ProfileScreen() {
   if (isBootstrapping) {
     return (
       <View style={styles.centered}>
+        <StatusBar style="light" />
         <PlotStarLoader size="large" label="Cargando perfil..." />
       </View>
     );
@@ -97,6 +101,7 @@ export default function ProfileScreen() {
   if (!user) {
     return (
       <View style={styles.centered}>
+        <StatusBar style="light" />
         <Text style={styles.errorText}>{error ?? 'Error desconocido'}</Text>
       </View>
     );
@@ -115,8 +120,29 @@ export default function ProfileScreen() {
     openDetail(item.media_type, item.tmdb_id);
   }
 
+  async function handleProfileTabPress(nextTab: ProfileTabKey) {
+    await commitInlineProfileEdits();
+    setActiveTab(nextTab);
+  }
+
+  async function handleOpenActionMenu() {
+    await commitInlineProfileEdits();
+    openActionMenu();
+  }
+
+  async function handleChangeAvatar() {
+    await commitInlineProfileEdits();
+    await changeAvatarFromLibrary();
+  }
+
+  async function handleOpenNetwork(tab: 'followers' | 'following') {
+    await commitInlineProfileEdits();
+    openNetwork(tab);
+  }
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <View style={styles.screen}>
+      <StatusBar style="light" />
       <FavoritePickerModal
         visible={isEditingFavorites}
         query={favoriteQuery}
@@ -135,61 +161,71 @@ export default function ProfileScreen() {
         loggingOut={loggingOut}
         onClose={closeActionMenu}
         onLogout={handleLogout}
+        topInset={insets.top}
       />
 
-      <View style={styles.header}>
-        <View style={styles.iconButtonPlaceholder} />
-        <View style={styles.headerSpacer} />
-        <Pressable style={styles.iconButton} onPress={openActionMenu} disabled={loggingOut}>
-          <Ionicons
-            name={loggingOut ? 'hourglass-outline' : 'ellipsis-vertical'}
-            size={20}
-            color={darkDesign.colors.text}
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, darkDesign.spacing.lg) + 4 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        onScrollBeginDrag={() => void commitInlineProfileEdits()}
+      >
+        <View style={styles.header}>
+          <View style={styles.iconButtonPlaceholder} />
+          <View style={styles.headerSpacer} />
+          <Pressable style={styles.iconButton} onPress={() => void handleOpenActionMenu()} disabled={loggingOut}>
+            <Ionicons
+              name={loggingOut ? 'hourglass-outline' : 'ellipsis-vertical'}
+              size={20}
+              color={darkDesign.colors.text}
+            />
+          </Pressable>
+        </View>
+
+        <View style={styles.profileTabs}>
+          <ProfileTopTab
+            label={uiCopy.tabs.profile}
+            active={activeTab === 'profile'}
+            onPress={() => void handleProfileTabPress('profile')}
           />
-        </Pressable>
-      </View>
+          <ProfileTopTab
+            label={uiCopy.tabs.watchlist}
+            active={activeTab === 'watchlist'}
+            onPress={() => void handleProfileTabPress('watchlist')}
+          />
+          <ProfileTopTab
+            label={uiCopy.tabs.diary}
+            active={activeTab === 'diary'}
+            onPress={() => void handleProfileTabPress('diary')}
+          />
+        </View>
 
-      <View style={styles.profileTabs}>
-        <ProfileTopTab
-          label={uiCopy.tabs.profile}
-          active={activeTab === 'profile'}
-          onPress={() => setActiveTab('profile')}
-        />
-        <ProfileTopTab
-          label={uiCopy.tabs.watchlist}
-          active={activeTab === 'watchlist'}
-          onPress={() => setActiveTab('watchlist')}
-        />
-        <ProfileTopTab
-          label={uiCopy.tabs.diary}
-          active={activeTab === 'diary'}
-          onPress={() => setActiveTab('diary')}
-        />
-      </View>
-
-      {activeTab === 'profile' ? (
-        <>
-          <View style={styles.heroSection}>
-            <Pressable
-              style={styles.avatarPressable}
-              onPress={changeAvatarFromLibrary}
-              disabled={uploadingAvatar || savingProfile}
-            >
-              {user.avatar_url ? (
-                <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
-              ) : (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{initial}</Text>
-                </View>
-              )}
-              <View style={styles.avatarBadge}>
-                {uploadingAvatar ? (
-                  <PlotStarLoader size={20} />
+        {activeTab === 'profile' ? (
+          <Pressable style={styles.profileTabContent} onPress={() => void commitInlineProfileEdits()}>
+            <View style={styles.heroSection}>
+              <Pressable
+                style={styles.avatarPressable}
+                onPress={() => void handleChangeAvatar()}
+                disabled={uploadingAvatar || savingProfile}
+                hitSlop={14}
+              >
+                {user.avatar_url ? (
+                  <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
                 ) : (
-                  <Ionicons name="image-outline" size={16} color={darkDesign.colors.text} />
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{initial}</Text>
+                  </View>
                 )}
-              </View>
-            </Pressable>
+                <View style={styles.avatarBadge}>
+                  {uploadingAvatar ? (
+                    <PlotStarLoader size={20} />
+                  ) : (
+                    <Ionicons name="image-outline" size={16} color={darkDesign.colors.text} />
+                  )}
+                </View>
+              </Pressable>
 
             {isEditingDisplayName ? (
               <TextInput
@@ -206,11 +242,11 @@ export default function ProfileScreen() {
                 maxLength={100}
               />
             ) : (
-              <Pressable style={styles.displayNamePressable} onPress={startDisplayNameEditing}>
+              <Pressable style={styles.displayNamePressable} onPress={() => void startDisplayNameEditing()}>
                 <Text style={styles.displayName}>{user.display_name ?? user.username}</Text>
               </Pressable>
             )}
-            <Text style={styles.usernameMeta}>@{user.username}</Text>
+              <Text style={styles.usernameMeta}>@{user.username}</Text>
             {isEditingBio ? (
               <TextInput
                 style={styles.bioInput}
@@ -227,7 +263,7 @@ export default function ProfileScreen() {
                 autoFocus
               />
             ) : (
-              <Pressable style={styles.bioPressable} onPress={startBioEditing}>
+              <Pressable style={styles.bioPressable} onPress={() => void startBioEditing()}>
                 <Text style={styles.bio}>
                   {user.bio && user.bio.trim().length > 0 ? user.bio : 'Toca para anadir tu bio'}
                 </Text>
@@ -238,79 +274,80 @@ export default function ProfileScreen() {
               profileSummary={profileSummary}
               stats={stats}
               error={profileSummaryError ?? statsError}
-              onOpenFollowers={() => openNetwork('followers')}
-              onOpenFollowing={() => openNetwork('following')}
+              onOpenFollowers={() => void handleOpenNetwork('followers')}
+              onOpenFollowing={() => void handleOpenNetwork('following')}
             />
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {successMessage ? <Text style={styles.successText}>{successMessage}</Text> : null}
           </View>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{uiCopy.sections.favorites}</Text>
-            {favoritesError ? <Text style={styles.errorText}>{favoritesError}</Text> : null}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{uiCopy.sections.favorites}</Text>
+              {favoritesError ? <Text style={styles.errorText}>{favoritesError}</Text> : null}
 
-            <View style={styles.favoritesGrid}>
-              {favoriteItems.map((item, index) => (
-                <FavoritePosterCard
-                  key={`${index}-${item?.tmdb_id ?? 'empty'}`}
-                  media={item}
-                  index={index}
-                  active={isEditingFavorites && activeFavoriteSlot === index}
-                  editable
-                  onSelect={() => openFavoritePicker(index)}
-                  onClear={() => clearFavoriteSlot(index)}
-                />
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{uiCopy.sections.recentActivity}</Text>
-              <Pressable style={styles.sectionAction} onPress={() => setActiveTab('diary')}>
-                <Text style={styles.sectionActionText}>{uiCopy.actions.viewDiary}</Text>
-              </Pressable>
+              <View style={styles.favoritesGrid}>
+                {favoriteItems.map((item, index) => (
+                  <FavoritePosterCard
+                    key={`${index}-${item?.tmdb_id ?? 'empty'}`}
+                    media={item}
+                    index={index}
+                    active={isEditingFavorites && activeFavoriteSlot === index}
+                    editable
+                    onSelect={() => openFavoritePicker(index)}
+                    onClear={() => clearFavoriteSlot(index)}
+                  />
+                ))}
+              </View>
             </View>
 
-            {recentWatchError ? <Text style={styles.errorText}>{recentWatchError}</Text> : null}
-            {!recentWatchLoading && recentWatch.length === 0 ? (
-              <Text style={styles.emptyText}>Todavia no has registrado visionados recientes.</Text>
-            ) : null}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{uiCopy.sections.recentActivity}</Text>
+                <Pressable style={styles.sectionAction} onPress={() => void handleProfileTabPress('diary')}>
+                  <Text style={styles.sectionActionText}>{uiCopy.actions.viewDiary}</Text>
+                </Pressable>
+              </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.posterRail}>
-              {recentWatch.map((item) => (
-                <RecentActivityCard
-                  key={item.id}
-                  item={item}
-                  onOpen={() => openDetail(item.media.media_type, item.media.tmdb_id)}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        </>
-      ) : null}
+              {recentWatchError ? <Text style={styles.errorText}>{recentWatchError}</Text> : null}
+              {!recentWatchLoading && recentWatch.length === 0 ? (
+                <Text style={styles.emptyText}>Todavia no has registrado visionados recientes.</Text>
+              ) : null}
 
-      {activeTab === 'watchlist' ? (
-        <ProfileWatchlistTab
-          username={user.username}
-          items={watchlist.items}
-          loading={watchlist.loading}
-          error={watchlist.error}
-          onOpenDetail={openWatchlistDetail}
-        />
-      ) : null}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.posterRail}>
+                {recentWatch.map((item) => (
+                  <RecentActivityCard
+                    key={item.id}
+                    item={item}
+                    onOpen={() => openDetail(item.media.media_type, item.media.tmdb_id)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          </Pressable>
+        ) : null}
 
-      {activeTab === 'diary' ? (
-        <WatchLogDiaryContent
-          items={diary.items}
-          loading={diary.loading}
-          deletingId={diary.deletingId}
-          error={diary.error}
-          onOpenDetail={openDiaryDetail}
-          onDelete={diary.removeItem}
-          title="Diario"
-        />
-      ) : null}
-    </ScrollView>
+        {activeTab === 'watchlist' ? (
+          <ProfileWatchlistTab
+            username={user.username}
+            items={watchlist.items}
+            loading={watchlist.loading}
+            error={watchlist.error}
+            onOpenDetail={openWatchlistDetail}
+          />
+        ) : null}
+
+        {activeTab === 'diary' ? (
+          <WatchLogDiaryContent
+            items={diary.items}
+            loading={diary.loading}
+            deletingId={diary.deletingId}
+            error={diary.error}
+            onOpenDetail={openDiaryDetail}
+            onDelete={diary.removeItem}
+            title="Diario"
+          />
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -388,15 +425,17 @@ function ProfileActionsMenu({
   loggingOut,
   onClose,
   onLogout,
+  topInset,
 }: {
   visible: boolean;
   loggingOut: boolean;
   onClose: () => void;
   onLogout: () => void | Promise<void>;
+  topInset: number;
 }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.actionMenuOverlay}>
+      <View style={[styles.actionMenuOverlay, { paddingTop: topInset + darkDesign.spacing.lg }]}>
         <Pressable style={styles.actionMenuBackdrop} onPress={onClose} />
         <View style={styles.actionMenuCard}>
           <Pressable style={styles.actionMenuItem} onPress={onLogout} disabled={loggingOut}>
@@ -592,7 +631,6 @@ const styles = StyleSheet.create({
   content: {
     ...sharedStyles.scrollContent,
     paddingHorizontal: 0,
-    paddingTop: 28,
     paddingBottom: 40,
     gap: 0,
   },
@@ -665,6 +703,9 @@ const styles = StyleSheet.create({
   avatarPressable: {
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 144,
+    minHeight: 144,
+    padding: darkDesign.spacing.md,
   },
   avatar: {
     width: 112,
@@ -783,10 +824,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingTop: darkDesign.spacing.md,
   },
+  profileTabContent: {
+    gap: darkDesign.spacing.xl,
+  },
   actionMenuOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.32)',
-    paddingTop: 56,
+    backgroundColor: 'rgba(7, 9, 11, 0.66)',
     paddingLeft: darkDesign.spacing.xl,
     paddingRight: darkDesign.spacing.xl,
     alignItems: 'flex-end',

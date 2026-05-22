@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { getMediaDetail } from '../../../data/repositories/MediaRepository';
 import { deleteWatchLog, getMyWatchLog } from '../../../data/repositories/WatchLogRepository';
 import { MediaDetail, WatchLogEntry } from '../../../domain/entities/media';
@@ -16,11 +16,7 @@ export function useWatchLogListViewModel() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadWatchLog();
-  }, []);
-
-  async function loadWatchLog() {
+  const loadWatchLog = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -47,7 +43,13 @@ export function useWatchLogListViewModel() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadWatchLog();
+    }, [loadWatchLog]),
+  );
 
   async function removeItem(id: number) {
     setDeletingId(id);
@@ -76,5 +78,5 @@ export function useWatchLogListViewModel() {
     });
   }
 
-  return { items, loading, deletingId, error, openDetail, removeItem };
+  return { items, loading, deletingId, error, openDetail, removeItem, reload: loadWatchLog };
 }

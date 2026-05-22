@@ -91,7 +91,7 @@ export default function MyListsScreen() {
               />
             ))
           ) : (
-            <EmptyPanel text="Todavia no tienes listas." />
+            <Text style={styles.emptyText}>No tienes listas todavia. Crea una para empezar.</Text>
           )}
         </View>
       </ScrollView>
@@ -229,14 +229,6 @@ function PosterStrip({ posters }: { posters: string[] }) {
           <View key={`empty-${index}`} style={[styles.posterTile, styles.posterFallback]} />
         );
       })}
-    </View>
-  );
-}
-
-function EmptyPanel({ text }: { text: string }) {
-  return (
-    <View style={styles.emptyPanel}>
-      <Text style={styles.emptyText}>{text}</Text>
     </View>
   );
 }
@@ -493,18 +485,14 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     marginTop: -2,
   },
-  emptyPanel: {
-    backgroundColor: design.canvasNightSoft,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: design.hairline,
+  emptyText: {
+    color: design.onDark,
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '500',
     paddingHorizontal: 24,
     paddingVertical: 18,
-  },
-  emptyText: {
-    color: design.onDarkMute,
-    fontSize: 14,
-    lineHeight: 20,
+    textAlign: 'center',
   },
   pressed: {
     opacity: 0.84,
