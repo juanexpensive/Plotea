@@ -1,6 +1,7 @@
 # Node
 node_modules/
 .tools/
+_zip_stage/
 
 # Python
 backend/.venv/
@@ -10,3 +11,7 @@ backend/.venv/
 # Secrets
 backend/.env
 mobile/.env.local
+
+# Local workspace / generated artifacts
+.obsidian/
+outputs/
